@@ -1,13 +1,13 @@
 {
 	"Targets": [
 		{
-			"Name": "hukuokaGame",
-			"Path": "D:\\testUnreal\\game\\hukuokaGame\\Source\\hukuokaGame.Target.cs",
+			"Name": "Game",
+			"Path": "D:\\Creative Cloud Files\\_FukuokaGameContest\\Git\\Game\\Source\\Game.Target.cs",
 			"Type": "Game"
 		},
 		{
-			"Name": "hukuokaGameEditor",
-			"Path": "D:\\testUnreal\\game\\hukuokaGame\\Source\\hukuokaGameEditor.Target.cs",
+			"Name": "GameEditor",
+			"Path": "D:\\Creative Cloud Files\\_FukuokaGameContest\\Git\\Game\\Source\\GameEditor.Target.cs",
 			"Type": "Editor"
 		}
 	]

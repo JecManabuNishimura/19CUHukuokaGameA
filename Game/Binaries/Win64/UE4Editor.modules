@@ -2,6 +2,6 @@
 	"BuildId": "10570792",
 	"Modules": 
 	{
-		"hukuokaGame": "UE4Editor-hukuokaGame.dll"
+		"Game": "UE4Editor-Game.dll"
 	}
 }
