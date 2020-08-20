@@ -29,6 +29,14 @@
 			"Type": "Executable"
 		},
 		{
+			"Path": "$(ProjectDir)/Plugins/UE4Duino/Binaries/Win64/UE4Editor-UE4Duino.dll",
+			"Type": "DynamicLibrary"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/UE4Duino/Binaries/Win64/UE4Editor-UE4Duino.pdb",
+			"Type": "SymbolFile"
+		},
+		{
 			"Path": "$(EngineDir)/Plugins/2D/Paper2D/Binaries/Win64/UE4Editor-Paper2D.dll",
 			"Type": "DynamicLibrary"
 		},
@@ -2025,6 +2033,10 @@
 			"Type": "RequiredResource"
 		},
 		{
+			"Path": "$(ProjectDir)/Plugins/UE4Duino/Binaries/Win64/UE4Editor.modules",
+			"Type": "RequiredResource"
+		},
+		{
 			"Path": "$(EngineDir)/Plugins/2D/Paper2D/Binaries/Win64/UE4Editor.modules",
 			"Type": "RequiredResource"
 		},
@@ -2344,6 +2356,10 @@
 	"RuntimeDependencies": [
 		{
 			"Path": "$(ProjectDir)/Game.uproject",
+			"Type": "UFS"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/UE4Duino/UE4Duino.uplugin",
 			"Type": "UFS"
 		},
 		{
