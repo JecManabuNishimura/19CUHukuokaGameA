@@ -2,12 +2,12 @@
 	"Targets": [
 		{
 			"Name": "Game",
-			"Path": "D:\\Creative Cloud Files\\_FukuokaGameContest\\Git\\Game\\Source\\Game.Target.cs",
+			"Path": "D:\\GameTools\\Git\\Game\\Source\\Game.Target.cs",
 			"Type": "Game"
 		},
 		{
 			"Name": "GameEditor",
-			"Path": "D:\\Creative Cloud Files\\_FukuokaGameContest\\Git\\Game\\Source\\GameEditor.Target.cs",
+			"Path": "D:\\GameTools\\Git\\Game\\Source\\GameEditor.Target.cs",
 			"Type": "Editor"
 		}
 	]
