@@ -10,8 +10,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "..\..\UE4Duino\Source\UE4Duino\Public\Serial.h"
 #include "SensorTest.generated.h"
+
+class USerial;
 
 UCLASS()
 class GAME_API ASensorTest : public AActor

@@ -9,9 +9,12 @@
 #pragma once
 
 #include "SensorTest.h"
+#include "..\..\UE4Duino\Source\UE4Duino\Public\Serial.h"
 #include "Engine.h"
 
-#define ROTATOR_ARRAY_SIZE 10
+// prevRotatorの要素数を指定
+// 大きいほどなめらかに移動しますが、処理負荷が増え、値の判定もゆっくりになります
+#define ROTATOR_ARRAY_SIZE 5
 
 ASensorTest::ASensorTest() :
 	m_pArduinoSerial(NULL),
@@ -19,9 +22,6 @@ ASensorTest::ASensorTest() :
 	isOpen(false)
 {
 	PrimaryActorTick.bCanEverTick = true;
-
-	// シリアルのオブジェクトを生成
-	m_pArduinoSerial = CreateDefaultSubobject<USerial>(TEXT("m_pArduino"));
 
 	// 回転量の保存用配列の初期化
 	prevRotator.Reset();
@@ -31,46 +31,43 @@ void ASensorTest::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (m_pArduinoSerial != NULL)
-	{
-		// シリアルポートを開ける
-		m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
+	// シリアルポートを開ける
+	m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
 
-		if (isOpen == false)
+	if (isOpen == false)
+	{
+		UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), serialPort);
+		return;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), serialPort);
+	}
+
+	// 10回分のデータを入れる
+	int errorCount = 0;
+	for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
+	{
+		FRotator rotTemp;
+		rotTemp = SensorToRotator();
+
+		// センサーの値が読み取れていなければやり直し
+		if (rotTemp == FRotator::ZeroRotator)
 		{
-			UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), serialPort);
-			return;
+			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
+			++errorCount;
+			if (errorCount >= 10)
+			{
+				UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
+				break;
+			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), serialPort);
+			UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
 		}
 
-		// 10回分のデータを入れる
-		int errorCount = 0;
-		for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
-		{
-			FRotator rotTemp;
-			rotTemp = SensorToRotator();
-
-			// センサーの値が読み取れていなければやり直し
-			if (rotTemp == FRotator::ZeroRotator)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
-				++errorCount;
-				if (errorCount >= 10)
-				{
-					UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
-					break;
-				}
-			}
-			else
-			{
-				UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
-			}
-
-			prevRotator.Add(rotTemp);
-		}
+		prevRotator.Add(rotTemp);
 	}
 }
 
@@ -141,7 +138,7 @@ FRotator ASensorTest::SensorToRotator()
 	bool isRead = false;		// データを読み取れたか？
 	FString fStr;				// 読み取りデータ格納用
 	int tryCnt = 0;				// 読み取ろうとした回数
-	int tryCntMax = 100;		// 最大の読み取る回数
+	const int tryCntMax = 500;	// 最大の読み取る回数
 
 	// シリアルのオブジェクトがあれば
 	if (m_pArduinoSerial != NULL)
@@ -175,12 +172,6 @@ FRotator ASensorTest::SensorToRotator()
 		// センサーデータをカンマ区切りでsplitTextArrayに入れる
 		fStr.ParseIntoArray(splitTextArray, TEXT(","));
 
-		UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): split Num: %d"), splitTextArray.Num());
-		for (int i = 0; i < splitTextArray.Num(); ++i)
-		{
-			UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): split Array[%d]: %s"), i,  *splitTextArray[i]);
-		}
-
 		// それぞれをint型に変換する
 		TArray<float> rotatorAxis;
 		rotatorAxis.Reset();
@@ -195,10 +186,10 @@ FRotator ASensorTest::SensorToRotator()
 		{
 			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): Failed Add TArray<float> elements. return ZeroRotator."));
 			return FRotator::ZeroRotator;
-		}		
+		}
 
 		UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): Rotator Roll:%f Pitch:%f Yaw:%f"), rotatorAxis[0], rotatorAxis[1], rotatorAxis[2]);
-				
+
 		// FRotator型の変数をfloat型を使用して初期化
 		FRotator rot(rotatorAxis[1], rotatorAxis[2], -rotatorAxis[0]);
 
