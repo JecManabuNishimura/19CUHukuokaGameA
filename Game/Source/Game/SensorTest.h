@@ -38,6 +38,7 @@ private:
 
 	// ‰ñ“]—Ê‚Ì•Û‘¶i‚È‚ß‚ç‚©‚ÉˆÚ“®‚·‚é‚æ‚¤‚Éj
 	TArray<FRotator> prevRotator;
+	FRotator prevDiffRot;
 
 	// For Arduino Com Port
 	UPROPERTY(EditAnywhere, Category = "Sensor")
