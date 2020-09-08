@@ -11,10 +11,11 @@
 #include "SensorTest.h"
 #include "..\..\UE4Duino\Source\UE4Duino\Public\Serial.h"
 #include "Engine.h"
+#include <time.h>
 
 // prevRotatorの要素数を指定
 // 大きいほどなめらかに移動しますが、処理負荷が増え、値の判定もゆっくりになります
-#define ROTATOR_ARRAY_SIZE 5
+#define ROTATOR_ARRAY_SIZE 1
 
 ASensorTest::ASensorTest() :
 	m_pArduinoSerial(NULL),
@@ -76,6 +77,7 @@ void ASensorTest::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// 回転量保存用
+
 	float tempRoll = 0.0f;
 	float tempPitch = 0.0f;
 	float tempYaw = 0.0f;
@@ -95,6 +97,15 @@ void ASensorTest::Tick(float DeltaTime)
 
 	// Actorに回転量を反映
 	FRotator rot(tempPitch, tempYaw, tempRoll);
+
+	UE_LOG(LogTemp, Error, TEXT("Roll : %f Pitch : %f Yaw : %f"), (rot - prevDiffRot).Roll, (rot - prevDiffRot).Pitch, (rot - prevDiffRot).Yaw);
+
+	float angle = 5.0f;
+	if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
+	{
+		rot = prevDiffRot;
+	}
+
 	SetActorRotation(rot);
 
 	// リストを更新
@@ -117,6 +128,8 @@ void ASensorTest::Tick(float DeltaTime)
 			prevRotator.Add(rotTemp);
 		}
 	}
+
+	prevDiffRot = rot;
 }
 
 void ASensorTest::EndPlay(const EEndPlayReason::Type EndPlayReason)
