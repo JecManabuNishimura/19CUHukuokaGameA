@@ -144,7 +144,10 @@ void APlayerChara::UpdateMove(float _deltaTime)
 	//	‘O‚ÉŒü‚­‚¸‚Á‚ÆˆÚ“®‚·‚é
 	if (!m_bGuarding)
 	{		
-		NewLocation.X += 20.f;		
+		//NewLocation.X += 20.f;		
+
+		// Testing Value(from 19CU0222ß‰Æ“¯)
+		//NewLocation.X += 5.f;
 	}
 	else
 	{
