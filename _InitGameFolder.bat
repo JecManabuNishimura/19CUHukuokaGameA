@@ -1,20 +1,48 @@
 @echo off
 
+set /p isDel="Will delete unnecessary folder, are you sure?(Y/N):"
+
+IF %isDel%==Y (
+ goto delete
+
+) ELSE IF %isDel%==y (
+ goto delete
+
+) ELSE (
+ echo;
+ echo Canceled delete.
+ timeout /t -1
+ goto :EOF
+)
+
+:delete
+ echo;
+echo Start deleting.
 set dir="Game"
 
 cd %dir%/
 
 echo;
-rd /s .vs
+rd /s /q .vs
+echo %dir%/.vs Completed.
 echo;
-rd /s Binaries
+rd /s /q Binaries
+echo %dir%/Binaries Completed.
 echo;
-rd /s Build
+rd /s /q Build
+echo %dir%/Build Completed.
 echo;
-rd /s DerivedDataCache
+rd /s /q DerivedDataCache
+echo %dir%/DerivedDataCache Completed.
 echo;
-rd /s Intermediate
+rd /s /q Intermediate
+echo %dir%/Intermediate Completed.
 echo;
-rd /s Saved
+rd /s /q Saved
+echo %dir%/Saved Completed.
 echo;
-del /p Game.sln
+del Game.sln
+echo %dir%/Game.sln Completed.
+echo;
+echo Delete completed.
+timeout /t -1
