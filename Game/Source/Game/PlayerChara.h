@@ -45,19 +45,6 @@ private:
 
 	//	ガード処理
 	void UpdateGuard();
-<<<<<<< HEAD
-private:
-	//	【入力バインド】カメラ回転:Pitch（Y軸）
-	void Cam_RotatePitch(float _axisValue);
-	//	【入力バインド】カメラ回転:Yaw（Z軸）
-	void Cam_RotateYaw(float _axisValue);
-
-	//	【入力バインド】キャラ移動:前後
-	void Chara_MoveForward(float _axisValue);
-	//	【入力バインド】キャラ移動:左右
-	void Chara_MoveRight(float _axisValue);
-=======
->>>>>>> playerMove
 
 	//	加速処理
 	void UpdateAccelerate();
@@ -87,13 +74,6 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		UCameraComponent* m_pCamera;				//	カメラ
 
-<<<<<<< HEAD
-	FVector2D m_charaMoveInput;						//	Pawn移動入力量
-	FVector2D m_cameraRotateInput;					//	カメラ回転入力量
-	FVector2D m_charaRotateInput;
-
-=======
->>>>>>> playerMove
 	UPROPERTY(EditAnywhere, Category = "Camera")
 		FVector2D m_cameraPitchLimit;				//	カメラのピッチ範囲
 
@@ -112,11 +92,8 @@ private:
 
 	bool m_bGuarding;								//	ガード中フラグ
 
-<<<<<<< HEAD
-=======
 	bool m_bAccelerate;
 
->>>>>>> playerMove
 	bool m_bCanControl;								//	操作可能な状態か?
 public:
 	// Is Open Com Port
