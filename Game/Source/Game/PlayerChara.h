@@ -1,10 +1,3 @@
-//----------------------------------------------------------
-// ファイル名		：PlayerChara.h
-// 概要				：プレイヤーキャラを制御するCharacterオブジェクト
-// 作成者			：19CU0220 曹　飛
-// 更新内容			：2020/08/07 作成
-//----------------------------------------------------------
-
 // インクルードガード
 #pragma once
 
@@ -14,6 +7,7 @@
 #include "PlayerChara.generated.h"
 
 //	前方宣言
+class USerial;
 class USpringArmComponent;
 class UCameraComponent;
 
@@ -31,12 +25,13 @@ protected:
 	// ゲームスタート時、または生成時に呼ばれる処理
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason);
 public:
 	// 毎フレームの更新処理
 	virtual void Tick(float DeltaTime) override;
 
-	// 各入力関係メソッドとのバインド処理
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	// センサーの値をRotatorに変換
+	FRotator SensorToRotator();
 
 private:
 	//	カメラ更新処理
@@ -48,20 +43,29 @@ private:
 	//	ジャンプ処理
 	void UpdateJump(float _deltaTime);
 
+	//	ガード処理
+	void UpdateGuard();
+
+	//	加速処理
+	void UpdateAccelerate();
 private:
-	//	【入力バインド】カメラ回転:Pitch（Y軸）
-	void Cam_RotatePitch(float _axisValue);
-	//	【入力バインド】カメラ回転:Yaw（Z軸）
-	void Cam_RotateYaw(float _axisValue);
-
-	//	【入力バインド】キャラ移動:前後
-	void Chara_MoveForward(float _axisValue);
-	//	【入力バインド】キャラ移動:左右
-	void Chara_MoveRight(float _axisValue);
-
 	//	【入力バインド】ジャンプ開始
 	void JumpStart();
+
+	//	【入力バインド】ガード開始
+	void GuardStart(float _axisValue);
 private:
+	// Arduinoのシリアル通信保存用
+	USerial* m_pArduinoSerial;
+
+	// 回転量の保存（なめらかに移動するように）
+	TArray<FRotator> prevRotator;
+	FRotator prevDiffRot;
+
+	// For Arduino Com Port
+	UPROPERTY(EditAnywhere, Category = "Sensor")
+		int serialPort;
+
 	//	UPROPERTYにすることで、ブループリント上で変数の確認、編集などができる
 	//	「BlueprintReadOnly」に指定しているため、ブループリントで見ることだけ可能で、編集はできない
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -70,14 +74,8 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		UCameraComponent* m_pCamera;				//	カメラ
 
-	FVector2D m_charaMoveInput;						//	Pawn移動入力量
-	FVector2D m_cameraRotateInput;					//	カメラ回転入力量
-
 	UPROPERTY(EditAnywhere, Category = "Camera")
 		FVector2D m_cameraPitchLimit;				//	カメラのピッチ範囲
-
-	UPROPERTY(EditAnywhere, Category = "Move")
-		float m_moveSpeed;							//	移動量
 
 	UPROPERTY(EditAnywhere, Category = "Jump")
 		float m_gravity;							//	重力
@@ -92,5 +90,17 @@ private:
 	bool m_bJumping;								//	ジャンプ中フラグ
 	FVector m_posBeforeJump;						//	ジャンル開始前のキャラクター座標
 
+	bool m_bGuarding;								//	ガード中フラグ
+
+	bool m_bAccelerate;
+
 	bool m_bCanControl;								//	操作可能な状態か?
+public:
+	// Is Open Com Port
+	UPROPERTY(BlueprintReadOnly, Category = "Sensor")
+		bool isOpen;
+
+	float tempRoll;
+	float tempPitch;
+	float tempYaw;
 };
