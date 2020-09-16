@@ -19,6 +19,12 @@ APlayerChara::APlayerChara()
 	, isOpen(false)
 	, m_pSpringArm(NULL)
 	, m_pCamera(NULL)
+<<<<<<< HEAD
+	, m_charaMoveInput(FVector2D::ZeroVector)
+	, m_charaRotateInput(FVector2D::ZeroVector)
+	, m_moveSpeed(50.f)
+=======
+>>>>>>> playerMove
 	, m_gravity(600.f)
 	, m_jumpPower(1800.f)
 	, m_jumpTime(0.f)
@@ -26,7 +32,10 @@ APlayerChara::APlayerChara()
 	, m_prevJumpHeight(0.f)
 	, m_bJumping(false) 
 	, m_bGuarding(false)
+<<<<<<< HEAD
+=======
 	, m_bAccelerate(false)
+>>>>>>> playerMove
 	, m_bCanControl(true)
 	, tempRoll(0.f)
 	, tempPitch(0.f)
@@ -142,6 +151,13 @@ void APlayerChara::Tick(float DeltaTime)
 
 	//	ジャンプ処理
 	UpdateJump(DeltaTime);
+<<<<<<< HEAD
+
+	//	ガード処理
+	UpdateGuard();
+}
+=======
+>>>>>>> playerMove
 
 	//	ガード処理
 	UpdateGuard();
@@ -160,6 +176,13 @@ void APlayerChara::Tick(float DeltaTime)
 		tempYaw += prevRotator[i].Yaw;
 	}
 
+<<<<<<< HEAD
+	//	ジャンル
+	InputComponent->BindAction("Jump", IE_Pressed, this, &APlayerChara::JumpStart);
+
+	//	ガード
+	InputComponent->BindAxis("Guard", this, &APlayerChara::GuardStart);
+=======
 	// 平均値を算出
 	tempRoll /= prevRotator.Num();
 	tempPitch /= prevRotator.Num();
@@ -202,6 +225,7 @@ void APlayerChara::Tick(float DeltaTime)
 	}
 
 	prevDiffRot = rot;
+>>>>>>> playerMove
 }
 
 //	カメラ更新処理
@@ -224,7 +248,22 @@ void APlayerChara::UpdateMove(float _deltaTime)
 {
 	FVector NewLocation = GetActorLocation();
 	//	前に向くずっと移動する
+<<<<<<< HEAD
+	if (!m_bGuarding)
+	{		
+		NewLocation.X += 20.f;		
+	}
+	else
+	{
+		NewLocation.X += 12.f;
+	}
+
+	SetActorLocation(NewLocation);
+	//	移動入力がある場合
+	if (!m_charaMoveInput.IsZero())
+=======
 	if (m_bAccelerate)
+>>>>>>> playerMove
 	{
 		NewLocation.X += 30.f;
 	}
@@ -276,6 +315,26 @@ void APlayerChara::UpdateJump(float _deltaTime)
 
 		//	ジャンプ量を保持
 		m_prevJumpHeight = m_nowJumpHeight;
+<<<<<<< HEAD
+	}
+}
+
+//	ガード処理
+void APlayerChara::UpdateGuard()
+{
+	if (!m_charaRotateInput.IsZero())
+	{
+		m_bGuarding = true;
+		FRotator nowRot = GetActorRotation();
+		nowRot.Yaw -= 30.f;
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::SanitizeFloat(nowRot.Yaw));
+		SetActorRotation(nowRot);
+	}
+	else
+	{
+		m_bGuarding = false;
+=======
+>>>>>>> playerMove
 	}
 }
 
@@ -320,6 +379,16 @@ void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	prevRotator.Reset();
 }
 
+<<<<<<< HEAD
+void APlayerChara::GuardStart(float _axisValue)
+{
+	//	コントロール可能の場合のみ
+	if (m_bCanControl == false) { return; }
+
+	m_charaRotateInput.Y = _axisValue;
+}
+
+=======
 FRotator APlayerChara::SensorToRotator()
 {
 	bool isRead = false;		// データを読み取れたか？
@@ -388,3 +457,4 @@ FRotator APlayerChara::SensorToRotator()
 		return FRotator::ZeroRotator;
 	}
 }
+>>>>>>> playerMove
