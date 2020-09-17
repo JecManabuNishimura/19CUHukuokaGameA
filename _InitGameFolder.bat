@@ -1,6 +1,6 @@
 @echo off
 
-set /p isDel="Will delete unnecessary folder, are you sure?(Y/N):"
+set /p isDel="Will delete unnecessary folder(regenerated as needed), are you sure? (Y/N):"
 
 IF %isDel%==Y (
  goto delete
@@ -41,8 +41,8 @@ echo;
 rd /s /q Saved
 echo %dir%/Saved Completed.
 echo;
-del %dir%/.sln
-echo %dir%/%dir%/.sln Completed.
+del %dir%.sln
+echo %dir%/%dir%.sln Completed.
 echo;
 echo Delete completed.
 timeout /t -1
