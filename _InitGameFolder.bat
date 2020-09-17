@@ -18,7 +18,7 @@ IF %isDel%==Y (
 :delete
  echo;
 echo Start deleting.
-set dir="Game"
+set dir=Game
 
 cd %dir%/
 
@@ -41,8 +41,8 @@ echo;
 rd /s /q Saved
 echo %dir%/Saved Completed.
 echo;
-del Game.sln
-echo %dir%/Game.sln Completed.
+del %dir%/.sln
+echo %dir%/%dir%/.sln Completed.
 echo;
 echo Delete completed.
 timeout /t -1
