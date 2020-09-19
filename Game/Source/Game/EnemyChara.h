@@ -1,3 +1,12 @@
+//----------------------------------------------------------
+// ファイル名		：SensorTest.h
+// 概要				：敵の操作を行う
+// 作成者			：19CU0238 渡邊龍音
+//
+// 更新内容			：2020/09/13 渡邊龍音 作成
+//					：2020/09/19 渡邊龍音 溜めのある敵の動きの追加
+//					：			 直線移動をForwardVectorで行う
+//----------------------------------------------------------
 #pragma once
 
 #include "CoreMinimal.h"
@@ -9,6 +18,7 @@ enum class EEnemyMoveType : uint8
 {
 	Line			UMETA(DisplayName = "Line Move"),
 	Sin				UMETA(DisplayName = "Sine Wave Move"),
+	BodyBlow		UMETA(DisplayName = "BodyBlow"),
 	Overtake_Line	UMETA(DisplayName = "Overtake (Line)"),
 	Overtake_Smooth	UMETA(DisplayName = "Overtake (Smooth)"),
 	None			UMETA(DisplayName = "None Move"),
@@ -32,8 +42,20 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
+	// 正弦波に使う時間計測用
 	float sinTime;
+
+	// もともとのY軸の位置
 	float originPosY;
+
+	// もともとの回転量
+	FRotator originRotate;
+
+	// 突進の時間計測用
+	float chargeTime;
+
+	// 突進を始めるかどうか
+	bool isBlowing;
 
 public:
 	// 敵の移動の種類
@@ -51,6 +73,35 @@ public:
 	// 正弦波移動のときの振れ幅
 	UPROPERTY(EditAnyWhere, Category = "Enemy Move Sine")
 		float sinWaveFrequency;
+
+	// （仮）プレイヤーの移動速度
+	// 本来はプレイヤーから移動速度を取得できるようにしたい
+	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
+		float _TEMP_playerMoveSpeed;
+
+	// 突進の時に止まるプレイヤーとの距離
+	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
+		float bodyBlowDistance;
+
+	// 突進の時の向かってくる速度
+	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
+		float bodyBlowMoveSpeed;
+
+	// 突進の時の速度
+	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
+		float bodyBlowSpeed;	
+
+	// 突進の時の溜め時間
+	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
+		float bodyBlowChargeTime;
+
+	// 突進の時の回転が開始するまでを遅らせる
+	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
+		float bodyBlowTurnDelay;
+
+	// 突進の時の回転が終了するまでを早める
+	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
+		float bodyBlowTurnShorten;
 
 	// Playerを代入
 	UPROPERTY(EditAnywhere, Category = "Enemy Move Overtake")

@@ -1,18 +1,37 @@
+//----------------------------------------------------------
+// ファイル名		：SensorTest.h
+// 概要				：敵の操作を行う
+// 作成者			：19CU0238 渡邊龍音
+//
+// 更新内容			：2020/09/13 渡邊龍音 作成
+//					：2020/09/19 渡邊龍音 溜めのある敵の動きの追加
+//					：			 直線移動をForwardVectorで行う
+//----------------------------------------------------------
 #include "EnemyChara.h"
 #include "DrawDebugHelpers.h"
 
 AEnemyChara::AEnemyChara()
 	: sinTime(0.0f)
 	, originPosY(0.0f)
+	, chargeTime(0.0f)
+	, isBlowing(false)
 	, enemyType(EEnemyMoveType::None)
 	, playerActor(NULL)
 	, forwardSpeed(1.0f)
 	, sinWaveSpeed(1.0f)
 	, sinWaveFrequency(1.0f)
+	, bodyBlowDistance(100.0f)
+	, bodyBlowMoveSpeed(0.5f)
+	, bodyBlowSpeed(2.0f)
+	, bodyBlowChargeTime(2.0f)
+	, bodyBlowTurnDelay(0.5f)
+	, bodyBlowTurnShorten(0.5f)
 	, overtakeSpeed(2.0f)
 	, overtakeOffset(0.0f)
 	, overtakeDistance(300.0f)
 	, overtakeYAxisMove(-100.0f)
+
+	, _TEMP_playerMoveSpeed(5.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -22,13 +41,16 @@ void AEnemyChara::BeginPlay()
 	Super::BeginPlay();
 
 	// 開始時点のY座標を保存
-	originPosY = GetActorLocation().Y; 
+	originPosY = GetActorLocation().Y;
+
+	// 開始時点の回転量を保存
+	originRotate = GetActorRotation();
 }
 
 void AEnemyChara::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+
 	// このActorの位置の更新
 	FVector pos = GetActorLocation();
 
@@ -42,21 +64,21 @@ void AEnemyChara::Tick(float DeltaTime)
 	// 移動の種類に応じて分岐
 	switch (enemyType)
 	{
-	// 直線移動タイプ
+		// 直線移動タイプ
 	case EEnemyMoveType::Line:
 
 		Move_Line(forwardSpeed, pos);
 		break;
 
 
-	// 正弦波移動タイプ
+		// 正弦波移動タイプ
 	case EEnemyMoveType::Sin:
 
 		Move_Sin(forwardSpeed, sinWaveSpeed, sinWaveFrequency, DeltaTime, pos);
 		break;
 
 
-	// 追い越して内側に入るタイプ
+		// 追い越して内側に入るタイプ
 	case EEnemyMoveType::Overtake_Line:
 	case EEnemyMoveType::Overtake_Smooth:
 
@@ -94,9 +116,67 @@ void AEnemyChara::Tick(float DeltaTime)
 		}
 		break;
 
-	// タイプ指定なし
-	default:
+		// 溜めからの突進
+	case EEnemyMoveType::BodyBlow:
+
+		// Playerが設定されていなければエラーログを表示し関数を終了
+		if (playerActor == NULL)
+		{
+			UE_LOG(LogTemp, Error, TEXT("AEnemyChara::Tick(): playerActor is NULL. Need to set Actor."));
+			return;
+		}
+
+		// プレイヤーと敵の距離が距離以上離れていれば
+		if (FMath::Abs(this->GetActorLocation().X - playerActor->GetActorLocation().X) > bodyBlowDistance)
+		{
+			Move_Line(bodyBlowMoveSpeed, pos);
+		}
+		// プレイヤーとの距離が一定の距離に達したら
+		else if (isBlowing == false)
+		{
+			Move_Line(-_TEMP_playerMoveSpeed, pos);
+			chargeTime += DeltaTime;
+
+			// （経過時間 - 回転を遅らせる時間）が、設定時間を超えるまで
+			if ((chargeTime - bodyBlowTurnDelay) < bodyBlowChargeTime)
+			{
+				// 敵とプレイヤーの位置から角度を算出
+				float distanceX = playerActor->GetActorLocation().X - this->GetActorLocation().X;
+				float distanceY = playerActor->GetActorLocation().Y - this->GetActorLocation().Y;
+				float radAngle = atan2(distanceY, distanceX);
+				float degAngle = FMath::RadiansToDegrees(radAngle);
+
+				FRotator targetRot(originRotate.Pitch, degAngle, originRotate.Roll);
+
+				// 回転を早める分を算出
+				float shortRatio = FMath::Clamp((chargeTime - bodyBlowTurnDelay) / bodyBlowChargeTime, 0.0f, 1.0f);
+				float shorten = FMath::Lerp(0.0f, bodyBlowTurnShorten, shortRatio);
+
+				// 時間に応じて回転させる
+				float rotatorRatio = FMath::Clamp((chargeTime - bodyBlowTurnDelay + shorten) / bodyBlowChargeTime, 0.0f, 1.0f);
+				FRotator newRotate = FMath::Lerp(originRotate, targetRot, rotatorRatio);
+
+				// 敵に回転量を反映
+				SetActorRotation(newRotate);
+			}
+			else
+			{
+				isBlowing = true;
+			}
+		}
+		// 突進開始
+		else if (isBlowing == true)
+		{
+			Move_Line(bodyBlowSpeed, pos);
+		}
 		break;
+
+		// タイプ指定なし
+	default:
+
+		// エラーログの表示
+		UE_LOG(LogTemp, Warning, TEXT("Enemy : %s is not MoveType setting."), *(this->GetName()))
+			break;
 	}
 }
 
@@ -109,7 +189,8 @@ void AEnemyChara::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void AEnemyChara::Move_Line(const float _speed, const FVector _pos)
 {
 	// X軸に移動量を加算し、Actorの位置を更新する
-	FVector nextPos((_pos.X + _speed), _pos.Y, _pos.Z);
+	FVector vector = GetActorForwardVector() * _speed;
+	FVector nextPos((_pos.X + vector.X), (_pos.Y + vector.Y), _pos.Z);
 
 	SetActorLocation(nextPos);
 }
@@ -121,7 +202,7 @@ void AEnemyChara::Move_Sin(const float _speedForward, const float _speedSide, co
 	// sinの値をY軸に反映させ、X軸に移動量を加算し、Actorの位置を更新する
 	sinTime += _deltaTime;
 
-	FVector nextPos(_pos.X + _speedForward, ((_pos.Y + (FMath::Sin(sinTime * _speedSide) * _frequency)) / 2.0f), _pos.Z);
+	FVector nextPos(_pos.X + _speedForward, (originPosY + (FMath::Sin(sinTime * _speedSide) * _frequency)), _pos.Z);
 
 	SetActorLocation(nextPos);
 }
@@ -167,9 +248,9 @@ void AEnemyChara::Move_Overtake_Lerp(const float _overtakeSpeed, const float _sp
 	if (_ePos.X < (_pPos.X + overtakeOffset + (overtakeDistance / 2.0f)))
 	{
 		// 3点の保存をする
-		point[0] = FVector(_pPos.X + overtakeOffset								, originPosY								, _ePos.Z);
-		point[1] = FVector(_pPos.X + overtakeOffset + (overtakeDistance / 2.0f) , originPosY								, _ePos.Z);
-		point[2] = FVector(_pPos.X + overtakeOffset + (overtakeDistance / 2.0f) , originPosY + (overtakeYAxisMove / 2.0f)	, _ePos.Z);
+		point[0] = FVector(_pPos.X + overtakeOffset, originPosY, _ePos.Z);
+		point[1] = FVector(_pPos.X + overtakeOffset + (overtakeDistance / 2.0f), originPosY, _ePos.Z);
+		point[2] = FVector(_pPos.X + overtakeOffset + (overtakeDistance / 2.0f), originPosY + (overtakeYAxisMove / 2.0f), _ePos.Z);
 
 		// 現在の位置が、目的地点に対してどのぐらいの割合か計算
 		float t = (_ePos.X - _pPos.X - overtakeOffset) / (overtakeDistance / 2.0f);
@@ -186,9 +267,9 @@ void AEnemyChara::Move_Overtake_Lerp(const float _overtakeSpeed, const float _sp
 	else
 	{
 		// 3点の保存
-		point[0] = FVector(_pPos.X + overtakeOffset + (overtakeDistance / 2.0f) , originPosY + (overtakeYAxisMove / 2.0f)	, _ePos.Z);
-		point[1] = FVector(_pPos.X + overtakeOffset + (overtakeDistance / 2.0f) , originPosY + overtakeYAxisMove			, _ePos.Z);
-		point[2] = FVector(_pPos.X + overtakeOffset + overtakeDistance			, originPosY + overtakeYAxisMove			, _ePos.Z);
+		point[0] = FVector(_pPos.X + overtakeOffset + (overtakeDistance / 2.0f), originPosY + (overtakeYAxisMove / 2.0f), _ePos.Z);
+		point[1] = FVector(_pPos.X + overtakeOffset + (overtakeDistance / 2.0f), originPosY + overtakeYAxisMove, _ePos.Z);
+		point[2] = FVector(_pPos.X + overtakeOffset + overtakeDistance, originPosY + overtakeYAxisMove, _ePos.Z);
 
 		// 現在の位置が、目的地点に対してどのぐらいの割合か計算
 		float t = (_ePos.X - _pPos.X - overtakeOffset - (overtakeDistance / 2.0f)) / (overtakeDistance / 2.0f);
@@ -209,7 +290,7 @@ void AEnemyChara::Move_Overtake_Lerp(const float _overtakeSpeed, const float _sp
 
 // なめらかな移動の際に使う処理（3点の座標からなめらかな曲線を描く）
 FVector AEnemyChara::CalcLerpPos(const FVector _startPos, const FVector _midPos, const FVector _endPos, const float _interpolation
-								, float* _posX /* = NULL */, float* _posY /* = NULL */, float* _posZ /* = NULL */)
+	, float* _posX /* = NULL */, float* _posY /* = NULL */, float* _posZ /* = NULL */)
 {
 	FVector lerpPos[3];
 
@@ -217,8 +298,8 @@ FVector AEnemyChara::CalcLerpPos(const FVector _startPos, const FVector _midPos,
 	float t = FMath::Clamp(_interpolation, 0.0f, 1.0f);
 
 	// 開始点から中間点（a）、中間点から終了点（b）を線補間した値を保存
-	lerpPos[0] = FMath::Lerp(_startPos,	 _midPos,	 _interpolation);
-	lerpPos[1] = FMath::Lerp(_midPos,	 _endPos,	 _interpolation);
+	lerpPos[0] = FMath::Lerp(_startPos, _midPos, _interpolation);
+	lerpPos[1] = FMath::Lerp(_midPos, _endPos, _interpolation);
 
 	// 上記a, bを線補間した値を保存（なめらかに移動する際の座標になる）
 	lerpPos[2] = FMath::Lerp(lerpPos[0], lerpPos[1], _interpolation);

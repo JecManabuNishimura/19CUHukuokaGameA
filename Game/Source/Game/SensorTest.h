@@ -4,6 +4,7 @@
 // 作成者			：19CU0238 渡邊龍音
 //
 // 更新内容			：2020/08/31 渡邊龍音 作成
+//					：2020/09/17 渡邊龍音 クラスとして使いやすいように・デッドゾーンの追加
 //----------------------------------------------------------
 
 #pragma once
@@ -29,9 +30,6 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
-	// センサーの値をRotatorに変換
-	FRotator SensorToRotator();
-
 private:
 	// Arduinoのシリアル通信保存用
 	USerial* m_pArduinoSerial;
@@ -40,12 +38,25 @@ private:
 	TArray<FRotator> prevRotator;
 	FRotator prevDiffRot;
 
-	// For Arduino Com Port
-	UPROPERTY(EditAnywhere, Category = "Sensor")
-		int serialPort;
+	
+protected:
+	// センサーの値をRotatorに変換
+	FRotator SensorToRotator();
+
+	// センサーの値をSetActorRotationに設定する
+	void SetActorRotationFromSensor(AActor* _setActor);
 
 public:
 	// Is Open Com Port
 	UPROPERTY(BlueprintReadOnly, Category = "Sensor")
 		bool isOpen;
+	
+	// For Arduino Com Port
+	UPROPERTY(EditAnywhere, Category = "Sensor")
+		int serialPort;
+
+	// Dead zone for sensor
+	UPROPERTY(EditAnywhere, Category = "Sensor")
+		float deadZone;
+
 };

@@ -4,6 +4,7 @@
 // 作成者			：19CU0238 渡邊龍音
 //
 // 更新内容			：2020/08/31 渡邊龍音 作成
+//					：2020/09/17 渡邊龍音 クラスとして使いやすいように・デッドゾーンの追加
 //----------------------------------------------------------
 
 #pragma once
@@ -17,10 +18,13 @@
 // 大きいほどなめらかに移動しますが、処理負荷が増え、値の判定もゆっくりになります
 #define ROTATOR_ARRAY_SIZE 1
 
-ASensorTest::ASensorTest() :
-	m_pArduinoSerial(NULL),
-	serialPort(4),
-	isOpen(false)
+#define SENSOR_ERROR FRotator(999.9f, 999.9f, 999.9f)
+
+ASensorTest::ASensorTest()
+	: m_pArduinoSerial(NULL)
+	, serialPort(4)
+	, isOpen(false)
+	, deadZone(1.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -53,7 +57,7 @@ void ASensorTest::BeginPlay()
 		rotTemp = SensorToRotator();
 
 		// センサーの値が読み取れていなければやり直し
-		if (rotTemp == FRotator::ZeroRotator)
+		if (rotTemp == SENSOR_ERROR)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
 			++errorCount;
@@ -76,60 +80,7 @@ void ASensorTest::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// 回転量保存用
-
-	float tempRoll = 0.0f;
-	float tempPitch = 0.0f;
-	float tempYaw = 0.0f;
-
-	// 加算
-	for (int i = 0; i < prevRotator.Num(); ++i)
-	{
-		tempRoll += prevRotator[i].Roll;
-		tempPitch += prevRotator[i].Pitch;
-		tempYaw += prevRotator[i].Yaw;
-	}
-
-	// 平均値を算出
-	tempRoll /= prevRotator.Num();
-	tempPitch /= prevRotator.Num();
-	tempYaw /= prevRotator.Num();
-
-	// Actorに回転量を反映
-	FRotator rot(tempPitch, tempYaw, tempRoll);
-
-	UE_LOG(LogTemp, Error, TEXT("Roll : %f Pitch : %f Yaw : %f"), (rot - prevDiffRot).Roll, (rot - prevDiffRot).Pitch, (rot - prevDiffRot).Yaw);
-
-	float angle = 5.0f;
-	if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
-	{
-		rot = prevDiffRot;
-	}
-
-	SetActorRotation(rot);
-
-	// リストを更新
-	if (prevRotator.IsValidIndex(0) == true)
-	{
-		// インデックス番号0の要素を削除
-		prevRotator.RemoveAt(0);
-
-		FRotator rotTemp = SensorToRotator();
-
-		// センサーからの値が完全に0か判別
-		if (rotTemp == FRotator::ZeroRotator)
-		{
-			// 現在の平均値を代入
-			prevRotator.Add(rot);
-		}
-		else
-		{
-			// センサーからの値を代入
-			prevRotator.Add(rotTemp);
-		}
-	}
-
-	prevDiffRot = rot;
+	
 }
 
 void ASensorTest::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -171,11 +122,11 @@ FRotator ASensorTest::SensorToRotator()
 
 		UE_LOG(LogTemp, VeryVerbose, TEXT("ASensorTest::SensorToRotator(): Try Read Count: %d / %d"), tryCnt, tryCntMax);
 
-		// 読み取れなかったらZeroRotatorを返して終了
+		// 読み取れなかったらSENSOR_ERRORを返して終了
 		if (isRead == false)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): No Data From Sensor. return ZeroRotator."));
-			return FRotator::ZeroRotator;
+			return SENSOR_ERROR;
 		}
 		else
 		{
@@ -198,7 +149,7 @@ FRotator ASensorTest::SensorToRotator()
 		if (rotatorAxis.IsValidIndex(2) == false)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): Failed Add TArray<float> elements. return ZeroRotator."));
-			return FRotator::ZeroRotator;
+			return SENSOR_ERROR;
 		}
 
 		UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): Rotator Roll:%f Pitch:%f Yaw:%f"), rotatorAxis[0], rotatorAxis[1], rotatorAxis[2]);
@@ -206,12 +157,80 @@ FRotator ASensorTest::SensorToRotator()
 		// FRotator型の変数をfloat型を使用して初期化
 		FRotator rot(rotatorAxis[1], rotatorAxis[2], -rotatorAxis[0]);
 
+		// デッドゾーン以上の移動があるか？
+		for (int i = 0; i < rotatorAxis.Num(); ++i)
+		{
+			// デッドゾーンより入力が少なければZeroRotatorを返す
+			if (rotatorAxis[i] < deadZone && rotatorAxis[i] > -deadZone)
+			{
+				return FRotator::ZeroRotator;
+			}
+		}
+
 		return rot;
 	}
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("ASensorTest::SensorToRotator(): ASensorTest::m_pArduinoSerial is NULL."));
-		return FRotator::ZeroRotator;
+		return SENSOR_ERROR;
 	}
+}
+
+void ASensorTest::SetActorRotationFromSensor(AActor* _setActor)
+{
+	// 回転量保存用
+
+	float tempRoll = 0.0f;
+	float tempPitch = 0.0f;
+	float tempYaw = 0.0f;
+
+	// 加算
+	for (int i = 0; i < prevRotator.Num(); ++i)
+	{
+		tempRoll += prevRotator[i].Roll;
+		tempPitch += prevRotator[i].Pitch;
+		tempYaw += prevRotator[i].Yaw;
+	}
+
+	// 平均値を算出
+	tempRoll /= prevRotator.Num();
+	tempPitch /= prevRotator.Num();
+	tempYaw /= prevRotator.Num();
+
+	// Actorに回転量を反映
+	FRotator rot(tempPitch, tempYaw, tempRoll);
+
+	UE_LOG(LogTemp, Error, TEXT("Roll : %f Pitch : %f Yaw : %f"), (rot - prevDiffRot).Roll, (rot - prevDiffRot).Pitch, (rot - prevDiffRot).Yaw);
+
+	float angle = 5.0f;
+	if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
+	{
+		rot = prevDiffRot;
+	}
+
+	_setActor->SetActorRotation(rot);
+
+	// リストを更新
+	if (prevRotator.IsValidIndex(0) == true)
+	{
+		// インデックス番号0の要素を削除
+		prevRotator.RemoveAt(0);
+
+		FRotator rotTemp = SensorToRotator();
+
+		// センサーからの値がエラー値か判別
+		if (rotTemp == SENSOR_ERROR)
+		{
+			// 現在の平均値を代入
+			prevRotator.Add(rot);
+		}
+		else
+		{
+			// センサーからの値を代入
+			prevRotator.Add(rotTemp);
+		}
+	}
+
+	prevDiffRot = rot;
 }
 
