@@ -4,6 +4,7 @@
 // インクルード
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"	// ACharacterを継承しているため
+#include "Blueprint/UserWidget.h"
 #include "PlayerChara.generated.h"
 
 //	前方宣言
@@ -42,7 +43,7 @@ private:
 	void UpdateJump(float _deltaTime);
 
 	//	ガード処理
-	void UpdateGuard();
+	void UpdateGuard(float _deltaTime);
 private:
 	//	【入力バインド】カメラ回転:Pitch（Y軸）
 	void Cam_RotatePitch(float _axisValue);
@@ -84,6 +85,11 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Jump")
 		float m_jumpPower;							//	ジャンプ力
 
+	UPROPERTY(EditAnywhere, Category = "UI")
+		TSubclassOf<UUserWidget> PlayerGuardUIClass;
+	
+	UUserWidget* PlayerGuardUI;
+
 	float m_jumpTime;								//	ジャンプ時間
 	float m_nowJumpHeight;							//	現在フレームのジャンプ量
 	float m_prevJumpHeight;							//	前フレームのジャンプ量
@@ -92,6 +98,13 @@ private:
 	FVector m_posBeforeJump;						//	ジャンル開始前のキャラクター座標
 
 	bool m_bGuarding;								//	ガード中フラグ
+	bool m_bCanGuard;
+	float m_GuardRechargeTime;
+	float m_GuardCostTime;
 
 	bool m_bCanControl;								//	操作可能な状態か?
+
+public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		float m_GuardValue;
 };

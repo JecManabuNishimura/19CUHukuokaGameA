@@ -23,7 +23,11 @@ APlayerChara::APlayerChara()
 	, m_prevJumpHeight(0.f)
 	, m_bJumping(false) 
 	, m_bGuarding(false)
-	, m_bCanControl(true)
+	, m_bCanGuard(true)
+	, m_bCanControl(true)	
+	, m_GuardValue(100.f)
+	, m_GuardCostTime(70.f)
+	, m_GuardRechargeTime(40.f)
 {
 	// 毎フレーム、このクラスのTick()を呼ぶかどうかを決めるフラグ。必要に応じて、パフォーマンス向上のために切ることもできる。
 	PrimaryActorTick.bCanEverTick = true;
@@ -74,6 +78,12 @@ void APlayerChara::BeginPlay()
 		//	ジャンプ時にも水平方向への移動が聞くように（0～1の間に設定することで移動する具合を調整）
 		pCharMoveComp->AirControl = 0.8f;
 	}
+
+	// ViewPort上にGuardUIの表示
+	if (PlayerGuardUIClass != nullptr) {
+		PlayerGuardUI = CreateWidget(GetWorld(), PlayerGuardUIClass);
+		PlayerGuardUI->AddToViewport();
+	}
 }
 
 // 毎フレームの更新処理
@@ -91,7 +101,7 @@ void APlayerChara::Tick(float DeltaTime)
 	UpdateJump(DeltaTime);
 
 	//	ガード処理
-	UpdateGuard();
+	UpdateGuard(DeltaTime);
 }
 
 // 各入力関係メソッドとのバインド処理
@@ -147,7 +157,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 		//NewLocation.X += 20.f;		
 
 		// Testing Value(from 19CU0222鍾家同)
-		//NewLocation.X += 5.f;
+		NewLocation.X += 5.f;
 	}
 	else
 	{
@@ -211,19 +221,45 @@ void APlayerChara::UpdateJump(float _deltaTime)
 }
 
 //	ガード処理
-void APlayerChara::UpdateGuard()
+void APlayerChara::UpdateGuard(float _deltaTime)
 {
-	if (!m_charaRotateInput.IsZero())
-	{
-		m_bGuarding = true;
-		FRotator nowRot = GetActorRotation();
-		nowRot.Yaw -= 30.f;
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::SanitizeFloat(nowRot.Yaw));
-		SetActorRotation(nowRot);
+	if (m_bCanGuard) {
+		if (!m_charaRotateInput.IsZero() && m_GuardValue > 0.0f)
+		{
+			m_bGuarding = true;
+
+			FRotator nowRot = GetActorRotation();
+			nowRot.Yaw -= 30.f;
+			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::SanitizeFloat(nowRot.Yaw));
+			SetActorRotation(nowRot);
+
+			m_GuardValue -= _deltaTime * m_GuardCostTime;
+			if (m_GuardValue <= 0.0f) {
+				m_GuardValue = 0.0f;
+				m_bCanGuard = false;
+			}
+			UE_LOG(LogTemp, Warning, TEXT("guarding."));
+		}
+		else if (m_charaRotateInput.IsZero() && m_GuardValue > 0.0f)
+		{			
+			m_bGuarding = false;
+			if (m_GuardValue >= 100.0f) {
+				m_GuardValue = 100.0f;
+				m_bCanGuard = true;
+			}
+			else m_GuardValue += _deltaTime * m_GuardRechargeTime;
+			UE_LOG(LogTemp, Warning, TEXT("can guard."));
+		}
 	}
-	else
-	{
+	else {
+		m_bCanGuard = false;
 		m_bGuarding = false;
+		if (m_GuardValue >= 100.0f) {
+			m_GuardValue = 100.0f;
+			m_bCanGuard = true;
+		}
+		else m_GuardValue += _deltaTime * m_GuardRechargeTime;
+		UE_LOG(LogTemp, Warning, TEXT("guard is charging."));
 	}
 }
 
