@@ -1,12 +1,6 @@
-//----------------------------------------------------------
-// ファイル名		：PlayerChara.cpp
-// 概要				：プレイヤーキャラを制御するCharacterオブジェクト
-// 作成者			：19CU0220 曹　飛
-// 更新内容			：2020/08/07 作成
-//----------------------------------------------------------
-
 // インクルード
 #include "PlayerChara.h"
+#include "Engine.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -20,6 +14,7 @@ APlayerChara::APlayerChara()
 	: m_pSpringArm(NULL)
 	, m_pCamera(NULL)
 	, m_charaMoveInput(FVector2D::ZeroVector)
+	, m_charaRotateInput(FVector2D::ZeroVector)
 	, m_moveSpeed(50.f)
 	, m_gravity(600.f)
 	, m_jumpPower(1200.f)
@@ -27,7 +22,12 @@ APlayerChara::APlayerChara()
 	, m_nowJumpHeight(0.f)
 	, m_prevJumpHeight(0.f)
 	, m_bJumping(false) 
-	, m_bCanControl(true)
+	, m_bGuarding(false)
+	, m_bCanGuard(true)
+	, m_bCanControl(true)	
+	, m_GuardValue(100.f)
+	, m_GuardCostTime(70.f)
+	, m_GuardRechargeTime(40.f)
 {
 	// 毎フレーム、このクラスのTick()を呼ぶかどうかを決めるフラグ。必要に応じて、パフォーマンス向上のために切ることもできる。
 	PrimaryActorTick.bCanEverTick = true;
@@ -78,6 +78,12 @@ void APlayerChara::BeginPlay()
 		//	ジャンプ時にも水平方向への移動が聞くように（0～1の間に設定することで移動する具合を調整）
 		pCharMoveComp->AirControl = 0.8f;
 	}
+
+	// ViewPort上にGuardUIの表示
+	if (PlayerGuardUIClass != nullptr) {
+		PlayerGuardUI = CreateWidget(GetWorld(), PlayerGuardUIClass);
+		PlayerGuardUI->AddToViewport();
+	}
 }
 
 // 毎フレームの更新処理
@@ -93,6 +99,9 @@ void APlayerChara::Tick(float DeltaTime)
 
 	//	ジャンプ処理
 	UpdateJump(DeltaTime);
+
+	//	ガード処理
+	UpdateGuard(DeltaTime);
 }
 
 // 各入力関係メソッドとのバインド処理
@@ -105,6 +114,9 @@ void APlayerChara::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	//	ジャンル
 	InputComponent->BindAction("Jump", IE_Pressed, this, &APlayerChara::JumpStart);
+
+	//	ガード
+	InputComponent->BindAxis("Guard", this, &APlayerChara::GuardStart);
 }
 
 //	カメラ更新処理
@@ -138,11 +150,21 @@ void APlayerChara::UpdateCamera(float _deltaTime)
 //	移動処理
 void APlayerChara::UpdateMove(float _deltaTime)
 {
-	//	前に向くずっと移動する
 	FVector NewLocation = GetActorLocation();
-	NewLocation.X += 20.f;
-	SetActorLocation(NewLocation);
+	//	前に向くずっと移動する
+	if (!m_bGuarding)
+	{		
+		//NewLocation.X += 20.f;		
 
+		// Testing Value(from 19CU0222鍾家同)
+		NewLocation.X += 5.f;
+	}
+	else
+	{
+		NewLocation.X += 12.f;
+	}
+
+	SetActorLocation(NewLocation);
 	//	移動入力がある場合
 	if (!m_charaMoveInput.IsZero())
 	{
@@ -195,10 +217,49 @@ void APlayerChara::UpdateJump(float _deltaTime)
 
 		//	ジャンプ量を保持
 		m_prevJumpHeight = m_nowJumpHeight;
+	}
+}
 
-		////	デバッグ確認用
-		//nowPos = GetActorLocation();
-		//UE_LOG(LogTemp, Warning, TEXT("Jump > PosZ %f / Height %f"), nowPos.Z, m_nowJumpHeight);
+//	ガード処理
+void APlayerChara::UpdateGuard(float _deltaTime)
+{
+	if (m_bCanGuard) {
+		if (!m_charaRotateInput.IsZero() && m_GuardValue > 0.0f)
+		{
+			m_bGuarding = true;
+
+			FRotator nowRot = GetActorRotation();
+			nowRot.Yaw -= 30.f;
+			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::SanitizeFloat(nowRot.Yaw));
+			SetActorRotation(nowRot);
+
+			m_GuardValue -= _deltaTime * m_GuardCostTime;
+			if (m_GuardValue <= 0.0f) {
+				m_GuardValue = 0.0f;
+				m_bCanGuard = false;
+			}
+			UE_LOG(LogTemp, Warning, TEXT("guarding."));
+		}
+		else if (m_charaRotateInput.IsZero() && m_GuardValue > 0.0f)
+		{			
+			m_bGuarding = false;
+			if (m_GuardValue >= 100.0f) {
+				m_GuardValue = 100.0f;
+				m_bCanGuard = true;
+			}
+			else m_GuardValue += _deltaTime * m_GuardRechargeTime;
+			UE_LOG(LogTemp, Warning, TEXT("can guard."));
+		}
+	}
+	else {
+		m_bCanGuard = false;
+		m_bGuarding = false;
+		if (m_GuardValue >= 100.0f) {
+			m_GuardValue = 100.0f;
+			m_bCanGuard = true;
+		}
+		else m_GuardValue += _deltaTime * m_GuardRechargeTime;
+		UE_LOG(LogTemp, Warning, TEXT("guard is charging."));
 	}
 }
 
@@ -225,5 +286,13 @@ void APlayerChara::JumpStart()
 		//	ジャンル前のActor座標を保持
 		m_posBeforeJump = GetActorLocation();
 	}
+}
+
+void APlayerChara::GuardStart(float _axisValue)
+{
+	//	コントロール可能の場合のみ
+	if (m_bCanControl == false) { return; }
+
+	m_charaRotateInput.Y = _axisValue;
 }
 

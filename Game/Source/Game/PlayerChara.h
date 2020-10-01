@@ -1,16 +1,10 @@
-//----------------------------------------------------------
-// ファイル名		：PlayerChara.h
-// 概要				：プレイヤーキャラを制御するCharacterオブジェクト
-// 作成者			：19CU0220 曹　飛
-// 更新内容			：2020/08/07 作成
-//----------------------------------------------------------
-
 // インクルードガード
 #pragma once
 
 // インクルード
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"	// ACharacterを継承しているため
+#include "Blueprint/UserWidget.h"
 #include "PlayerChara.generated.h"
 
 //	前方宣言
@@ -48,6 +42,8 @@ private:
 	//	ジャンプ処理
 	void UpdateJump(float _deltaTime);
 
+	//	ガード処理
+	void UpdateGuard(float _deltaTime);
 private:
 	//	【入力バインド】カメラ回転:Pitch（Y軸）
 	void Cam_RotatePitch(float _axisValue);
@@ -61,6 +57,9 @@ private:
 
 	//	【入力バインド】ジャンプ開始
 	void JumpStart();
+
+	//	【入力バインド】ガード開始
+	void GuardStart(float _axisValue);
 private:
 	//	UPROPERTYにすることで、ブループリント上で変数の確認、編集などができる
 	//	「BlueprintReadOnly」に指定しているため、ブループリントで見ることだけ可能で、編集はできない
@@ -72,6 +71,7 @@ private:
 
 	FVector2D m_charaMoveInput;						//	Pawn移動入力量
 	FVector2D m_cameraRotateInput;					//	カメラ回転入力量
+	FVector2D m_charaRotateInput;
 
 	UPROPERTY(EditAnywhere, Category = "Camera")
 		FVector2D m_cameraPitchLimit;				//	カメラのピッチ範囲
@@ -85,6 +85,11 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Jump")
 		float m_jumpPower;							//	ジャンプ力
 
+	UPROPERTY(EditAnywhere, Category = "UI")
+		TSubclassOf<UUserWidget> PlayerGuardUIClass;
+	
+	UUserWidget* PlayerGuardUI;
+
 	float m_jumpTime;								//	ジャンプ時間
 	float m_nowJumpHeight;							//	現在フレームのジャンプ量
 	float m_prevJumpHeight;							//	前フレームのジャンプ量
@@ -92,5 +97,14 @@ private:
 	bool m_bJumping;								//	ジャンプ中フラグ
 	FVector m_posBeforeJump;						//	ジャンル開始前のキャラクター座標
 
+	bool m_bGuarding;								//	ガード中フラグ
+	bool m_bCanGuard;
+	float m_GuardRechargeTime;
+	float m_GuardCostTime;
+
 	bool m_bCanControl;								//	操作可能な状態か?
+
+public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		float m_GuardValue;
 };
