@@ -4,6 +4,8 @@
 // 作成者			：19CU0238 渡邊龍音
 //
 // 更新内容			：2020/09/17 渡邊龍音 作成
+//					：2020/09/22 渡邊龍音 コインから一定距離を取るように
+//					：2020/09/23 渡邊龍音 コインを取ったときに上に跳ねるように
 //----------------------------------------------------------
 
 #include "CoinItem.h"
@@ -12,10 +14,13 @@
 
 ACoinItem::ACoinItem()
 	: m_AddScore(100)
-	, m_GetCoinTime(5.0f)
+	, m_CoinDistance(100.0f)
+	, m_CoinBounce(200.0f)
+	, m_CoinBounceSpeed(10.0f)
 	, m_CoinTimer(0.0f)
 	, m_playerActor(NULL)
 	, m_OriginScale(FVector::ZeroVector)
+	, m_OriginLocation(FVector::ZeroVector)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -46,6 +51,9 @@ void ACoinItem::BeginPlay()
 
 	// 現在のスケールを保存
 	m_OriginScale = GetActorScale();
+
+	// 現在の位置を保存
+	m_OriginLocation = GetActorLocation();
 }
 
 void ACoinItem::Tick(float DeltaTime)
@@ -56,16 +64,23 @@ void ACoinItem::Tick(float DeltaTime)
 	{
 		m_CoinTimer += DeltaTime;
 
-		if (m_CoinTimer >= m_GetCoinTime)
+		if (FMath::RadiansToDegrees(m_CoinTimer * m_CoinBounceSpeed) >= 180.0f)
 		{
 			this->Destroy();
 		}
 
 		// 取得してからの時間の割合を計算
-		float ratio = FMath::Clamp((m_CoinTimer / m_GetCoinTime), 0.0f, 1.0f);
+		float ratio = FMath::Clamp((FMath::RadiansToDegrees(m_CoinTimer * m_CoinBounceSpeed) / 180.0f), 0.0f, 1.0f);
 
 		// 位置を更新
-		FVector newPos = FMath::Lerp(GetActorLocation(), m_playerActor->GetActorLocation(), ratio);
+		FVector originPos = GetActorLocation();
+		FVector targetPos = m_playerActor->GetActorLocation();
+
+		originPos.X += m_CoinDistance;
+		
+		FVector newPos = FMath::Lerp(originPos, targetPos, ratio);
+
+		newPos.Z = m_OriginLocation.Z + (FMath::Sin(m_CoinTimer * m_CoinBounceSpeed) * m_CoinBounce);
 
 		// サイズの更新
 		FVector newScale = FMath::Lerp(m_OriginScale, FVector::ZeroVector, ratio);
@@ -91,6 +106,12 @@ void ACoinItem::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor*
 
 			// コリジョン無効化
 			this->SetActorEnableCollision(false);
+
+			// 移動
+			FVector newPos = GetActorLocation();
+			newPos.X += m_CoinDistance;
+
+			SetActorLocation(newPos);
 		}
 	}
 }

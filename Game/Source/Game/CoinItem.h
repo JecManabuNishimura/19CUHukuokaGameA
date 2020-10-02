@@ -4,6 +4,8 @@
 // 作成者			：19CU0238 渡邊龍音
 //
 // 更新内容			：2020/09/17 渡邊龍音 作成
+//					：2020/09/22 渡邊龍音 コインから一定距離を取るように
+//					：2020/09/23 渡邊龍音 コインを取ったときに上に跳ねるように
 //----------------------------------------------------------
 
 #pragma once
@@ -54,9 +56,17 @@ private:
 	UPROPERTY(EditAnyWhere)
 		int m_AddScore;
 
-	// 何秒でコインを取得できるか
+	// コイン取得時の距離
 	UPROPERTY(EditAnyWhere)
-		float m_GetCoinTime;
+		float m_CoinDistance;
+
+	// 跳ねる量
+	UPROPERTY(EditAnyWhere)
+		float m_CoinBounce;
+
+	// 跳ねる量
+	UPROPERTY(EditAnyWhere)
+		float m_CoinBounceSpeed;
 
 	// コイン取得用タイマー
 	float m_CoinTimer;
@@ -66,4 +76,7 @@ private:
 
 	// もともとのScale
 	FVector m_OriginScale;
+
+	// もともとの位置
+	FVector m_OriginLocation;
 };
