@@ -4,10 +4,13 @@
 // インクルード
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"	// ACharacterを継承しているため
+#include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "PlayerChara.generated.h"
 
 //	前方宣言
+class USerial;
 class USpringArmComponent;
 class UCameraComponent;
 
@@ -25,16 +28,17 @@ protected:
 	// ゲームスタート時、または生成時に呼ばれる処理
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason);
 public:
 	// 毎フレームの更新処理
 	virtual void Tick(float DeltaTime) override;
 
-	// 各入力関係メソッドとのバインド処理
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	// センサーの値をRotatorに変換
+	FRotator SensorToRotator();
 
 private:
 	//	カメラ更新処理
-	void UpdateCamera(float _deltaTime);
+	void UpdateSensor(float _deltaTime);
 
 	//	移動処理
 	void UpdateMove(float _deltaTime);
@@ -43,24 +47,28 @@ private:
 	void UpdateJump(float _deltaTime);
 
 	//	ガード処理
-	void UpdateGuard(float _deltaTime);
+	void UpdateGuard();
+
+	//	加速処理
+	void UpdateAccelerate();
+
+	//	リスタート
+	void RestartGame();
+
+	//	死亡カウント
+	void DeadCount();
 private:
-	//	【入力バインド】カメラ回転:Pitch（Y軸）
-	void Cam_RotatePitch(float _axisValue);
-	//	【入力バインド】カメラ回転:Yaw（Z軸）
-	void Cam_RotateYaw(float _axisValue);
+	// Arduinoのシリアル通信保存用
+	USerial* m_pArduinoSerial;
 
-	//	【入力バインド】キャラ移動:前後
-	void Chara_MoveForward(float _axisValue);
-	//	【入力バインド】キャラ移動:左右
-	void Chara_MoveRight(float _axisValue);
+	// 回転量の保存（なめらかに移動するように）
+	TArray<FRotator> prevRotator;
+	FRotator prevDiffRot;
 
-	//	【入力バインド】ジャンプ開始
-	void JumpStart();
+	// For Arduino Com Port
+	UPROPERTY(EditAnywhere, Category = "Sensor")
+		int serialPort;
 
-	//	【入力バインド】ガード開始
-	void GuardStart(float _axisValue);
-private:
 	//	UPROPERTYにすることで、ブループリント上で変数の確認、編集などができる
 	//	「BlueprintReadOnly」に指定しているため、ブループリントで見ることだけ可能で、編集はできない
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -69,42 +77,97 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		UCameraComponent* m_pCamera;				//	カメラ
 
-	FVector2D m_charaMoveInput;						//	Pawn移動入力量
-	FVector2D m_cameraRotateInput;					//	カメラ回転入力量
-	FVector2D m_charaRotateInput;
-
 	UPROPERTY(EditAnywhere, Category = "Camera")
 		FVector2D m_cameraPitchLimit;				//	カメラのピッチ範囲
-
-	UPROPERTY(EditAnywhere, Category = "Move")
-		float m_moveSpeed;							//	移動量
 
 	UPROPERTY(EditAnywhere, Category = "Jump")
 		float m_gravity;							//	重力
 
-	UPROPERTY(EditAnywhere, Category = "Jump")
-		float m_jumpPower;							//	ジャンプ力
-
-	UPROPERTY(EditAnywhere, Category = "UI")
-		TSubclassOf<UUserWidget> PlayerGuardUIClass;
-	
-	UUserWidget* PlayerGuardUI;
+	UPROPERTY(EditAnywhere, Category = "Jump")		//	ジャンプ力
+		float m_jumpPower;
 
 	float m_jumpTime;								//	ジャンプ時間
 	float m_nowJumpHeight;							//	現在フレームのジャンプ量
 	float m_prevJumpHeight;							//	前フレームのジャンプ量
 
+	bool m_bCanJump;
 	bool m_bJumping;								//	ジャンプ中フラグ
 	FVector m_posBeforeJump;						//	ジャンル開始前のキャラクター座標
 
+	float tempRotate;								//　元状態に戻すの回転角度
 	bool m_bGuarding;								//	ガード中フラグ
-	bool m_bCanGuard;
-	float m_GuardRechargeTime;
-	float m_GuardCostTime;
+	bool m_bHaveGuardEnergy;
 
-	bool m_bCanControl;								//	操作可能な状態か?
+	bool m_bDashing;
+	bool m_bHaveDashEnergy;
 
+	float m_bTempDamgeFrame;
+	bool m_bCanDamge;
+
+	bool m_bDead;									//	死亡フラグ
+
+	bool m_bIsGoal;
+
+	float tempRoll;
+	float tempPitch;
+	float tempYaw;
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-		float m_GuardValue;
+	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	HPのUI
+		TSubclassOf<UUserWidget> player_HP_Widget_Class;
+	UUserWidget* Player_HP_Widget;
+
+	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DeadのUI
+		TSubclassOf<UUserWidget> player_select_Widget_Class;
+	UUserWidget* player_select_Widget;
+
+	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	GuardのUI
+		TSubclassOf<UUserWidget> player_guard_Widget_Class;
+	UUserWidget* player_guard_Widget;
+
+	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DashのUI
+		TSubclassOf<UUserWidget> player_dash_Widget_Class;
+	UUserWidget* player_dash_Widget;
+
+	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DamageのUI
+		TSubclassOf<UUserWidget> player_damage_Widget_Class;
+	UUserWidget* player_damage_Widget;
+
+	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	GoalのUI
+		TSubclassOf<UUserWidget> player_goal_Widget_Class;
+	UUserWidget* player_goal_Widget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int32 selectPlay;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float HP;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float GuardEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float DashEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Guard_UIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Dash_UIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float DamgeFrame;
+
+	UPROPERTY(EditAnywhere)
+		float Fence_FilmDmg;
+	// Is Open Com Port
+	UPROPERTY(BlueprintReadOnly, Category = "Sensor")
+		bool isOpen;
+
+	UFUNCTION()
+		void OnBeginOverlap(class UPrimitiveComponent* HitComp,
+			class AActor* OtherActor, class UPrimitiveComponent* OtherComp,
+			int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+		void OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 };
