@@ -19,6 +19,8 @@ APlayerChara::APlayerChara()
 	, isOpen(false)
 	, m_pSpringArm(NULL)
 	, m_pCamera(NULL)
+	, tempSpeed(0.f)
+	, playerSpeed(10.f)
 	, m_gravity(700.f)
 	, m_jumpPower(1200.f)
 	, m_jumpTime(0.f)
@@ -29,18 +31,19 @@ APlayerChara::APlayerChara()
 	, tempRotate(0.f)
 	, m_bGuarding(false)
 	, m_bDashing(false)
-	, m_bTempDamgeFrame(0.f)
-	, m_bCanDamge(true)
+	, m_bTempDamageFrame(0.f)
+	, m_bCanDamage(true)
 	, m_bHaveGuardEnergy(true)
 	, m_bHaveDashEnergy(true)
 	, m_bDead(false)
 	, m_bIsGoal(false)
+	, m_bIsDamageOver(false)
 	, HP(100.f)
 	, GuardEnergy(100.f)
 	, DashEnergy(100.f)
 	, Guard_UIDownSpeed(0.5f)
 	, Dash_UIDownSpeed(0.5f)
-	, DamgeFrame(50.f)
+	, DamageFrame(50.f)
 	, Fence_FilmDmg(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
@@ -89,7 +92,8 @@ void APlayerChara::BeginPlay()
 {
 	Super::BeginPlay();
 
-	m_bTempDamgeFrame = DamgeFrame;
+	m_bTempDamageFrame = DamageFrame;
+	tempSpeed = playerSpeed;
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &APlayerChara::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &APlayerChara::OverlapEnds);;
@@ -172,7 +176,7 @@ void APlayerChara::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(GuardEnergy));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DeltaTime));
 
 	if (!m_bDead && !m_bIsGoal)
 	{
@@ -190,18 +194,20 @@ void APlayerChara::Tick(float DeltaTime)
 
 		UpdateAccelerate();
 
-		if (!m_bCanDamge)
+		if (!m_bCanDamage)
 		{
-			DamgeFrame -= (DeltaTime * 120);
+			DamageFrame -= (DeltaTime * 60);
 
-			if (DamgeFrame <= 0.f)
+			if (DamageFrame <= 0.f)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DamgeFrame));
-				m_bCanDamge = true;
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DamageFrame));
+				m_bCanDamage = true;
 				player_damage_Widget->RemoveFromViewport();
-				DamgeFrame = m_bTempDamgeFrame;
+				DamageFrame = m_bTempDamageFrame;
+				m_bIsDamageOver = true;
 			}
 		}
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(playerSpeed));
 	}
 
 	if (selectPlay == 1)
@@ -212,7 +218,7 @@ void APlayerChara::Tick(float DeltaTime)
 	DeadCount();
 }
 
-//	カメラ更新処理
+//	センサーの更新処理
 void APlayerChara::UpdateSensor(float _deltaTime)
 {
 	tempRoll = 0.f;
@@ -307,25 +313,40 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 void APlayerChara::UpdateMove(float _deltaTime)
 {
 	FVector NewLocation = GetActorLocation();
+	FVector YRotation = GetActorForwardVector();
+
 	//	前に向くずっと移動する
 	if (m_bDashing)
 	{
-		NewLocation.X += 18.f;
+		NewLocation.X += playerSpeed * 1.15f;
 	}
 	else if (!m_bGuarding && !m_bDashing)
 	{
-		NewLocation.X += 12.f;
+		NewLocation.X += playerSpeed;
 	}
 	else if (m_bGuarding)
 	{
-		NewLocation.X += 8.f;
+		NewLocation.X += playerSpeed * 0.8f;
 	}
 
-	//	キャラクターの移動
+	//	キャラクターのY軸移動
 	{
-		//	SpringArmが向く方向に、入力による移動量をPawnMovementComponentに渡す
-		NewLocation.Y += tempRoll * 0.2f;
+		YRotation.Y = 0.f;
+		NewLocation.Y += 0.2f * tempRoll;
 		SetActorLocation(NewLocation);
+	}
+
+	if (m_bIsDamageOver)
+	{
+		if (playerSpeed >= tempSpeed)
+		{
+			m_bIsDamageOver = false;
+			playerSpeed = tempSpeed;
+		}
+		else
+		{
+			playerSpeed += tempSpeed * 0.02f;
+		}
 	}
 }
 
@@ -472,7 +493,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		m_bCanJump = true;
 	}
 
-	if (OtherActor->ActorHasTag("Fence_Film") && m_bCanDamge && !m_bDashing)
+	if (OtherActor->ActorHasTag("Fence_Film") && m_bCanDamage && !m_bDashing)
 	{
 		if (player_damage_Widget_Class != nullptr)
 		{
@@ -480,7 +501,8 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 			player_damage_Widget->AddToViewport();
 		}
 
-		m_bCanDamge = false;
+		playerSpeed *= 0.5f;
+		m_bCanDamage = false;
 		HP -= Fence_FilmDmg;
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(HP));
 	}

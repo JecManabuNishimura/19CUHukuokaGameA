@@ -3,7 +3,7 @@
   <ItemGroup>
     <None Include="..\..\Game.uproject" />
     <Filter Include="Source">
-      <UniqueIdentifier>{57A5E4EE-2E76-465A-B97E-35D6103B2434}</UniqueIdentifier>
+      <UniqueIdentifier>{683A8EC0-4139-48AE-8288-A3D5946F211B}</UniqueIdentifier>
     </Filter>
     <None Include="..\..\Source\Game.Target.cs">
       <Filter>Source</Filter>
@@ -12,7 +12,7 @@
       <Filter>Source</Filter>
     </None>
     <Filter Include="Config">
-      <UniqueIdentifier>{11BECA57-8F34-4D09-B0B1-A6C8BAE22A6F}</UniqueIdentifier>
+      <UniqueIdentifier>{6AFD5A00-528C-4E1E-8047-96132646A071}</UniqueIdentifier>
     </Filter>
     <None Include="..\..\Config\DefaultEditor.ini">
       <Filter>Config</Filter>
@@ -23,9 +23,81 @@
     <None Include="..\..\Config\DefaultGame.ini">
       <Filter>Config</Filter>
     </None>
-    <Filter Include="Source\Game">
-      <UniqueIdentifier>{AA73CC43-48C3-43CE-BC02-412177527FC9}</UniqueIdentifier>
+    <None Include="..\..\Config\DefaultInput.ini">
+      <Filter>Config</Filter>
+    </None>
+    <Filter Include="Plugins">
+      <UniqueIdentifier>{06076242-574F-4F02-B02F-0D3846268181}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Plugins\UE4Duino">
+      <UniqueIdentifier>{A5905FA5-3B0F-49AB-A1D2-CC764F0C05BE}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\UE4Duino\Source">
+      <UniqueIdentifier>{A638F59B-FCF5-42BD-8776-68ADDCA4C752}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\UE4Duino\Source\UE4Duino">
+      <UniqueIdentifier>{6854C48C-8BD5-4C3F-9616-9BF33FF0EB2F}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\UE4Duino\Source\UE4Duino\UE4Duino.Build.cs">
+      <Filter>Plugins\UE4Duino\Source\UE4Duino</Filter>
+    </None>
+    <Filter Include="Plugins\UE4Duino\Source\UE4Duino\Private">
+      <UniqueIdentifier>{59FB5F9B-E7D5-424D-898C-B0E3AFBFAB43}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Plugins\UE4Duino\Source\UE4Duino\Private\Serial.cpp">
+      <Filter>Plugins\UE4Duino\Source\UE4Duino\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\UE4Duino\Source\UE4Duino\Private\UE4DuinoModule.cpp">
+      <Filter>Plugins\UE4Duino\Source\UE4Duino\Private</Filter>
+    </ClCompile>
+    <Filter Include="Plugins\UE4Duino\Source\UE4Duino\Public">
+      <UniqueIdentifier>{7DC26B37-2709-467B-81D6-27D30D58B163}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="..\..\Plugins\UE4Duino\Source\UE4Duino\Public\Serial.h">
+      <Filter>Plugins\UE4Duino\Source\UE4Duino\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Plugins\UE4Duino\Source\UE4Duino\Public\UE4DuinoModule.h">
+      <Filter>Plugins\UE4Duino\Source\UE4Duino\Public</Filter>
+    </ClInclude>
+    <None Include="..\..\Plugins\UE4Duino\UE4Duino.uplugin">
+      <Filter>Plugins\UE4Duino</Filter>
+    </None>
+    <Filter Include="Plugins\UE4Duino\Config">
+      <UniqueIdentifier>{72C1D1F4-1168-4ECA-8D75-D13F5FEB043F}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\UE4Duino\Config\FilterPlugin.ini">
+      <Filter>Plugins\UE4Duino\Config</Filter>
+    </None>
+    <Filter Include="Plugins\UE4Duino\Resources">
+      <UniqueIdentifier>{5E9F1FDD-9CE6-4CAD-855F-49C510F71639}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\UE4Duino\Resources\Icon128.png">
+      <Filter>Plugins\UE4Duino\Resources</Filter>
+    </None>
+    <None Include="..\..\Plugins\UE4Duino\Resources\Logo.ai">
+      <Filter>Plugins\UE4Duino\Resources</Filter>
+    </None>
+    <Filter Include="Source\Game">
+      <UniqueIdentifier>{17CB7C2A-06E0-47FC-A27C-5084114D47E2}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Source\Game\CoinItem.cpp">
+      <Filter>Source\Game</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\Game\CoinItem.h">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\Game\EnemyChara.cpp">
+      <Filter>Source\Game</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\Game\EnemyChara.h">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\Game\EnemyCharaATKControl.cpp">
+      <Filter>Source\Game</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\Game\EnemyCharaATKControl.h">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
     <None Include="..\..\Source\Game\Game.Build.cs">
       <Filter>Source\Game</Filter>
     </None>
@@ -41,10 +113,28 @@
     <ClInclude Include="..\..\Source\Game\GameGameModeBase.h">
       <Filter>Source\Game</Filter>
     </ClInclude>
+    <ClCompile Include="..\..\Source\Game\ParticleControl.cpp">
+      <Filter>Source\Game</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\Game\ParticleControl.h">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\Source\Game\PlayerChara.cpp">
       <Filter>Source\Game</Filter>
     </ClCompile>
     <ClInclude Include="..\..\Source\Game\PlayerChara.h">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\Game\PlayerCharaNoSensor.cpp">
+      <Filter>Source\Game</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\Game\PlayerCharaNoSensor.h">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\Game\SensorTest.cpp">
+      <Filter>Source\Game</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\Game\SensorTest.h">
       <Filter>Source\Game</Filter>
     </ClInclude>
   </ItemGroup>

@@ -161,7 +161,7 @@ void APlayerCharaNoSensor::UpdateMove(float _deltaTime)
 		//NewLocation.X += 20.f;		
 
 		// Testing Value(from 19CU0222èﬂâ∆ìØ)
-		NewLocation.X += 5.f;
+		NewLocation.X += 3.f;
 	}
 	else
 	{

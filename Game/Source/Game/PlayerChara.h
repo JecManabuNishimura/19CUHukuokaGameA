@@ -98,11 +98,14 @@ private:
 	bool m_bGuarding;								//	ガード中フラグ
 	bool m_bHaveGuardEnergy;
 
+	float tempSpeed;
+	bool m_bIsDamageOver;
+
 	bool m_bDashing;
 	bool m_bHaveDashEnergy;
 
-	float m_bTempDamgeFrame;
-	bool m_bCanDamge;
+	float m_bTempDamageFrame;
+	bool m_bCanDamage;
 
 	bool m_bDead;									//	死亡フラグ
 
@@ -139,6 +142,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 selectPlay;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Guard_UIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Dash_UIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float playerSpeed;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float HP;
 
@@ -148,14 +160,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DashEnergy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float Guard_UIDownSpeed;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float Dash_UIDownSpeed;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float DamgeFrame;
+		float DamageFrame;
 
 	UPROPERTY(EditAnywhere)
 		float Fence_FilmDmg;
