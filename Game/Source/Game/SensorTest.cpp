@@ -5,6 +5,7 @@
 //
 // 更新内容			：2020/08/31 渡邊龍音 作成
 //					：2020/09/17 渡邊龍音 クラスとして使いやすいように・デッドゾーンの追加
+//					：2020/10/07 渡邊龍音 センサーのシリアルポートを自動検出できる
 //----------------------------------------------------------
 
 #pragma once
@@ -24,6 +25,7 @@ ASensorTest::ASensorTest()
 	: m_pArduinoSerial(NULL)
 	, serialPort(4)
 	, isOpen(false)
+	, isAutoSerialPort(true)
 	, deadZone(1.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -35,13 +37,41 @@ ASensorTest::ASensorTest()
 void ASensorTest::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// (10/07 渡邊)-------------------------------------------------------
+	// シリアルポート自動検出
+	if (isAutoSerialPort)
+	{
+		for (int port = 0; port < 10; ++port)
+		{
+			m_pArduinoSerial = USerial::OpenComPort(isOpen, port, 115200);
 
-	// シリアルポートを開ける
-	m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
+			if (isOpen == true && m_pArduinoSerial != NULL)
+			{
+				serialPort = port;
+				break;
+			}
+		}
+	}
+	else
+	{
+		// 指定したシリアルポートを開ける
+		m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
+	}
+	//--------------------------------------------------------------------
 
 	if (isOpen == false)
 	{
-		UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), serialPort);
+		// (10/07 渡邊)-------------------------------------------------------
+		if (isAutoSerialPort)
+		{
+			UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Could not COM Port open automatically. Try the manual setting."));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), serialPort);
+		}
+		//--------------------------------------------------------------------
 		return;
 	}
 	else
