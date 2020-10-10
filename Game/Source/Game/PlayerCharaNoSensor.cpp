@@ -68,6 +68,8 @@ void APlayerCharaNoSensor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	GetWorld()->GetFirstPlayerController()->bShowMouseCursor = false;
+
 	//	PlayerCharaNoSensorが持っているメッシュコンポーネントの相対位置を変更
 	USkeletalMeshComponent* pMeshComp = GetMesh();
 	if (pMeshComp != NULL)

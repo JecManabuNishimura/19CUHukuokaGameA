@@ -87,7 +87,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "UI")
 		TSubclassOf<UUserWidget> PlayerGuardUIClass;
-
 	UUserWidget* PlayerGuardUI;
 
 	float m_jumpTime;								//	ƒWƒƒƒ“ƒvŽžŠÔ
