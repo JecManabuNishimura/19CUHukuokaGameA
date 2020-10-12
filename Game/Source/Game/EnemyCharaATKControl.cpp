@@ -75,8 +75,7 @@ void AEnemyCharaATKControl::Shooting(float DeltaTime)
 
 	FVector currentVector = GetActorLocation();
 	FRotator currentRotator = GetActorRotation();
-	if (bulletTimeCount >= bulletDuration) {
-		// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
+	if (bulletTimeCount >= bulletDuration) {		// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
 		GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, currentRotator);
 		bulletTimeCount = 0.0f;
 		UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));

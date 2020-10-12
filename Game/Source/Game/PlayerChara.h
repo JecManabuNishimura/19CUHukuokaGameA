@@ -36,6 +36,8 @@ public:
 	// センサーの値をRotatorに変換
 	FRotator SensorToRotator();
 
+	bool m_bGuarding;								//	ガード中フラグ
+
 private:
 	//	カメラ更新処理
 	void UpdateSensor(float _deltaTime);
@@ -95,7 +97,7 @@ private:
 	FVector m_posBeforeJump;						//	ジャンル開始前のキャラクター座標
 
 	float tempRotate;								//　元状態に戻すの回転角度
-	bool m_bGuarding;								//	ガード中フラグ
+	
 	bool m_bHaveGuardEnergy;
 
 	bool m_bDashing;
