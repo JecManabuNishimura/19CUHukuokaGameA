@@ -36,8 +36,6 @@ public:
 	// センサーの値をRotatorに変換
 	FRotator SensorToRotator();
 
-	bool m_bGuarding;								//	ガード中フラグ
-
 private:
 	//	カメラ更新処理
 	void UpdateSensor(float _deltaTime);
@@ -73,11 +71,6 @@ private:
 
 	//	UPROPERTYにすることで、ブループリント上で変数の確認、編集などができる
 	//	「BlueprintReadOnly」に指定しているため、ブループリントで見ることだけ可能で、編集はできない
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		USpringArmComponent* m_pSpringArm;			//	スプリングアーム
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		UCameraComponent* m_pCamera;				//	カメラ
 
 	UPROPERTY(EditAnywhere, Category = "Camera")
 		FVector2D m_cameraPitchLimit;				//	カメラのピッチ範囲
@@ -97,7 +90,7 @@ private:
 	FVector m_posBeforeJump;						//	ジャンル開始前のキャラクター座標
 
 	float tempRotate;								//　元状態に戻すの回転角度
-	
+
 	bool m_bHaveGuardEnergy;
 
 	float tempSpeed;
@@ -145,6 +138,9 @@ public:
 		int32 selectPlay;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float guardBulletUIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float Guard_UIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -178,4 +174,6 @@ public:
 
 	UFUNCTION()
 		void OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	bool m_bGuarding;
 };
