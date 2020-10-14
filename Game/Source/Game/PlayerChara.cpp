@@ -17,8 +17,6 @@ APlayerChara::APlayerChara()
 	: m_pArduinoSerial(NULL)
 	, serialPort(4)
 	, isOpen(false)
-	, m_pSpringArm(NULL)
-	, m_pCamera(NULL)
 	, tempSpeed(0.f)
 	, playerSpeed(10.f)
 	, m_gravity(700.f)
@@ -41,6 +39,7 @@ APlayerChara::APlayerChara()
 	, HP(100.f)
 	, GuardEnergy(100.f)
 	, DashEnergy(100.f)
+	, guardBulletUIDownSpeed(10.f)
 	, Guard_UIDownSpeed(0.5f)
 	, Dash_UIDownSpeed(0.5f)
 	, DamageFrame(50.f)
@@ -58,33 +57,6 @@ APlayerChara::APlayerChara()
 
 	//	デフォルトプレイヤーとして設定
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
-
-	//	スプリングアームのオブジェクトを生成
-	m_pSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("m_pSpringArm"));
-	if (m_pSpringArm != NULL)
-	{
-		m_pSpringArm->SetupAttachment(RootComponent);
-
-		//	アームの長さを設定
-		//	カメラの子リジョンテストを行うかを設定
-		m_pSpringArm->bDoCollisionTest = false;
-		//	カメラ追従ラグを使うかを設定
-		m_pSpringArm->bEnableCameraLag = true;
-		//	カメラ追従ラグの速度を設定
-		m_pSpringArm->CameraLagSpeed = 20.f;
-		//	カメラ回転ラグを使うかを設定
-		m_pSpringArm->bEnableCameraRotationLag = true;
-		//	カメラ回転ラグの速度を設定
-		m_pSpringArm->CameraRotationLagSpeed = 20.f;
-	}
-
-	//	カメラのオブジェクトを生成
-	m_pCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("m_pCamera"));
-	if (m_pCamera != NULL)
-	{
-		//	カメラをスプリングアームにアタッチさせる
-		m_pCamera->SetupAttachment(m_pSpringArm, USpringArmComponent::SocketName);
-	}
 }
 
 // ゲームスタート時、または生成時に呼ばれる処理
@@ -207,7 +179,6 @@ void APlayerChara::Tick(float DeltaTime)
 				m_bIsDamageOver = true;
 			}
 		}
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(playerSpeed));
 	}
 
 	if (selectPlay == 1)
@@ -274,13 +245,6 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 	if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
 	{
 		rot = prevDiffRot;
-	}
-
-	//	ルートオブジェクトを中心に、スプリングアームについているカメラを回転させる
-	USpringArmComponent* pSpringArm = m_pSpringArm;
-	if (pSpringArm != NULL)
-	{
-		pSpringArm->SetRelativeRotation(FRotator(-rot.Pitch, -rot.Yaw, 0.f));
 	}
 
 	SetActorRotation(rot);
@@ -386,6 +350,13 @@ void APlayerChara::UpdateJump(float _deltaTime)
 //	ガード処理
 void APlayerChara::UpdateGuard()
 {
+	if (GuardEnergy <= 0.f)
+	{
+		m_bGuarding = false;
+		m_bHaveGuardEnergy = false;
+		tempRotate = 0.f;
+	}
+
 	FRotator nowRot = GetActorRotation();
 	if (tempYaw < -30.f || tempYaw > 30.f)
 	{
@@ -396,17 +367,10 @@ void APlayerChara::UpdateGuard()
 		m_bGuarding = false;
 	}
 
-	if (GuardEnergy <= 0.f)
-	{
-		m_bGuarding = false;
-		m_bHaveGuardEnergy = false;
-		tempRotate = 0.f;
-	}
-
-
 	if (m_bGuarding && m_bHaveGuardEnergy)
 	{
-		GuardEnergy -= Guard_UIDownSpeed;
+		GuardEnergy -= 0.05f;
+		//GuardEnergy -= Guard_UIDownSpeed;
 	}
 	else
 	{
@@ -493,7 +457,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		m_bCanJump = true;
 	}
 
-	if (OtherActor->ActorHasTag("Fence_Film") && m_bCanDamage && !m_bDashing)
+	if (OtherActor->ActorHasTag("Fence_Film") && m_bCanDamage && !m_bDashing && !m_bGuarding)
 	{
 		if (player_damage_Widget_Class != nullptr)
 		{
@@ -504,7 +468,25 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		playerSpeed *= 0.5f;
 		m_bCanDamage = false;
 		HP -= Fence_FilmDmg;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(HP));
+	}
+
+	if (OtherActor->ActorHasTag("EnemyBullet") && m_bCanDamage && !m_bDashing)
+	{
+		if (!m_bGuarding)
+		{
+			if (player_damage_Widget_Class != nullptr)
+			{
+				player_damage_Widget = CreateWidget(GetWorld(), player_damage_Widget_Class);
+				player_damage_Widget->AddToViewport();
+			}
+			playerSpeed *= 0.5f;
+			m_bCanDamage = false;
+			HP -= Fence_FilmDmg;
+		}
+		else
+		{
+			GuardEnergy -= guardBulletUIDownSpeed;
+		}
 	}
 
 	if (OtherActor->ActorHasTag("Goal"))
