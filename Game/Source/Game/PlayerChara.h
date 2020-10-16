@@ -13,6 +13,14 @@
 class USerial;
 class USpringArmComponent;
 class UCameraComponent;
+class AActor;
+
+UENUM(BlueprintType)
+enum class PPlayerAttackType : uint8
+{
+	Straight		UMETA(DisplayName = "straight bullet"),
+	None			UMETA(DisplayName = "no attack"),
+};
 
 UCLASS()
 class GAME_API APlayerChara : public ACharacter
@@ -55,6 +63,9 @@ private:
 	//	リスタート
 	void RestartGame();
 
+	//発射開始
+	void Shooting(float DeltaTime);
+
 	//	死亡カウント
 	void DeadCount();
 private:
@@ -93,6 +104,9 @@ private:
 
 	bool m_bHaveGuardEnergy;
 
+	// 発射間隔カウントダウン
+	float bulletTimeCount;
+
 	float tempSpeed;
 	bool m_bIsDamageOver;
 
@@ -110,29 +124,49 @@ private:
 	float tempPitch;
 	float tempYaw;
 public:
+	// Attacking type (攻撃タイプ)
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		PPlayerAttackType playerATKType;
+
+	// Bullet type (弾の使用タイプ)
+	UPROPERTY(EditAnywhere, Category = "Bullet")
+		TSubclassOf<AActor> bulletActor;
+
+	// Time Duration between two bullets.(発射間隔)
+	UPROPERTY(EditAnywhere, Category = "Bullet")
+		float bulletDuration;
+
+	// Using the Offset to prevent the collide with enemy.(弾の生成位置補正)
+	UPROPERTY(EditAnywhere, Category = "Offset")
+		float bulletXOffset;
+
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	HPのUI
-		TSubclassOf<UUserWidget> player_HP_Widget_Class;
+		TSubclassOf<UUserWidget> Player_HP_Widget_Class;
 	UUserWidget* Player_HP_Widget;
 
+	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	ScoreのUI
+		TSubclassOf<UUserWidget> Player_Score_Widget_Class;
+	UUserWidget* Player_Score_Widget;
+
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DeadのUI
-		TSubclassOf<UUserWidget> player_select_Widget_Class;
-	UUserWidget* player_select_Widget;
+		TSubclassOf<UUserWidget> Player_Select_Widget_Class;
+	UUserWidget* Player_Select_Widget;
 
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	GuardのUI
-		TSubclassOf<UUserWidget> player_guard_Widget_Class;
-	UUserWidget* player_guard_Widget;
+		TSubclassOf<UUserWidget> Player_Guard_Widget_Class;
+	UUserWidget* Player_Guard_Widget;
 
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DashのUI
-		TSubclassOf<UUserWidget> player_dash_Widget_Class;
-	UUserWidget* player_dash_Widget;
+		TSubclassOf<UUserWidget> Player_Dash_Widget_Class;
+	UUserWidget* Player_Dash_Widget;
 
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DamageのUI
-		TSubclassOf<UUserWidget> player_damage_Widget_Class;
-	UUserWidget* player_damage_Widget;
+		TSubclassOf<UUserWidget> Player_Damage_Widget_Class;
+	UUserWidget* Player_Damage_Widget;
 
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	GoalのUI
-		TSubclassOf<UUserWidget> player_goal_Widget_Class;
-	UUserWidget* player_goal_Widget;
+		TSubclassOf<UUserWidget> Player_Goal_Widget_Class;
+	UUserWidget* Player_Goal_Widget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 selectPlay;
@@ -149,8 +183,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float playerSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float GoalTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float HP;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int32 CoinCount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int32 CountShootEnemy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float GuardEnergy;
@@ -160,6 +203,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DamageFrame;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)			//	CoinScore
+		float CoinScore;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)			//	EnemyScore
+		float EnemyScore;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float PlayerScore;								//	Player獲得のScore
 
 	UPROPERTY(EditAnywhere)
 		float Fence_FilmDmg;

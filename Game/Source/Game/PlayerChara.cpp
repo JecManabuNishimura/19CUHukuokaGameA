@@ -18,6 +18,9 @@ APlayerChara::APlayerChara()
 	, serialPort(4)
 	, isOpen(false)
 	, tempSpeed(0.f)
+	, bulletTimeCount(0.0f)
+	, bulletDuration(1.0f)
+	, bulletXOffset(10.0f)
 	, playerSpeed(10.f)
 	, m_gravity(700.f)
 	, m_jumpPower(1200.f)
@@ -36,13 +39,19 @@ APlayerChara::APlayerChara()
 	, m_bDead(false)
 	, m_bIsGoal(false)
 	, m_bIsDamageOver(false)
+	, GoalTime(0.f)
 	, HP(100.f)
+	, CoinCount(0)
+	, CountShootEnemy(0)
 	, GuardEnergy(100.f)
 	, DashEnergy(100.f)
 	, guardBulletUIDownSpeed(10.f)
 	, Guard_UIDownSpeed(0.5f)
 	, Dash_UIDownSpeed(0.5f)
 	, DamageFrame(50.f)
+	, CoinScore(1000.f)
+	, EnemyScore(2000.f)
+	, PlayerScore(0.f)
 	, Fence_FilmDmg(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
@@ -124,22 +133,28 @@ void APlayerChara::BeginPlay()
 		prevRotator.Add(rotTemp);
 	}
 
-	if (player_HP_Widget_Class != nullptr)
+	if (Player_HP_Widget_Class != nullptr)
 	{
-		Player_HP_Widget = CreateWidget(GetWorld(), player_HP_Widget_Class);
+		Player_HP_Widget = CreateWidget(GetWorld(), Player_HP_Widget_Class);
 		Player_HP_Widget->AddToViewport();
 	}
 
-	if (player_guard_Widget_Class != nullptr)
+	if (Player_Guard_Widget_Class != nullptr)
 	{
-		player_guard_Widget = CreateWidget(GetWorld(), player_guard_Widget_Class);
-		player_guard_Widget->AddToViewport();
+		Player_Guard_Widget = CreateWidget(GetWorld(), Player_Guard_Widget_Class);
+		Player_Guard_Widget->AddToViewport();
 	}
 
-	if (player_dash_Widget_Class != nullptr)
+	if (Player_Dash_Widget_Class != nullptr)
 	{
-		player_dash_Widget = CreateWidget(GetWorld(), player_dash_Widget_Class);
-		player_dash_Widget->AddToViewport();
+		Player_Dash_Widget = CreateWidget(GetWorld(), Player_Dash_Widget_Class);
+		Player_Dash_Widget->AddToViewport();
+	}
+
+	if (Player_Dash_Widget_Class != nullptr)
+	{
+		Player_Score_Widget = CreateWidget(GetWorld(), Player_Score_Widget_Class);
+		Player_Score_Widget->AddToViewport();
 	}
 }
 
@@ -152,6 +167,8 @@ void APlayerChara::Tick(float DeltaTime)
 
 	if (!m_bDead && !m_bIsGoal)
 	{
+		GoalTime += DeltaTime;
+
 		//	カメラ更新処理
 		UpdateSensor(DeltaTime);
 
@@ -166,6 +183,8 @@ void APlayerChara::Tick(float DeltaTime)
 
 		UpdateAccelerate();
 
+		Shooting(DeltaTime);
+
 		if (!m_bCanDamage)
 		{
 			DamageFrame -= (DeltaTime * 60);
@@ -174,7 +193,7 @@ void APlayerChara::Tick(float DeltaTime)
 			{
 				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DamageFrame));
 				m_bCanDamage = true;
-				player_damage_Widget->RemoveFromViewport();
+				Player_Damage_Widget->RemoveFromViewport();
 				DamageFrame = m_bTempDamageFrame;
 				m_bIsDamageOver = true;
 			}
@@ -426,9 +445,23 @@ void APlayerChara::RestartGame()
 
 	m_bDead = false;
 
-	player_select_Widget->RemoveFromViewport();
+	Player_Select_Widget->RemoveFromViewport();
 
 	selectPlay = 0;
+}
+
+//発射開始
+void APlayerChara::Shooting(float DeltaTime)
+{
+	bulletTimeCount += DeltaTime;
+
+	FVector currentVector = GetActorLocation();
+	if (bulletTimeCount >= bulletDuration) {
+		// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
+		GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
+		bulletTimeCount = 0.0f;
+		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
+	}
 }
 
 void APlayerChara::DeadCount()
@@ -439,10 +472,10 @@ void APlayerChara::DeadCount()
 		{
 			m_bDead = true;
 
-			if (player_select_Widget_Class != nullptr)
+			if (Player_Select_Widget_Class != nullptr)
 			{
-				player_select_Widget = CreateWidget(GetWorld(), player_select_Widget_Class);
-				player_select_Widget->AddToViewport();
+				Player_Select_Widget = CreateWidget(GetWorld(), Player_Select_Widget_Class);
+				Player_Select_Widget->AddToViewport();
 			}
 
 			GetMesh()->SetSimulatePhysics(true);
@@ -459,10 +492,10 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 
 	if (OtherActor->ActorHasTag("Fence_Film") && m_bCanDamage && !m_bDashing && !m_bGuarding)
 	{
-		if (player_damage_Widget_Class != nullptr)
+		if (Player_Damage_Widget_Class != nullptr)
 		{
-			player_damage_Widget = CreateWidget(GetWorld(), player_damage_Widget_Class);
-			player_damage_Widget->AddToViewport();
+			Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
+			Player_Damage_Widget->AddToViewport();
 		}
 
 		playerSpeed *= 0.5f;
@@ -474,10 +507,10 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 	{
 		if (!m_bGuarding)
 		{
-			if (player_damage_Widget_Class != nullptr)
+			if (Player_Damage_Widget_Class != nullptr)
 			{
-				player_damage_Widget = CreateWidget(GetWorld(), player_damage_Widget_Class);
-				player_damage_Widget->AddToViewport();
+				Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
+				Player_Damage_Widget->AddToViewport();
 			}
 			playerSpeed *= 0.5f;
 			m_bCanDamage = false;
@@ -489,13 +522,41 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		}
 	}
 
+	if (OtherActor->ActorHasTag("Coin"))
+	{
+		PlayerScore += CoinScore;
+
+		CoinCount += 1;
+	}
+
 	if (OtherActor->ActorHasTag("Goal"))
 	{
-		if (player_goal_Widget_Class != nullptr)
+		if (Player_Goal_Widget_Class != nullptr)
 		{
-			player_goal_Widget = CreateWidget(GetWorld(), player_goal_Widget_Class);
-			player_goal_Widget->AddToViewport();
+			Player_Goal_Widget = CreateWidget(GetWorld(), Player_Goal_Widget_Class);
+			Player_Goal_Widget->AddToViewport();
 		}
+
+		if (Player_HP_Widget_Class != nullptr)
+		{
+			Player_HP_Widget->RemoveFromViewport();
+		}
+
+		if (Player_Guard_Widget_Class != nullptr)
+		{
+			Player_Guard_Widget->RemoveFromViewport();
+		}
+
+		if (Player_Dash_Widget_Class != nullptr)
+		{
+			Player_Dash_Widget->RemoveFromViewport();
+		}
+
+		if (Player_Dash_Widget_Class != nullptr)
+		{
+			Player_Score_Widget->RemoveFromViewport();
+		}
+
 		m_bIsGoal = true;
 	}
 }
