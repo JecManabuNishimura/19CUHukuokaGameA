@@ -5,6 +5,7 @@
 //
 // 更新内容			：2020/08/31 渡邊龍音 作成
 //					：2020/09/17 渡邊龍音 クラスとして使いやすいように・デッドゾーンの追加
+//					：2020/10/07 渡邊龍音 センサーのシリアルポートを自動検出できる
 //----------------------------------------------------------
 
 #pragma once
@@ -50,10 +51,16 @@ public:
 	// Is Open Com Port
 	UPROPERTY(BlueprintReadOnly, Category = "Sensor")
 		bool isOpen;
+
+	// (10/07 渡邊)-------------------------------------------------------
+	// Is Serialport Automatic detection
+	UPROPERTY(EditAnywhere, Category = "Sensor Ports")
+		bool isAutoSerialPort;
 	
 	// For Arduino Com Port
-	UPROPERTY(EditAnywhere, Category = "Sensor")
+	UPROPERTY(EditAnywhere, Category = "Sensor Ports")
 		int serialPort;
+	//--------------------------------------------------------------------
 
 	// Dead zone for sensor
 	UPROPERTY(EditAnywhere, Category = "Sensor")

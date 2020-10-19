@@ -13,5 +13,4 @@ UCLASS()
 class GAME_API AGameGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
-	
 };
