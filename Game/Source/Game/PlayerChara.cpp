@@ -39,6 +39,7 @@ APlayerChara::APlayerChara()
 	, m_bDead(false)
 	, m_bIsGoal(false)
 	, m_bIsDamageOver(false)
+	, isStart(false)
 	, GoalTime(0.f)
 	, HP(100.f)
 	, CoinCount(0)
@@ -139,7 +140,7 @@ void APlayerChara::BeginPlay()
 		Player_HP_Widget->AddToViewport();
 	}
 
-	if (Player_Guard_Widget_Class != nullptr)
+	/*if (Player_Guard_Widget_Class != nullptr)
 	{
 		Player_Guard_Widget = CreateWidget(GetWorld(), Player_Guard_Widget_Class);
 		Player_Guard_Widget->AddToViewport();
@@ -155,7 +156,7 @@ void APlayerChara::BeginPlay()
 	{
 		Player_Score_Widget = CreateWidget(GetWorld(), Player_Score_Widget_Class);
 		Player_Score_Widget->AddToViewport();
-	}
+	}*/
 }
 
 // 毎フレームの更新処理
@@ -165,7 +166,7 @@ void APlayerChara::Tick(float DeltaTime)
 
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DeltaTime));
 
-	if (!m_bDead && !m_bIsGoal)
+	if (!m_bDead && !m_bIsGoal && isStart)
 	{
 		GoalTime += DeltaTime;
 
