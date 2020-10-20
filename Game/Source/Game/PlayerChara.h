@@ -172,6 +172,9 @@ public:
 		int32 selectPlay;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool isStart;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float guardBulletUIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
