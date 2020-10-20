@@ -1,2 +1,0 @@
-D:\GameTools\Git\Game\Intermediate\Build\Win64\UE4Editor\Development\Game\Definitions.Game.h
-D:\GameTools\Git\Game\Source\Game\Game.h

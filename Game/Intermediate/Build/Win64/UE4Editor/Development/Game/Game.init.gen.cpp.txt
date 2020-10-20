@@ -1,3 +1,0 @@
-D:\GameTools\Git\Game\Intermediate\Build\Win64\UE4Editor\Development\Game\Definitions.Game.h
-D:\GameTools\UE4\UE_4.24\Engine\Source\Runtime\CoreUObject\Public\UObject/GeneratedCppIncludes.h
-D:\GameTools\UE4\UE_4.24\Engine\Source\Runtime\CoreUObject\Public\UObject/MetaData.h
