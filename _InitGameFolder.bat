@@ -43,6 +43,18 @@ echo %dir%/Saved Completed.
 echo;
 del %dir%.sln
 echo %dir%/%dir%.sln Completed.
+
+echo Start Plugins/UE4Duino/ Delete.
+
+cd Plugins/UE4Duino/
+echo;
+
+rd /s /q Binaries
+echo %dir%/Plugins/UE4Duino/Binaries Completed.
+
+rd /s /q Intermediate
+echo %dir%/Plugins/UE4Duino/Intermediate Completed.
+
 echo;
 echo Delete completed.
 timeout /t -1
