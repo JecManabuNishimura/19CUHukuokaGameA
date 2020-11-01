@@ -11,7 +11,6 @@
 #include "CoreMinimal.h"
 #include "EnemyChara.h"
 #include "PlayerChara.h"
-#include "PlayerCharaNoSensor.h"
 #include "EnemyCharaATKControl.generated.h"
 
 class AActor;
@@ -62,7 +61,6 @@ public:
 private:
 
 	APlayerChara* pPlayer;
-	APlayerCharaNoSensor* pPlayerNoSensor;
 
 	// 発射間隔カウントダウン
 	float bulletTimeCount;
