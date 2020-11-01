@@ -65,12 +65,16 @@ private:
 private:
 	UPROPERTY(EditAnywhere, Category = "Controllable Value")
 		float scalingTime;
+	// 縮小率
 	UPROPERTY(EditAnywhere, Category = "Controllable Value")
 		float scalingRate;
 	UPROPERTY(EditAnywhere, Category = "Controllable Value")
 		float rotatingTime;
 	UPROPERTY(EditAnywhere, Category = "Controllable Value")
 		float rotatingRateMax;
+	// ステージの数
+	UPROPERTY(EditAnywhere, Category = "Controllable Value")
+		int stageAmount;
 
 	// rotate duration.
 	UPROPERTY(VisibleAnywhere, Category = "Checkable Value")
@@ -78,7 +82,7 @@ private:
 
 	// Current Stage you selected.
 	UPROPERTY(VisibleAnywhere, Category = "Checkable Value")
-		int stageNum;
+		int currentStage;
 
 // 入力バインド
 private:

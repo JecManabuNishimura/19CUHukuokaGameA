@@ -27,8 +27,9 @@ AStageSelect::AStageSelect() :
 	finishRotating(false),
 	startRotating(false),
 	nextRotation(0.0f, 0.0f, 0.0f),
-	stageNum(1),
-	pressCount(0)
+	currentStage(1),
+	pressCount(0),
+	stageAmount(4)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -84,7 +85,7 @@ AStageSelect::AStageSelect() :
 		// カメラ回転ラグの速度を設定
 		m_pSpringArm->CameraRotationLagSpeed = 10.0f;
 
-		m_pSpringArm->TargetArmLength = 1280.0f;
+		m_pSpringArm->TargetArmLength = 1280.0f * 2.0f;
 	}
 
 	m_pCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("m_pCamera"));
@@ -130,13 +131,13 @@ void AStageSelect::SelectRight()
 		UE_LOG(LogTemp, Warning, TEXT("Right!!"));
 		turnRight = true;
 		anyPressed = false;
-		stageNum += 1;
-		if (stageNum >= 5) stageNum = 1;
+		currentStage += 1;
+		if (currentStage >= stageAmount + 1) currentStage = 1;
 		pressCount += 1;
 	}
 	/*if (canEnter) {
-		stageNum += 1;
-		if (stageNum >= 5) stageNum = 1;
+		currentStage += 1;
+		if (currentStage >= stageAmount + 1) currentStage = 1;
 		pressCount += 1;
 	}*/
 }
@@ -147,13 +148,13 @@ void AStageSelect::SelectLeft()
 		UE_LOG(LogTemp, Warning, TEXT("Right!!"));
 		turnRight = false;
 		anyPressed = false;
-		stageNum -= 1;
-		if (stageNum <= 0) stageNum = 4;
+		currentStage -= 1;
+		if (currentStage <= 0) currentStage = stageAmount;
 		pressCount += 1;
 	}
 	/*if (canEnter) {
-		stageNum -= 1;
-		if (stageNum <= 0) stageNum = 4;
+		currentStage -= 1;
+		if (currentStage <= 0) currentStage = stageAmount;
 		pressCount += 1;
 	}*/
 	
@@ -171,14 +172,16 @@ void AStageSelect::StageChanging(float _deltaTime)
 	FVector presScale = m_SceneComponent->GetRelativeScale3D();
 
 	UE_LOG(LogTemp, Warning, TEXT("TurnRight:%s"), turnRight ? TEXT("TRUE") : TEXT("FALSE"));
-	UE_LOG(LogTemp, Warning, TEXT("preScale:%s"), *FString::SanitizeFloat(presScale.SizeSquared()));
-	UE_LOG(LogTemp, Warning, TEXT("finishSmall:%s"), finishSmall ? TEXT("TRUE") : TEXT("FALSE"));
-	UE_LOG(LogTemp, Warning, TEXT("finishRotating:%s"), finishRotating ? TEXT("TRUE") : TEXT("FALSE"));
+	UE_LOG(LogTemp, Warning, TEXT("anyPressed:%s"), anyPressed ? TEXT("TRUE") : TEXT("FALSE"));
+	//UE_LOG(LogTemp, Warning, TEXT("preScale:%s"), *FString::SanitizeFloat(presScale.SizeSquared()));
+	//UE_LOG(LogTemp, Warning, TEXT("finishSmall:%s"), finishSmall ? TEXT("TRUE") : TEXT("FALSE"));
+	//UE_LOG(LogTemp, Warning, TEXT("finishRotating:%s"), finishRotating ? TEXT("TRUE") : TEXT("FALSE"));
 	UE_LOG(LogTemp, Warning, TEXT("presRotation:%s"), *presRotation.ToString());
 	UE_LOG(LogTemp, Warning, TEXT("rotatingRate:%s"), *FString::SanitizeFloat(rotatingRate));
 
 	if (turnRight) {
-		if (!finishSmall && presScale.SizeSquared() >= scalingRate) {
+		// 縮小開始
+		/*if (!finishSmall && presScale.SizeSquared() >= scalingRate) {
 			m_SceneComponent->SetRelativeScale3D(
 				FVector(presScale.X -= scalingTime * _deltaTime,
 				presScale.Y -= scalingTime * _deltaTime,
@@ -186,23 +189,27 @@ void AStageSelect::StageChanging(float _deltaTime)
 		}
 		else if (!finishSmall) {
 			finishSmall = true;
-		}
+		}*/
 
-		if (finishSmall && !finishRotating && rotatingRate <= rotatingRateMax * FMath::Abs(pressCount)) {
+		// 回転開始
+		if (/*finishSmall &&*/ !finishRotating && rotatingRate <= rotatingRateMax * FMath::Abs(pressCount)) {
+			canEnter = true;
 			startRotating = true;
 			rotatingRate += _deltaTime;
 			m_SceneComponent->SetRelativeRotation(
 				FRotator(presRotation.Pitch, presRotation.Yaw += rotatingTime * _deltaTime, presRotation.Roll));
 		}
-		else if (finishSmall && rotatingRate > rotatingRateMax) {
-			finishRotating = true;
+		else if (/*finishSmall &&*/ rotatingRate > rotatingRateMax) {
+			finishRotating = false;
 			startRotating = false;
 			rotatingRate = 0.0f;
 			pressCount = 0.0f;
-			canEnter = false;
+			//canEnter = false;
+			anyPressed = true;
 		}
 
-		if (finishRotating) {
+		// 拡大開始
+		/*if (finishRotating) {
 			if (presScale.SizeSquared() <= 3.0f) {
 				m_SceneComponent->SetRelativeScale3D(
 					FVector(presScale.X += scalingTime * _deltaTime,
@@ -216,10 +223,11 @@ void AStageSelect::StageChanging(float _deltaTime)
 				finishSmall = false;
 				finishRotating = false;
 			}
-		}
+		}*/
 	}
 	if (!turnRight) {
-		if (!finishSmall && presScale.SizeSquared() >= scalingRate) {
+		// 縮小開始
+		/*if (!finishSmall && presScale.SizeSquared() >= scalingRate) {
 			m_SceneComponent->SetRelativeScale3D(
 				FVector(presScale.X -= scalingTime * _deltaTime,
 				presScale.Y -= scalingTime * _deltaTime,
@@ -227,23 +235,27 @@ void AStageSelect::StageChanging(float _deltaTime)
 		}
 		else if (!finishSmall) {
 			finishSmall = true;
-		}
-
-		if (finishSmall && !finishRotating && rotatingRate <= rotatingRateMax * (float) pressCount) {
+		}*/
+		
+		// 回転開始
+		if (/*finishSmall &&*/ !finishRotating && rotatingRate <= rotatingRateMax * (float) pressCount) {
+			canEnter = true;
 			startRotating = true;
 			rotatingRate += _deltaTime;
 			m_SceneComponent->SetRelativeRotation(
 				FRotator(presRotation.Pitch, presRotation.Yaw -= rotatingTime * _deltaTime, presRotation.Roll));
 		}
-		else if (finishSmall && rotatingRate > rotatingRateMax) {
-			finishRotating = true;
+		else if (/*finishSmall &&*/ rotatingRate > rotatingRateMax) {
+			finishRotating = false;
 			startRotating = false;
 			rotatingRate = 0.0f;
 			pressCount = 0.0f;
-			canEnter = false;
+			//canEnter = false;
+			anyPressed = true;
 		}
 
-		if (finishRotating) {
+		// 拡大開始
+		/*if (finishRotating) {
 			if (presScale.SizeSquared() <= 3.0f) {
 				m_SceneComponent->SetRelativeScale3D(
 					FVector(presScale.X += scalingTime * _deltaTime,
@@ -257,7 +269,7 @@ void AStageSelect::StageChanging(float _deltaTime)
 				finishSmall = false;
 				finishRotating = false;
 			}
-		}
+		}*/
 	}
 }
 
