@@ -44,6 +44,8 @@ public:
 	// センサーの値をRotatorに変換
 	FRotator SensorToRotator();
 
+	// 各入力関係メソッドとのバインド処理
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 private:
 	//	カメラ更新処理
 	void UpdateSensor(float _deltaTime);
@@ -68,6 +70,23 @@ private:
 
 	//	死亡カウント
 	void DeadCount();
+
+	void GetPlayerPosZ(float DeltaTime);
+
+	//	====================================
+	//	センサーが持ってない関数
+
+	//	【入力バインド】キャラ移動:左右
+	void MoveRightWithNoSensor(float _axisValue);
+
+	//	【入力バインド】ガード開始
+	void GuardStartWithNoSensor(float _axisValue);
+	
+	//	【入力バインド】ダッシュ開始
+	void DashOrJumpStartWithNoSensor(float _axisValue);
+
+	//	====================================
+
 private:
 	// Arduinoのシリアル通信保存用
 	USerial* m_pArduinoSerial;
@@ -82,48 +101,46 @@ private:
 
 	//	UPROPERTYにすることで、ブループリント上で変数の確認、編集などができる
 	//	「BlueprintReadOnly」に指定しているため、ブループリントで見ることだけ可能で、編集はできない
-
-	UPROPERTY(EditAnywhere, Category = "Camera")
-		FVector2D m_cameraPitchLimit;				//	カメラのピッチ範囲
-
 	UPROPERTY(EditAnywhere, Category = "Jump")
-		float m_gravity;							//	重力
+		float gravity;							//	重力
 
 	UPROPERTY(EditAnywhere, Category = "Jump")		//	ジャンプ力
-		float m_jumpPower;
+		float jumpPower;
 
-	float m_jumpTime;								//	ジャンプ時間
-	float m_nowJumpHeight;							//	現在フレームのジャンプ量
-	float m_prevJumpHeight;							//	前フレームのジャンプ量
+	float jumpTime;								//	ジャンプ時間
+	float nowJumpHeight;							//	現在フレームのジャンプ量
+	float prevJumpHeight;							//	前フレームのジャンプ量
 
-	bool m_bCanJump;
-	bool m_bJumping;								//	ジャンプ中フラグ
-	FVector m_posBeforeJump;						//	ジャンル開始前のキャラクター座標
+	bool canJump;
+	FVector posBeforeJump;						//	ジャンル開始前のキャラクター座標
+
+	float startPosZ;
+	float nowPosZ;
+	float countPosZTime;
+	bool overStartHight;
 
 	float tempRotate;								//　元状態に戻すの回転角度
-
-	bool m_bHaveGuardEnergy;
+	
+	bool haveGuardEnergy;
 
 	// 発射間隔カウントダウン
 	float bulletTimeCount;
 
 	float tempSpeed;
-	bool m_bIsDamageOver;
+	bool isDamageOver;
 
-	bool m_bDashing;
-	bool m_bHaveDashEnergy;
+	bool haveDashEnergy;
 
-	float m_bTempDamageFrame;
-	bool m_bCanDamage;
-
-	bool m_bDead;									//	死亡フラグ
-
-	bool m_bIsGoal;
+	float tempDamageFrame;
 
 	float tempRoll;
 	float tempPitch;
 	float tempYaw;
 public:
+	//	センサーが持っていますか
+	UPROPERTY(EditAnywhere, Category = "WithSensor")
+		bool withSensor;
+
 	// Attacking type (攻撃タイプ)
 	UPROPERTY(EditAnywhere, Category = "Attack")
 		PPlayerAttackType playerATKType;
@@ -140,25 +157,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Offset")
 		float bulletXOffset;
 
-	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	HPのUI
-		TSubclassOf<UUserWidget> Player_HP_Widget_Class;
-	UUserWidget* Player_HP_Widget;
-
-	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	ScoreのUI
-		TSubclassOf<UUserWidget> Player_Score_Widget_Class;
-	UUserWidget* Player_Score_Widget;
-
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DeadのUI
 		TSubclassOf<UUserWidget> Player_Select_Widget_Class;
 	UUserWidget* Player_Select_Widget;
-
-	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	GuardのUI
-		TSubclassOf<UUserWidget> Player_Guard_Widget_Class;
-	UUserWidget* Player_Guard_Widget;
-
-	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DashのUI
-		TSubclassOf<UUserWidget> Player_Dash_Widget_Class;
-	UUserWidget* Player_Dash_Widget;
 
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	DamageのUI
 		TSubclassOf<UUserWidget> Player_Damage_Widget_Class;
@@ -168,11 +169,9 @@ public:
 		TSubclassOf<UUserWidget> Player_Goal_Widget_Class;
 	UUserWidget* Player_Goal_Widget;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		int32 selectPlay;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		bool isStart;
+		int32 selectPlay;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float guardBulletUIDownSpeed;
@@ -216,6 +215,35 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float PlayerScore;								//	Player獲得のScore
 
+	//	=============================================================
+	//	プレイヤーの状態
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool isStart;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool isGoal;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+		bool isDead;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+		bool isJumping;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+		bool isLanding;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+		bool isDashing;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+		bool isDashLine;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+		bool isGuarding;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+		bool canBeDamaged;
+
 	UPROPERTY(EditAnywhere)
 		float Fence_FilmDmg;
 	// Is Open Com Port
@@ -229,6 +257,4 @@ public:
 
 	UFUNCTION()
 		void OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
-	bool m_bGuarding;
 };

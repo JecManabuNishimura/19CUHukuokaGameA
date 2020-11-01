@@ -7,39 +7,47 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "..\..\UE4Duino\Source\UE4Duino\Public\Serial.h"
 #include <time.h>
+#include "HeadMountedDisplayFunctionLibrary.h"			// VR's 
 
 //	defineマクロ
 #define ROTATOR_ARRAY_SIZE 1
-#define JUMP_HEIGHT (m_jumpTime * m_jumpTime * (-m_gravity) / 2) + (m_jumpTime * m_jumpPower)
+#define JUMP_HEIGHT (jumpTime * jumpTime * (-gravity) / 2) + (jumpTime * jumpPower)
 
 // コンストラクタ
 APlayerChara::APlayerChara()
 	: m_pArduinoSerial(NULL)
+	, withSensor(true)
 	, serialPort(4)
 	, isOpen(false)
+	, startPosZ(0.f)
+	, nowPosZ(0.f)
+	, countPosZTime(0.f)
+	, overStartHight(false)
 	, tempSpeed(0.f)
 	, bulletTimeCount(0.0f)
 	, bulletDuration(1.0f)
 	, bulletXOffset(10.0f)
 	, playerSpeed(10.f)
-	, m_gravity(700.f)
-	, m_jumpPower(1200.f)
-	, m_jumpTime(0.f)
-	, m_nowJumpHeight(0.f)
-	, m_prevJumpHeight(0.f)
-	, m_bCanJump(false)
-	, m_bJumping(false)
+	, gravity(700.f)
+	, jumpPower(1200.f)
+	, jumpTime(0.f)
+	, nowJumpHeight(0.f)
+	, prevJumpHeight(0.f)
+	, canJump(false)
+	, isJumping(false)
+	, isLanding(false)
 	, tempRotate(0.f)
-	, m_bGuarding(false)
-	, m_bDashing(false)
-	, m_bTempDamageFrame(0.f)
-	, m_bCanDamage(true)
-	, m_bHaveGuardEnergy(true)
-	, m_bHaveDashEnergy(true)
-	, m_bDead(false)
-	, m_bIsGoal(false)
-	, m_bIsDamageOver(false)
+	, isGuarding(false)
+	, isDashing(false)
+	, isDashLine(false)
+	, tempDamageFrame(0.f)
+	, canBeDamaged(true)
+	, haveGuardEnergy(true)
+	, haveDashEnergy(true)
 	, isStart(false)
+	, isDead(false)
+	, isGoal(false)
+	, isDamageOver(false)
 	, GoalTime(0.f)
 	, HP(100.f)
 	, CoinCount(0)
@@ -74,7 +82,7 @@ void APlayerChara::BeginPlay()
 {
 	Super::BeginPlay();
 
-	m_bTempDamageFrame = DamageFrame;
+	tempDamageFrame = DamageFrame;
 	tempSpeed = playerSpeed;
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &APlayerChara::OnBeginOverlap);
@@ -88,75 +96,69 @@ void APlayerChara::BeginPlay()
 		pMeshComp->SetRelativeLocation(FVector(0.f, 0.f, -85.f));
 	}
 
-	UCharacterMovementComponent* pCharMoveComp = GetCharacterMovement();
-	if (pCharMoveComp != NULL)
+	if (withSensor)
 	{
-		//	ジャンプ時にも水平方向への移動が聞くように（0～1の間に設定することで移動する具合を調整）
-		pCharMoveComp->AirControl = 0.8f;
-	}
-
-	// シリアルポートを開ける
-	m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
-
-	if (isOpen == false)
-	{
-		UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), serialPort);
-		return;
-	}
-	else
-	{
-		UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), serialPort);
-	}
-
-	// 10回分のデータを入れる
-	int errorCount = 0;
-	for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
-	{
-		FRotator rotTemp;
-		rotTemp = SensorToRotator();
-
-		// センサーの値が読み取れていなければやり直し
-		if (rotTemp == FRotator::ZeroRotator)
+		UCharacterMovementComponent* pCharMoveComp = GetCharacterMovement();
+		if (pCharMoveComp != NULL)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
-			++errorCount;
-			if (errorCount >= 10)
-			{
-				UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
-				break;
-			}
+			//	ジャンプ時にも水平方向への移動が聞くように（0～1の間に設定することで移動する具合を調整）
+			pCharMoveComp->AirControl = 0.8f;
+		}
+
+		// シリアルポートを開ける
+		m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
+
+		if (isOpen == false)
+		{
+			UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), serialPort);
+			return;
 		}
 		else
 		{
-			UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
+			UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), serialPort);
 		}
 
-		prevRotator.Add(rotTemp);
+		// 10回分のデータを入れる
+		int errorCount = 0;
+		for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
+		{
+			FRotator rotTemp;
+			rotTemp = SensorToRotator();
+
+			// センサーの値が読み取れていなければやり直し
+			if (rotTemp == FRotator::ZeroRotator)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
+				++errorCount;
+				if (errorCount >= 10)
+				{
+					UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
+					break;
+				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
+			}
+
+			prevRotator.Add(rotTemp);
+		}
 	}
 
-	if (Player_HP_Widget_Class != nullptr)
-	{
-		Player_HP_Widget = CreateWidget(GetWorld(), Player_HP_Widget_Class);
-		Player_HP_Widget->AddToViewport();
-	}
+	// VR's
+	FName DeviceName = UHeadMountedDisplayFunctionLibrary::GetHMDDeviceName();
 
-	/*if (Player_Guard_Widget_Class != nullptr)
+	if (DeviceName == "SteamVR" || DeviceName == "OculusHMD")
 	{
-		Player_Guard_Widget = CreateWidget(GetWorld(), Player_Guard_Widget_Class);
-		Player_Guard_Widget->AddToViewport();
-	}
 
-	if (Player_Dash_Widget_Class != nullptr)
-	{
-		Player_Dash_Widget = CreateWidget(GetWorld(), Player_Dash_Widget_Class);
-		Player_Dash_Widget->AddToViewport();
-	}
+		UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Floor);
 
-	if (Player_Dash_Widget_Class != nullptr)
+	} // end if()
+	else
 	{
-		Player_Score_Widget = CreateWidget(GetWorld(), Player_Score_Widget_Class);
-		Player_Score_Widget->AddToViewport();
-	}*/
+		UE_LOG(LogTemp, Warning, TEXT("Can't find VR Origin(HMD)"));
+	} // end else
+
 }
 
 // 毎フレームの更新処理
@@ -164,14 +166,18 @@ void APlayerChara::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DeltaTime));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(startPosZ));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isGuarding ? TEXT("true") : TEXT("false"));
 
-	if (!m_bDead && !m_bIsGoal && isStart)
+	if (withSensor)
+	{
+		//	センサーの更新処理
+		UpdateSensor(DeltaTime);
+	}
+
+	if (!isDead && !isGoal && isStart)
 	{
 		GoalTime += DeltaTime;
-
-		//	カメラ更新処理
-		UpdateSensor(DeltaTime);
 
 		//	移動処理
 		UpdateMove(DeltaTime);
@@ -186,17 +192,19 @@ void APlayerChara::Tick(float DeltaTime)
 
 		Shooting(DeltaTime);
 
-		if (!m_bCanDamage)
+		GetPlayerPosZ(DeltaTime);
+
+		if (!canBeDamaged)
 		{
 			DamageFrame -= (DeltaTime * 60);
 
 			if (DamageFrame <= 0.f)
 			{
 				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DamageFrame));
-				m_bCanDamage = true;
+				canBeDamaged = true;
 				Player_Damage_Widget->RemoveFromViewport();
-				DamageFrame = m_bTempDamageFrame;
-				m_bIsDamageOver = true;
+				DamageFrame = tempDamageFrame;
+				isDamageOver = true;
 			}
 		}
 	}
@@ -207,6 +215,317 @@ void APlayerChara::Tick(float DeltaTime)
 	}
 
 	DeadCount();
+
+}
+
+//	移動処理
+void APlayerChara::UpdateMove(float _deltaTime)
+{
+	FVector NewLocation = GetActorLocation();
+	FVector YRotation = GetActorForwardVector();
+
+	//	前に向くずっと移動する
+	if (isDashing || isDashLine)
+	{
+		NewLocation.X += playerSpeed * 1.5f;
+	}
+	else if (!isGuarding && !isDashing)
+	{
+		NewLocation.X += playerSpeed;
+	}
+	else if (isGuarding)
+	{
+		NewLocation.X += playerSpeed * 0.8f;
+	}
+
+	//	キャラクターのY軸移動
+	{
+		YRotation.Y = 0.f;
+		NewLocation.Y += 0.2f * tempRoll;
+		SetActorLocation(NewLocation);
+	}
+
+	if (isDamageOver)
+	{
+		if (playerSpeed >= tempSpeed)
+		{
+			isDamageOver = false;
+			playerSpeed = tempSpeed;
+		}
+		else
+		{
+			playerSpeed += tempSpeed * 0.02f;
+		}
+	}
+}
+
+//	ジャンプ処理
+void APlayerChara::UpdateJump(float _deltaTime)
+{
+	if (tempPitch > 30.f && !isJumping && canJump && !isGuarding)
+	{
+		isJumping = true;
+		posBeforeJump = GetActorLocation();
+	}
+
+	if (isJumping)
+	{
+		//	ジャンプ量を計算
+		nowJumpHeight = JUMP_HEIGHT;
+
+		FVector nowPos = GetActorLocation();
+
+		jumpTime += _deltaTime;
+
+		isLanding = false;
+
+		if (nowJumpHeight < 0.0f)
+		{
+			jumpTime = 0.f;
+			isJumping = false;
+			isLanding = true;
+			SetActorLocation(FVector(nowPos.X, nowPos.Y, posBeforeJump.Z));
+		}
+		else
+		{
+			SetActorLocation(FVector(nowPos.X, nowPos.Y, posBeforeJump.Z + nowJumpHeight), true);
+		}
+
+		prevJumpHeight = nowJumpHeight;
+	}
+}
+
+//	ガード処理
+void APlayerChara::UpdateGuard()
+{
+	if (GuardEnergy <= 0.f)
+	{
+		isGuarding = false;
+		haveGuardEnergy = false;
+		tempRotate = 0.f;
+	}
+
+	FRotator nowRot = GetActorRotation();
+	if ((tempYaw < -30.f || tempYaw > 30.f) && haveGuardEnergy)
+	{
+		isGuarding = true;
+	}
+	else
+	{
+		isGuarding = false;
+	}
+
+	if (isGuarding && haveGuardEnergy)
+	{
+		GuardEnergy -= 0.05f;
+		//GuardEnergy -= Guard_UIDownSpeed;
+	}
+	else
+	{
+		if (GuardEnergy <= 100.f)
+		{
+			GuardEnergy += Guard_UIDownSpeed;
+		}
+		else
+		{
+			haveGuardEnergy = true;
+		}
+	}
+}
+
+void APlayerChara::UpdateAccelerate()
+{
+	FRotator nowRot = GetActorRotation();
+	if (tempPitch < -30.f && haveDashEnergy)
+	{
+		isDashing = true;
+	}
+
+	if (DashEnergy <= 0.f)
+	{
+		isDashing = false;
+		haveDashEnergy = false;
+	}
+
+	if (isDashing && haveDashEnergy)
+	{
+		DashEnergy -= Dash_UIDownSpeed;
+	}
+	else
+	{
+		if (DashEnergy <= 100.f)
+		{
+			DashEnergy += Dash_UIDownSpeed;
+		}
+		else
+		{
+			haveDashEnergy = true;
+		}
+	}
+}
+
+void APlayerChara::RestartGame()
+{
+	FVector restartLocation = GetActorLocation();
+
+	SetActorLocation(FVector(restartLocation.X - 3000.f, -10.f, 30.f));
+
+	HP = 100.f;
+
+	isDead = false;
+
+	Player_Select_Widget->RemoveFromViewport();
+
+	selectPlay = 0;
+}
+
+//発射開始
+void APlayerChara::Shooting(float DeltaTime)
+{
+		bulletTimeCount += DeltaTime;
+
+		FVector currentVector = GetActorLocation();
+		if (bulletTimeCount >= bulletDuration) {
+			// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
+			GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
+			bulletTimeCount = 0.0f;
+			//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
+		}
+}
+
+void APlayerChara::DeadCount()
+{
+	if (HP <= 0)
+	{
+		if (!isDead)
+		{
+			isDead = true;
+
+			if (Player_Select_Widget_Class != nullptr)
+			{
+				Player_Select_Widget = CreateWidget(GetWorld(), Player_Select_Widget_Class);
+				Player_Select_Widget->AddToViewport();
+			}
+
+			GetMesh()->SetSimulatePhysics(true);
+		}
+	}
+}
+
+void APlayerChara::GetPlayerPosZ(float DeltaTime)
+{
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(startPosZ));
+	if (startPosZ == 0.f)
+	{
+		startPosZ = GetActorLocation().Z;
+	}
+	countPosZTime += DeltaTime;
+	nowPosZ = GetActorLocation().Z;
+
+
+		if (nowPosZ - startPosZ > 50.f)
+		{
+			overStartHight = true;		
+			isLanding = false;
+		}
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowPosZ));
+		//GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, nowPosZ == startPosZ ? TEXT("true") : TEXT("false"));
+
+	if (overStartHight && (nowPosZ - startPosZ < 0.1f))
+	{
+		isLanding = true;
+		overStartHight = false;
+	}
+}
+
+void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor->ActorHasTag("JumpPad"))
+	{
+		canJump = true;
+	}
+
+	if (OtherActor->ActorHasTag("Fence_Film") && canBeDamaged && !isDashing && !isGuarding)
+	{
+		if (Player_Damage_Widget_Class != nullptr)
+		{
+			Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
+			Player_Damage_Widget->AddToViewport();
+		}
+
+		playerSpeed *= 0.5f;
+		canBeDamaged = false;
+		HP -= Fence_FilmDmg;
+	}
+
+	if (OtherActor->ActorHasTag("EnemyBullet") && canBeDamaged && !isDashing && !isDashLine)
+	{
+		if (!isGuarding)
+		{
+			if (Player_Damage_Widget_Class != nullptr)
+			{
+				Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
+				Player_Damage_Widget->AddToViewport();
+			}
+			playerSpeed *= 0.5f;
+			canBeDamaged = false;
+			HP -= Fence_FilmDmg;
+		}
+		else
+		{
+			GuardEnergy -= guardBulletUIDownSpeed;
+		}
+	}
+
+	if (OtherActor->ActorHasTag("Coin"))
+	{
+		PlayerScore += CoinScore;
+
+		CoinCount += 1;
+	}
+
+	if (OtherActor->ActorHasTag("DashLine"))
+	{
+		isDashLine = true;
+	}
+
+	if (OtherActor->ActorHasTag("Goal"))
+	{
+		if (Player_Goal_Widget_Class != nullptr)
+		{
+			Player_Goal_Widget = CreateWidget(GetWorld(), Player_Goal_Widget_Class);
+			Player_Goal_Widget->AddToViewport();
+		}
+
+		isGoal = true;
+	}
+}
+
+void APlayerChara::OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (OtherActor->ActorHasTag("JumpPad"))
+	{
+		canJump = false;
+	}
+
+	if (OtherActor->ActorHasTag("DashLine"))
+	{
+		isDashLine = false;
+	}
+}
+
+void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	if (m_pArduinoSerial != NULL)
+	{
+		m_pArduinoSerial->Close();
+		m_pArduinoSerial = NULL;
+	}
+
+	// 回転量の保存用配列の初期化
+	prevRotator.Reset();
 }
 
 //	センサーの更新処理
@@ -230,7 +549,7 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 	tempYaw /= prevRotator.Num();
 
 	//	guardEnergyが0になったら、横回転の角度を強制に0に戻る
-	if (!m_bHaveGuardEnergy)
+	if (!haveGuardEnergy)
 	{
 		if (tempRotate >= 85.f || tempRotate <= -85.f)
 		{
@@ -250,12 +569,12 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 	}
 
 	// Actorに回転量を反映
-	if (m_bGuarding)
+	if (isGuarding)
 	{
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(tempRoll)); = tempPitch;
 		tempPitch = 0.f;
 	}
-	else if (m_bDashing)
+	else if (isDashing)
 	{
 		tempYaw = 0.f;
 	}
@@ -293,296 +612,6 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 	prevDiffRot = rot;
 }
 
-//	移動処理
-void APlayerChara::UpdateMove(float _deltaTime)
-{
-	FVector NewLocation = GetActorLocation();
-	FVector YRotation = GetActorForwardVector();
-
-	//	前に向くずっと移動する
-	if (m_bDashing)
-	{
-		NewLocation.X += playerSpeed * 1.15f;
-	}
-	else if (!m_bGuarding && !m_bDashing)
-	{
-		NewLocation.X += playerSpeed;
-	}
-	else if (m_bGuarding)
-	{
-		NewLocation.X += playerSpeed * 0.8f;
-	}
-
-	//	キャラクターのY軸移動
-	{
-		YRotation.Y = 0.f;
-		NewLocation.Y += 0.2f * tempRoll;
-		SetActorLocation(NewLocation);
-	}
-
-	if (m_bIsDamageOver)
-	{
-		if (playerSpeed >= tempSpeed)
-		{
-			m_bIsDamageOver = false;
-			playerSpeed = tempSpeed;
-		}
-		else
-		{
-			playerSpeed += tempSpeed * 0.02f;
-		}
-	}
-}
-
-//	ジャンプ処理
-void APlayerChara::UpdateJump(float _deltaTime)
-{
-	if (tempPitch > 45.f && !m_bJumping && m_bCanJump && !m_bGuarding)
-	{
-		m_bJumping = true;
-		m_posBeforeJump = GetActorLocation();
-	}
-
-	if (m_bJumping)
-	{
-		//	ジャンプ量を計算
-		m_nowJumpHeight = JUMP_HEIGHT;
-
-		FVector nowPos = GetActorLocation();
-
-		m_jumpTime += _deltaTime;
-
-		if (m_nowJumpHeight < 0.0f)
-		{
-			m_jumpTime = 0.f;
-			m_bJumping = false;
-			SetActorLocation(FVector(nowPos.X, nowPos.Y, m_posBeforeJump.Z));
-		}
-		else
-		{
-			SetActorLocation(FVector(nowPos.X, nowPos.Y, m_posBeforeJump.Z + m_nowJumpHeight), true);
-		}
-
-		m_prevJumpHeight = m_nowJumpHeight;
-	}
-}
-
-//	ガード処理
-void APlayerChara::UpdateGuard()
-{
-	if (GuardEnergy <= 0.f)
-	{
-		m_bGuarding = false;
-		m_bHaveGuardEnergy = false;
-		tempRotate = 0.f;
-	}
-
-	FRotator nowRot = GetActorRotation();
-	if (tempYaw < -30.f || tempYaw > 30.f)
-	{
-		m_bGuarding = true;
-	}
-	else
-	{
-		m_bGuarding = false;
-	}
-
-	if (m_bGuarding && m_bHaveGuardEnergy)
-	{
-		GuardEnergy -= 0.05f;
-		//GuardEnergy -= Guard_UIDownSpeed;
-	}
-	else
-	{
-		if (GuardEnergy <= 100.f)
-		{
-			GuardEnergy += Guard_UIDownSpeed;
-		}
-		else
-		{
-			m_bHaveGuardEnergy = true;
-		}
-	}
-}
-
-void APlayerChara::UpdateAccelerate()
-{
-	FRotator nowRot = GetActorRotation();
-	if (tempPitch < -30.f && m_bHaveDashEnergy)
-	{
-		m_bDashing = true;
-	}
-
-	if (DashEnergy <= 0.f)
-	{
-		m_bDashing = false;
-		m_bHaveDashEnergy = false;
-	}
-
-	if (m_bDashing && m_bHaveDashEnergy)
-	{
-		DashEnergy -= Dash_UIDownSpeed;
-	}
-	else
-	{
-		if (DashEnergy <= 100.f)
-		{
-			DashEnergy += Dash_UIDownSpeed;
-		}
-		else
-		{
-			m_bHaveDashEnergy = true;
-		}
-	}
-}
-
-void APlayerChara::RestartGame()
-{
-	FVector restartLocation = GetActorLocation();
-
-	SetActorLocation(FVector(restartLocation.X - 3000.f, -10.f, 30.f));
-
-	HP = 100.f;
-
-	m_bDead = false;
-
-	Player_Select_Widget->RemoveFromViewport();
-
-	selectPlay = 0;
-}
-
-//発射開始
-void APlayerChara::Shooting(float DeltaTime)
-{
-	bulletTimeCount += DeltaTime;
-
-	FVector currentVector = GetActorLocation();
-	if (bulletTimeCount >= bulletDuration) {
-		// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
-		GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
-		bulletTimeCount = 0.0f;
-		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
-	}
-}
-
-void APlayerChara::DeadCount()
-{
-	if (HP <= 0)
-	{
-		if (!m_bDead)
-		{
-			m_bDead = true;
-
-			if (Player_Select_Widget_Class != nullptr)
-			{
-				Player_Select_Widget = CreateWidget(GetWorld(), Player_Select_Widget_Class);
-				Player_Select_Widget->AddToViewport();
-			}
-
-			GetMesh()->SetSimulatePhysics(true);
-		}
-	}
-}
-
-void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	if (OtherActor->ActorHasTag("JumpPad"))
-	{
-		m_bCanJump = true;
-	}
-
-	if (OtherActor->ActorHasTag("Fence_Film") && m_bCanDamage && !m_bDashing && !m_bGuarding)
-	{
-		if (Player_Damage_Widget_Class != nullptr)
-		{
-			Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
-			Player_Damage_Widget->AddToViewport();
-		}
-
-		playerSpeed *= 0.5f;
-		m_bCanDamage = false;
-		HP -= Fence_FilmDmg;
-	}
-
-	if (OtherActor->ActorHasTag("EnemyBullet") && m_bCanDamage && !m_bDashing)
-	{
-		if (!m_bGuarding)
-		{
-			if (Player_Damage_Widget_Class != nullptr)
-			{
-				Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
-				Player_Damage_Widget->AddToViewport();
-			}
-			playerSpeed *= 0.5f;
-			m_bCanDamage = false;
-			HP -= Fence_FilmDmg;
-		}
-		else
-		{
-			GuardEnergy -= guardBulletUIDownSpeed;
-		}
-	}
-
-	if (OtherActor->ActorHasTag("Coin"))
-	{
-		PlayerScore += CoinScore;
-
-		CoinCount += 1;
-	}
-
-	if (OtherActor->ActorHasTag("Goal"))
-	{
-		if (Player_Goal_Widget_Class != nullptr)
-		{
-			Player_Goal_Widget = CreateWidget(GetWorld(), Player_Goal_Widget_Class);
-			Player_Goal_Widget->AddToViewport();
-		}
-
-		if (Player_HP_Widget_Class != nullptr)
-		{
-			Player_HP_Widget->RemoveFromViewport();
-		}
-
-		if (Player_Guard_Widget_Class != nullptr)
-		{
-			Player_Guard_Widget->RemoveFromViewport();
-		}
-
-		if (Player_Dash_Widget_Class != nullptr)
-		{
-			Player_Dash_Widget->RemoveFromViewport();
-		}
-
-		if (Player_Dash_Widget_Class != nullptr)
-		{
-			Player_Score_Widget->RemoveFromViewport();
-		}
-
-		m_bIsGoal = true;
-	}
-}
-
-void APlayerChara::OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-{
-	if (OtherActor->ActorHasTag("JumpPad"))
-	{
-		m_bCanJump = false;
-	}
-}
-
-void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-
-	if (m_pArduinoSerial != NULL)
-	{
-		m_pArduinoSerial->Close();
-		m_pArduinoSerial = NULL;
-	}
-
-	// 回転量の保存用配列の初期化
-	prevRotator.Reset();
-}
 
 FRotator APlayerChara::SensorToRotator()
 {
@@ -652,3 +681,41 @@ FRotator APlayerChara::SensorToRotator()
 		return FRotator::ZeroRotator;
 	}
 }
+
+//	====================================
+//	センサーが持ってない関数
+
+
+// 各入力関係メソッドとのバインド処理
+void APlayerChara::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	//	移動
+	InputComponent->BindAxis("MoveRight", this, &APlayerChara::MoveRightWithNoSensor);
+
+	//	ガード
+	InputComponent->BindAxis("Guard", this, &APlayerChara::GuardStartWithNoSensor);
+
+	//	ダッシュ
+	InputComponent->BindAxis("DashAndJump", this, &APlayerChara::DashOrJumpStartWithNoSensor);
+}
+
+//	【入力バインド】キャラ移動:左右
+void APlayerChara::MoveRightWithNoSensor(float _axisValue)
+{
+
+	tempRoll = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 180.f;
+}
+
+void APlayerChara::GuardStartWithNoSensor(float _axisValue)
+{
+	tempYaw = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
+}
+
+void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
+{
+	tempPitch = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
+}
+
+//	====================================
