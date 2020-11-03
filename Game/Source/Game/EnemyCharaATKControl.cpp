@@ -8,7 +8,6 @@
 
 #include "EnemyCharaATKControl.h"
 #include "PlayerChara.h"
-#include "PlayerCharaNoSensor.h"
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"		// Player‚Ìî•ñæ“¾‚·‚é‚½‚ß
 #include "Engine.h"
 
@@ -26,8 +25,6 @@ void AEnemyCharaATKControl::BeginPlay()
 
 	// PlayerChara‘¤‚Ìî•ñ‚ğæ“¾
 	pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	// PlayerNoSensor‘¤‚Ìî•ñ‚ğæ“¾
-	pPlayerNoSensor = Cast<APlayerCharaNoSensor>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 }
 
 void AEnemyCharaATKControl::Tick(float DeltaTime)
@@ -54,8 +51,7 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 bool AEnemyCharaATKControl::CloseToPlayer()
 {
 	//APlayerChara* pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	//APlayerCharaNoSensor* pPlayerNoSensor = Cast<APlayerCharaNoSensor>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	FVector vectortoPlayer = pPlayerNoSensor->GetActorLocation() - this->GetActorLocation();
+	FVector vectortoPlayer = pPlayer->GetActorLocation() - this->GetActorLocation();
 	float currentDistance = vectortoPlayer.Size();
 
 	//UE_LOG(LogTemp, Warning, TEXT("value:%s"), *FString::SanitizeFloat(currentDistance));
