@@ -17,9 +17,9 @@ AEnemyBullet::AEnemyBullet()
 	, eEnemy(NULL)
 	, isPlayerBeGuarding(false)
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	collisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
 	RootComponent = collisionBox;
 }
@@ -36,13 +36,13 @@ void AEnemyBullet::BeginPlay()
 	//	colorÇÃê›íË
 	auto Cube = FindComponentByClass<UStaticMeshComponent>();
 	auto Material = Cube->GetMaterial(0);
-	
+
 	DynamicMaterial = UMaterialInstanceDynamic::Create(Material, NULL);
 	Cube->SetMaterial(0, DynamicMaterial);
-	
+
 	//	ÉvÉåÉCÉÑÅ[Ç∆ìGÇälìæ
 	pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	//eEnemy = Cast<AEnemyCharaATKControl>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	eEnemy = Cast<AEnemyCharaATKControl>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 }
 
 // Called every frame
@@ -52,23 +52,32 @@ void AEnemyBullet::Tick(float DeltaTime)
 
 	BulletMovement();
 
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->isGuarding ? TEXT("true") : TEXT("false"));
+	float PlayerCurrentLocationX = pPlayer->GetActorLocation().X;
+	if (GetActorLocation().X < PlayerCurrentLocationX) {
+		Destroy();
+	}
 }
 
 void AEnemyBullet::BulletMovement()
-{	
+{
 	if (isPlayerBeGuarding)
 	{
 		FVector NewPos = GetActorLocation();
 		NewPos.X += 100.f;
 		SetActorLocation(NewPos);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, *(FString::SanitizeFloat(eEnemy->tempA)));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, *(FString::SanitizeFloat(NewPos.X)));
 
 		//	colorÇÃê›íË
 		float blend = 1.0f;
 		DynamicMaterial->SetScalarParameterValue(TEXT("Blend"), blend);
 	}
 }
+
+void AEnemyBullet::PlayEffects()
+{
+	UGameplayStatics::SpawnEmitterAtLocation(this, GuardEffect, GetActorLocation());
+}
+
 
 //FVector AEnemyBullet::GetEnemyPos()
 //{
@@ -79,10 +88,13 @@ void AEnemyBullet::BulletMovement()
 
 void AEnemyBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->ActorHasTag("Player"))
+	if (OtherActor->ActorHasTag("Guard"))
 	{
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->isGuarding ? TEXT("true"): TEXT("false"));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->m_bGuarding ? TEXT("true"): TEXT("false"));
 		isPlayerBeGuarding = pPlayer->isGuarding;
+
+		pPlayer->GuardEnergy -= pPlayer->guardBulletUIDownSpeed;
+
+		PlayEffects();
 	}
 }
-
