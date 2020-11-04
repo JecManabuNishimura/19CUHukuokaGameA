@@ -1,5 +1,16 @@
+//----------------------------------------------------------
+// ファイル名		：PlayerChara.h
+// 概要				：プレイヤーの制御
+// 作成者			：19CU0220 曹飛
+// 更新内容			：
+//					：2020/11/03 鍾家同 コインエフェクトの生成
+//					：2020/11/04 シールドにEnemyBulletが当たると跳ね返す
+
+//----------------------------------------------------------
+
 // インクルード
 #include "PlayerChara.h"
+#include "PlayerBullet.h"
 #include "Engine.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -38,6 +49,9 @@ APlayerChara::APlayerChara()
 	, isLanding(false)
 	, tempRotate(0.f)
 	, isGuarding(false)
+	, isLeftGuarding(false)
+	, isRightGuarding(false)
+	, IsGenerateGuard(false)
 	, isDashing(false)
 	, isDashLine(false)
 	, tempDamageFrame(0.f)
@@ -66,6 +80,9 @@ APlayerChara::APlayerChara()
 	, tempRoll(0.f)
 	, tempPitch(0.f)
 	, tempYaw(0.f)
+	, nowRoll(0.f)
+	, nowPitch(0.f)
+	, nowYaw(0.f)
 {
 	// 毎フレーム、このクラスのTick()を呼ぶかどうかを決めるフラグ。必要に応じて、パフォーマンス向上のために切ることもできる。
 	PrimaryActorTick.bCanEverTick = true;
@@ -166,7 +183,7 @@ void APlayerChara::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(startPosZ));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DeltaTime * 60.f));
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isGuarding ? TEXT("true") : TEXT("false"));
 
 	if (withSensor)
@@ -309,6 +326,16 @@ void APlayerChara::UpdateGuard()
 	if ((tempYaw < -30.f || tempYaw > 30.f) && haveGuardEnergy)
 	{
 		isGuarding = true;
+		if (tempYaw < -30.f)
+		{
+			isRightGuarding = false;
+			isLeftGuarding = true;
+		}
+		else if (tempYaw > 30.f)
+		{
+			isLeftGuarding = false;
+			isRightGuarding = true;
+		}
 	}
 	else
 	{
@@ -317,8 +344,7 @@ void APlayerChara::UpdateGuard()
 
 	if (isGuarding && haveGuardEnergy)
 	{
-		GuardEnergy -= 0.05f;
-		//GuardEnergy -= Guard_UIDownSpeed;
+		GuardEnergy -= Guard_UIDownSpeed;
 	}
 	else
 	{
@@ -382,15 +408,17 @@ void APlayerChara::RestartGame()
 //発射開始
 void APlayerChara::Shooting(float DeltaTime)
 {
-		bulletTimeCount += DeltaTime;
+	bulletTimeCount += DeltaTime;
 
-		FVector currentVector = GetActorLocation();
-		if (bulletTimeCount >= bulletDuration) {
-			// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
-			GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
-			bulletTimeCount = 0.0f;
-			//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
+	FVector currentVector = GetActorLocation();
+	if (bulletTimeCount >= bulletDuration) {
+		if (playerATKType == PPlayerAttackType::Straight) {
+			// 弾の作成：SpawnActor<クラス型>(生成するクラス、始点座標、始点回転座標)
+			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
 		}
+		bulletTimeCount = 0.0f;
+		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
+	}
 }
 
 void APlayerChara::DeadCount()
@@ -423,13 +451,13 @@ void APlayerChara::GetPlayerPosZ(float DeltaTime)
 	nowPosZ = GetActorLocation().Z;
 
 
-		if (nowPosZ - startPosZ > 50.f)
-		{
-			overStartHight = true;		
-			isLanding = false;
-		}
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowPosZ));
-		//GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, nowPosZ == startPosZ ? TEXT("true") : TEXT("false"));
+	if (nowPosZ - startPosZ > 50.f)
+	{
+		overStartHight = true;
+		isLanding = false;
+	}
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowPosZ));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, nowPosZ == startPosZ ? TEXT("true") : TEXT("false"));
 
 	if (overStartHight && (nowPosZ - startPosZ < 0.1f))
 	{
@@ -554,7 +582,6 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 		if (tempRotate >= 85.f || tempRotate <= -85.f)
 		{
 			tempYaw = 0.f;
-
 		}
 		else if (tempRotate < 85.f && tempYaw < 0.f)
 		{
@@ -567,6 +594,12 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 			tempYaw += tempRotate;
 		}
 	}
+
+	nowRoll = tempRoll;
+	nowPitch = tempPitch;
+	nowYaw = tempYaw;
+
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowRoll));
 
 	// Actorに回転量を反映
 	if (isGuarding)

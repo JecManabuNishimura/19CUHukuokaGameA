@@ -11,6 +11,7 @@
 #include "EnemyBullet.generated.h"
 
 class UMaterialInstanceDynamic;
+class UParticleSystem;
 
 UCLASS()
 class GAME_API AEnemyBullet : public AActor
@@ -36,6 +37,10 @@ private:
 
 	bool isPlayerBeGuarding;
 
+private:
+	void PlayEffects();
+
+
 public:
 	void BulletMovement();
 
@@ -43,6 +48,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBoxComponent* collisionBox;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		UParticleSystem* GuardEffect;
 
 	UFUNCTION()
 		void OnBeginOverlap(class UPrimitiveComponent* HitComp,

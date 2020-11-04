@@ -21,9 +21,9 @@ AStageSelect::AStageSelect() :
 	scalingTime(1.0f),
 	scalingRate(0.75f),
 	finishSmall(false),
-	rotatingTime(100.0f),
+	rotatingTime(88.5f),
 	rotatingRate(0.0f),
-	rotatingRateMax(0.9f),
+	rotatingRateMax(1.0f),
 	finishRotating(false),
 	startRotating(false),
 	nextRotation(0.0f, 0.0f, 0.0f),
@@ -192,14 +192,14 @@ void AStageSelect::StageChanging(float _deltaTime)
 		}*/
 
 		// ‰ñ“]ŠJŽn
-		if (/*finishSmall &&*/ !finishRotating && rotatingRate <= rotatingRateMax * FMath::Abs(pressCount)) {
+		if (/*finishSmall &&*/ !finishRotating && rotatingRate < rotatingRateMax * FMath::Abs(pressCount)) {
 			canEnter = true;
 			startRotating = true;
 			rotatingRate += _deltaTime;
 			m_SceneComponent->SetRelativeRotation(
 				FRotator(presRotation.Pitch, presRotation.Yaw += rotatingTime * _deltaTime, presRotation.Roll));
 		}
-		else if (/*finishSmall &&*/ rotatingRate > rotatingRateMax) {
+		else if (/*finishSmall &&*/ rotatingRate >= rotatingRateMax) {
 			finishRotating = false;
 			startRotating = false;
 			rotatingRate = 0.0f;
