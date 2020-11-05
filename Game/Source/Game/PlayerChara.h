@@ -1,12 +1,3 @@
-//----------------------------------------------------------
-// ファイル名		：PlayerChara.h
-// 概要				：プレイヤーの制御
-// 作成者			：19CU0220 曹飛
-// 更新内容			：
-//					：2020/11/03 鍾家同 コインエフェクトの生成
-//					：2020/11/04 シールドにEnemyBulletが当たると跳ね返す
-//----------------------------------------------------------
-
 // インクルードガード
 #pragma once
 
@@ -23,7 +14,6 @@ class USerial;
 class USpringArmComponent;
 class UCameraComponent;
 class AActor;
-class APlayerBullet;
 
 UENUM(BlueprintType)
 enum class PPlayerAttackType : uint8
@@ -91,7 +81,7 @@ private:
 
 	//	【入力バインド】ガード開始
 	void GuardStartWithNoSensor(float _axisValue);
-
+	
 	//	【入力バインド】ダッシュ開始
 	void DashOrJumpStartWithNoSensor(float _axisValue);
 
@@ -143,7 +133,6 @@ private:
 
 	float tempDamageFrame;
 
-
 	float tempPitch;
 	float tempYaw;
 	float tempRoll;
@@ -158,7 +147,7 @@ public:
 
 	// Bullet type (弾の使用タイプ)
 	UPROPERTY(EditAnywhere, Category = "Bullet")
-		TSubclassOf<APlayerBullet> bulletActor;
+		TSubclassOf<AActor> bulletActor;
 
 	// Time Duration between two bullets.(発射間隔)
 	UPROPERTY(EditAnywhere, Category = "Bullet")
@@ -225,15 +214,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float PlayerScore;								//	Player獲得のScore
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float nowRoll;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float nowPitch;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float nowYaw;
-
 	//	=============================================================
 	//	プレイヤーの状態
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -256,15 +236,6 @@ public:
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isDashLine;
-
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
-		bool isLeftGuarding;
-
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
-		bool isRightGuarding;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		bool IsGenerateGuard;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isGuarding;
