@@ -1,18 +1,6 @@
-//----------------------------------------------------------
-// ファイル名		：PlayerChara.h
-// 概要				：プレイヤーの制御
-// 作成者			：19CU0220 曹飛
-// 更新内容			：
-//					：2020/11/03 鍾家同 コインエフェクトの生成
-//					：2020/11/04 シールドにEnemyBulletが当たると跳ね返す
-//					：2020/11/08 鍾家同　増加　ダッシュエフェクトの生成
-//----------------------------------------------------------
-
 // インクルード
 #include "PlayerChara.h"
-#include "PlayerBullet.h"
 #include "Engine.h"
-#include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -50,7 +38,6 @@ APlayerChara::APlayerChara()
 	, isLanding(false)
 	, tempRotate(0.f)
 	, isGuarding(false)
-	, IsGenerateGuard(false)
 	, isDashing(false)
 	, isDashLine(false)
 	, tempDamageFrame(0.f)
@@ -74,13 +61,11 @@ APlayerChara::APlayerChara()
 	, CoinScore(1000.f)
 	, EnemyScore(2000.f)
 	, PlayerScore(0.f)
-	, nowPage(1)
-	, maxPage(0)
 	, Fence_FilmDmg(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
 	, tempPitch(0.f)
-	, tempYaw(0.f)	
+	, tempYaw(0.f)
 {
 	// 毎フレーム、このクラスのTick()を呼ぶかどうかを決めるフラグ。必要に応じて、パフォーマンス向上のために切ることもできる。
 	PrimaryActorTick.bCanEverTick = true;
@@ -231,7 +216,6 @@ void APlayerChara::Tick(float DeltaTime)
 
 	DeadCount();
 
-	PlayEffect();
 }
 
 //	移動処理
@@ -397,17 +381,15 @@ void APlayerChara::RestartGame()
 //発射開始
 void APlayerChara::Shooting(float DeltaTime)
 {
-	bulletTimeCount += DeltaTime;
+		bulletTimeCount += DeltaTime;
 
-	FVector currentVector = GetActorLocation();
-	if (bulletTimeCount >= bulletDuration && !isJumping && !isGuarding) {
-		if (playerATKType == PPlayerAttackType::Straight) {
-			// 弾の作成：SpawnActor<クラス型>(生成するクラス、始点座標、始点回転座標)
-			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
+		FVector currentVector = GetActorLocation();
+		if (bulletTimeCount >= bulletDuration && !isJumping && !isGuarding) {
+			// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
+			GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
+			bulletTimeCount = 0.0f;
+			//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
 		}
-		bulletTimeCount = 0.0f;
-		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
-	}
 }
 
 void APlayerChara::DeadCount()
@@ -440,26 +422,18 @@ void APlayerChara::GetPlayerPosZ(float DeltaTime)
 	nowPosZ = GetActorLocation().Z;
 
 
-	if (nowPosZ - startPosZ > 50.f)
-	{
-		overStartHight = true;
-		isLanding = false;
-	}
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowPosZ));
-	//GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, nowPosZ == startPosZ ? TEXT("true") : TEXT("false"));
+		if (nowPosZ - startPosZ > 50.f)
+		{
+			overStartHight = true;		
+			isLanding = false;
+		}
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowPosZ));
+		//GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, nowPosZ == startPosZ ? TEXT("true") : TEXT("false"));
 
 	if (overStartHight && (nowPosZ - startPosZ < 0.1f))
 	{
 		isLanding = true;
 		overStartHight = false;
-	}
-}
-
-// エフェクトの生成
-void APlayerChara::PlayEffect()
-{
-	if (isDashing || isDashLine) {
-		UNiagaraFunctionLibrary::SpawnSystemAttached(DashEffect, RootComponent, NAME_None, FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
 	}
 }
 
@@ -591,8 +565,6 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 			tempYaw += tempRotate;
 		}
 	}
-
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowRoll));
 
 	// Actorに回転量を反映
 	if (isGuarding)

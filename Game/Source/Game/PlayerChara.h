@@ -1,13 +1,3 @@
-//----------------------------------------------------------
-// ファイル名		：PlayerChara.h
-// 概要				：プレイヤーの制御
-// 作成者			：19CU0220 曹飛
-// 更新内容			：
-//					：2020/11/03 鍾家同　コインエフェクトの生成
-//					：2020/11/04 鍾家同　増加　シールドにEnemyBulletが当たると跳ね返す
-//					：2020/11/08 鍾家同　増加　ダッシュエフェクトの生成
-//----------------------------------------------------------
-
 // インクルードガード
 #pragma once
 
@@ -17,7 +7,6 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Blueprint/UserWidget.h"
-#include "NiagaraFunctionLibrary.h"
 #include "PlayerChara.generated.h"
 
 //	前方宣言
@@ -25,8 +14,6 @@ class USerial;
 class USpringArmComponent;
 class UCameraComponent;
 class AActor;
-class APlayerBullet;
-class UNiagaraSystem;
 
 UENUM(BlueprintType)
 enum class PPlayerAttackType : uint8
@@ -86,8 +73,6 @@ private:
 
 	void GetPlayerPosZ(float DeltaTime);
 
-	void PlayEffect();
-
 	//	====================================
 	//	センサーが持ってない関数
 
@@ -96,7 +81,7 @@ private:
 
 	//	【入力バインド】ガード開始
 	void GuardStartWithNoSensor(float _axisValue);
-
+	
 	//	【入力バインド】ダッシュ開始
 	void DashOrJumpStartWithNoSensor(float _axisValue);
 
@@ -148,7 +133,6 @@ private:
 
 	float tempDamageFrame;
 
-
 	float tempPitch;
 	float tempYaw;
 	float tempRoll;
@@ -163,7 +147,7 @@ public:
 
 	// Bullet type (弾の使用タイプ)
 	UPROPERTY(EditAnywhere, Category = "Bullet")
-		TSubclassOf<APlayerBullet> bulletActor;
+		TSubclassOf<AActor> bulletActor;
 
 	// Time Duration between two bullets.(発射間隔)
 	UPROPERTY(EditAnywhere, Category = "Bullet")
@@ -184,9 +168,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	GoalのUI
 		TSubclassOf<UUserWidget> Player_Goal_Widget_Class;
 	UUserWidget* Player_Goal_Widget;
-
-	UPROPERTY(EditAnywhere, Category = "Effects")
-		UNiagaraSystem* DashEffect;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 selectPlay;
@@ -233,12 +214,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float PlayerScore;								//	Player獲得のScore
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		int nowPage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		int maxPage;
-
 	//	=============================================================
 	//	プレイヤーの状態
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -261,9 +236,6 @@ public:
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isDashLine;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		bool IsGenerateGuard;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isGuarding;
