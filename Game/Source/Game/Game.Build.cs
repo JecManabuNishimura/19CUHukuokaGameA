@@ -8,7 +8,7 @@ public class Game : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "UE4Duino", "UMG", "HeadMountedDisplay", "NavigationSystem" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "UE4Duino", "UMG", "HeadMountedDisplay", "NavigationSystem", "Niagara" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "SteamVR", "SteamVRInput" });
 
