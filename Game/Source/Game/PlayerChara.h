@@ -3,8 +3,9 @@
 // 概要				：プレイヤーの制御
 // 作成者			：19CU0220 曹飛
 // 更新内容			：
-//					：2020/11/03 鍾家同 コインエフェクトの生成
-//					：2020/11/04 シールドにEnemyBulletが当たると跳ね返す
+//					：2020/11/03 鍾家同　コインエフェクトの生成
+//					：2020/11/04 鍾家同　増加　シールドにEnemyBulletが当たると跳ね返す
+//					：2020/11/08 鍾家同　増加　ダッシュエフェクトの生成
 //----------------------------------------------------------
 
 // インクルードガード
@@ -16,6 +17,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "NiagaraFunctionLibrary.h"
 #include "PlayerChara.generated.h"
 
 //	前方宣言
@@ -24,6 +26,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class AActor;
 class APlayerBullet;
+class UNiagaraSystem;
 
 UENUM(BlueprintType)
 enum class PPlayerAttackType : uint8
@@ -82,6 +85,8 @@ private:
 	void DeadCount();
 
 	void GetPlayerPosZ(float DeltaTime);
+
+	void PlayEffect();
 
 	//	====================================
 	//	センサーが持ってない関数
@@ -180,6 +185,9 @@ public:
 		TSubclassOf<UUserWidget> Player_Goal_Widget_Class;
 	UUserWidget* Player_Goal_Widget;
 
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		UNiagaraSystem* DashEffect;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 selectPlay;
 
@@ -225,14 +233,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float PlayerScore;								//	Player獲得のScore
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float nowRoll;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int nowPage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float nowPitch;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float nowYaw;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int maxPage;
 
 	//	=============================================================
 	//	プレイヤーの状態
@@ -256,12 +261,6 @@ public:
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isDashLine;
-
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
-		bool isLeftGuarding;
-
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
-		bool isRightGuarding;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool IsGenerateGuard;

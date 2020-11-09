@@ -5,13 +5,14 @@
 // 更新内容			：
 //					：2020/11/03 鍾家同 コインエフェクトの生成
 //					：2020/11/04 シールドにEnemyBulletが当たると跳ね返す
-
+//					：2020/11/08 鍾家同　増加　ダッシュエフェクトの生成
 //----------------------------------------------------------
 
 // インクルード
 #include "PlayerChara.h"
 #include "PlayerBullet.h"
 #include "Engine.h"
+#include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -49,8 +50,6 @@ APlayerChara::APlayerChara()
 	, isLanding(false)
 	, tempRotate(0.f)
 	, isGuarding(false)
-	, isLeftGuarding(false)
-	, isRightGuarding(false)
 	, IsGenerateGuard(false)
 	, isDashing(false)
 	, isDashLine(false)
@@ -75,14 +74,13 @@ APlayerChara::APlayerChara()
 	, CoinScore(1000.f)
 	, EnemyScore(2000.f)
 	, PlayerScore(0.f)
+	, nowPage(1)
+	, maxPage(0)
 	, Fence_FilmDmg(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
 	, tempPitch(0.f)
-	, tempYaw(0.f)
-	, nowRoll(0.f)
-	, nowPitch(0.f)
-	, nowYaw(0.f)
+	, tempYaw(0.f)	
 {
 	// 毎フレーム、このクラスのTick()を呼ぶかどうかを決めるフラグ。必要に応じて、パフォーマンス向上のために切ることもできる。
 	PrimaryActorTick.bCanEverTick = true;
@@ -233,6 +231,7 @@ void APlayerChara::Tick(float DeltaTime)
 
 	DeadCount();
 
+	PlayEffect();
 }
 
 //	移動処理
@@ -326,16 +325,6 @@ void APlayerChara::UpdateGuard()
 	if ((tempYaw < -30.f || tempYaw > 30.f) && haveGuardEnergy)
 	{
 		isGuarding = true;
-		if (tempYaw < -30.f)
-		{
-			isRightGuarding = false;
-			isLeftGuarding = true;
-		}
-		else if (tempYaw > 30.f)
-		{
-			isLeftGuarding = false;
-			isRightGuarding = true;
-		}
 	}
 	else
 	{
@@ -411,7 +400,7 @@ void APlayerChara::Shooting(float DeltaTime)
 	bulletTimeCount += DeltaTime;
 
 	FVector currentVector = GetActorLocation();
-	if (bulletTimeCount >= bulletDuration) {
+	if (bulletTimeCount >= bulletDuration && !isJumping && !isGuarding) {
 		if (playerATKType == PPlayerAttackType::Straight) {
 			// 弾の作成：SpawnActor<クラス型>(生成するクラス、始点座標、始点回転座標)
 			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
@@ -463,6 +452,14 @@ void APlayerChara::GetPlayerPosZ(float DeltaTime)
 	{
 		isLanding = true;
 		overStartHight = false;
+	}
+}
+
+// エフェクトの生成
+void APlayerChara::PlayEffect()
+{
+	if (isDashing || isDashLine) {
+		UNiagaraFunctionLibrary::SpawnSystemAttached(DashEffect, RootComponent, NAME_None, FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
 	}
 }
 
@@ -595,11 +592,7 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 		}
 	}
 
-	nowRoll = tempRoll;
-	nowPitch = tempPitch;
-	nowYaw = tempYaw;
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowRoll));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowRoll));
 
 	// Actorに回転量を反映
 	if (isGuarding)
