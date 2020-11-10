@@ -214,6 +214,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float PlayerScore;								//	PlayerŠl“¾‚ÌScore
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int nowPage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int maxPage;
+
 	//	=============================================================
 	//	ƒvƒŒƒCƒ„[‚Ìó‘Ô
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

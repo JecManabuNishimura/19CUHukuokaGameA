@@ -95,6 +95,6 @@ void AEnemyBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 
 		pPlayer->GuardEnergy -= pPlayer->guardBulletUIDownSpeed;
 
-		PlayEffects();
+		//PlayEffects();
 	}
 }
