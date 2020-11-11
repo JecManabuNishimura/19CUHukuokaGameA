@@ -84,7 +84,7 @@ private:
 
 	//	【入力バインド】ガード開始
 	void GuardStartWithNoSensor(float _axisValue);
-	
+
 	//	【入力バインド】ダッシュ開始
 	void DashOrJumpStartWithNoSensor(float _axisValue);
 
@@ -98,9 +98,10 @@ private:
 	TArray<FRotator> prevRotator;
 	FRotator prevDiffRot;
 
+	// 2020/11/11 渡邊 UPROPERTYの削除 -------------------------------------------------
 	// For Arduino Com Port
-	UPROPERTY(EditAnywhere, Category = "Sensor")
 		int serialPort;
+	//----------------------------------------------------------------------------------
 
 	//	UPROPERTYにすることで、ブループリント上で変数の確認、編集などができる
 	//	「BlueprintReadOnly」に指定しているため、ブループリントで見ることだけ可能で、編集はできない
@@ -141,9 +142,10 @@ private:
 	float tempRoll;
 
 public:
+	// 2020/11/11 渡邊 自動検出により変更-------------------
 	//	センサーが持っていますか
-	UPROPERTY(EditAnywhere, Category = "WithSensor")
 		bool withSensor;
+	//------------------------------------------------------
 
 	// Attacking type (攻撃タイプ)
 	UPROPERTY(EditAnywhere, Category = "Attack")
@@ -261,6 +263,7 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		float Fence_FilmDmg;
+
 	// Is Open Com Port
 	UPROPERTY(BlueprintReadOnly, Category = "Sensor")
 		bool isOpen;

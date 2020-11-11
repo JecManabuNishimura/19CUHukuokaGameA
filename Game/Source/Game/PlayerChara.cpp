@@ -17,7 +17,7 @@
 // コンストラクタ
 APlayerChara::APlayerChara()
 	: m_pArduinoSerial(NULL)
-	, withSensor(true)
+	, withSensor(false)
 	, serialPort(4)
 	, isOpen(false)
 	, startPosZ(0.f)
@@ -100,53 +100,58 @@ void APlayerChara::BeginPlay()
 		pMeshComp->SetRelativeLocation(FVector(0.f, 0.f, -85.f));
 	}
 
-	if (withSensor)
+	UCharacterMovementComponent* pCharMoveComp = GetCharacterMovement();
+	if (pCharMoveComp != NULL)
 	{
-		UCharacterMovementComponent* pCharMoveComp = GetCharacterMovement();
-		if (pCharMoveComp != NULL)
-		{
-			//	ジャンプ時にも水平方向への移動が聞くように（0～1の間に設定することで移動する具合を調整）
-			pCharMoveComp->AirControl = 0.8f;
-		}
+		//	ジャンプ時にも水平方向への移動が聞くように（0～1の間に設定することで移動する具合を調整）
+		pCharMoveComp->AirControl = 0.8f;
+	}
 
+
+	// 2020/11/11 渡邊 自動検出に変更-----------------------------------------begin--
+	for (int i = 0; i < 20 && isOpen == false; ++i)
+	{
 		// シリアルポートを開ける
-		m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
+		//m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
+		m_pArduinoSerial = USerial::OpenComPort(isOpen, i, 115200);
 
 		if (isOpen == false)
 		{
-			UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), serialPort);
-			return;
+			UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), i);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), serialPort);
+			UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), i);
+			withSensor = true;
+			serialPort = i;
 		}
+	}
+	//---------------------------------------------------------------------------end---
 
-		// 10回分のデータを入れる
-		int errorCount = 0;
-		for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
+	// 10回分のデータを入れる
+	int errorCount = 0;
+	for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
+	{
+		FRotator rotTemp;
+		rotTemp = SensorToRotator();
+
+		// センサーの値が読み取れていなければやり直し
+		if (rotTemp == FRotator::ZeroRotator)
 		{
-			FRotator rotTemp;
-			rotTemp = SensorToRotator();
-
-			// センサーの値が読み取れていなければやり直し
-			if (rotTemp == FRotator::ZeroRotator)
+			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
+			++errorCount;
+			if (errorCount >= 10)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
-				++errorCount;
-				if (errorCount >= 10)
-				{
-					UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
-					break;
-				}
+				UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
+				break;
 			}
-			else
-			{
-				UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
-			}
-
-			prevRotator.Add(rotTemp);
 		}
+		else
+		{
+			UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
+		}
+
+		prevRotator.Add(rotTemp);
 	}
 
 	// VR's
@@ -442,13 +447,13 @@ void APlayerChara::GetPlayerPosZ(float DeltaTime)
 	nowPosZ = GetActorLocation().Z;
 
 
-		if (nowPosZ - startPosZ > 50.f)
-		{
-			overStartHight = true;		
-			isLanding = false;
-		}
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowPosZ));
-		//GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, nowPosZ == startPosZ ? TEXT("true") : TEXT("false"));
+	if (nowPosZ - startPosZ > 50.f)
+	{
+		overStartHight = true;
+		isLanding = false;
+	}
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowPosZ));
+	//GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, nowPosZ == startPosZ ? TEXT("true") : TEXT("false"));
 
 	if (overStartHight && (nowPosZ - startPosZ < 0.1f))
 	{
@@ -724,18 +729,32 @@ void APlayerChara::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 //	【入力バインド】キャラ移動:左右
 void APlayerChara::MoveRightWithNoSensor(float _axisValue)
 {
-
-	tempRoll = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 180.f;
+	// 2020/11/11 渡邊 センサー自動検出により変更--------------------------
+	if (withSensor == false)
+	{
+		tempRoll = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 180.f;
+	}
+	//---------------------------------------------------------------------
 }
 
 void APlayerChara::GuardStartWithNoSensor(float _axisValue)
 {
-	tempYaw = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
+	// 2020/11/11 渡邊 センサー自動検出により変更--------------------------
+	if (withSensor == false)
+	{
+		tempYaw = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
+	}
+	//---------------------------------------------------------------------
 }
 
 void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
 {
-	tempPitch = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
+	// 2020/11/11 渡邊 センサー自動検出により変更--------------------------
+	if (withSensor == false)
+	{
+		tempPitch = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
+	}
+	//---------------------------------------------------------------------
 }
 
 //	====================================
