@@ -7,6 +7,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "NiagaraFunctionLibrary.h"
 #include "PlayerChara.generated.h"
 
 //	前方宣言
@@ -73,6 +74,8 @@ private:
 
 	void GetPlayerPosZ(float DeltaTime);
 
+	void PlayEffects();
+
 	//	====================================
 	//	センサーが持ってない関数
 
@@ -136,6 +139,7 @@ private:
 	float tempPitch;
 	float tempYaw;
 	float tempRoll;
+
 public:
 	//	センサーが持っていますか
 	UPROPERTY(EditAnywhere, Category = "WithSensor")
@@ -168,6 +172,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	GoalのUI
 		TSubclassOf<UUserWidget> Player_Goal_Widget_Class;
 	UUserWidget* Player_Goal_Widget;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		UNiagaraSystem* DashEffect;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		FVector DashEffectLocationOffset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 selectPlay;
@@ -213,6 +223,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float PlayerScore;								//	Player獲得のScore
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int nowPage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int maxPage;
 
 	//	=============================================================
 	//	プレイヤーの状態

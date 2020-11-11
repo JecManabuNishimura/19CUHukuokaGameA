@@ -1,6 +1,7 @@
 // インクルード
 #include "PlayerChara.h"
 #include "Engine.h"
+#include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -54,6 +55,7 @@ APlayerChara::APlayerChara()
 	, CountShootEnemy(0)
 	, GuardEnergy(100.f)
 	, DashEnergy(100.f)
+	, DashEffectLocationOffset(400.f, 0.f, 0.f)
 	, guardBulletUIDownSpeed(10.f)
 	, Guard_UIDownSpeed(0.5f)
 	, Dash_UIDownSpeed(0.5f)
@@ -61,6 +63,8 @@ APlayerChara::APlayerChara()
 	, CoinScore(1000.f)
 	, EnemyScore(2000.f)
 	, PlayerScore(0.f)
+	, nowPage(1)
+	, maxPage(0)
 	, Fence_FilmDmg(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
@@ -216,6 +220,7 @@ void APlayerChara::Tick(float DeltaTime)
 
 	DeadCount();
 
+	PlayEffects();
 }
 
 //	移動処理
@@ -381,6 +386,7 @@ void APlayerChara::RestartGame()
 //発射開始
 void APlayerChara::Shooting(float DeltaTime)
 {
+	if (playerATKType == PPlayerAttackType::Straight) {
 		bulletTimeCount += DeltaTime;
 
 		FVector currentVector = GetActorLocation();
@@ -390,6 +396,7 @@ void APlayerChara::Shooting(float DeltaTime)
 			bulletTimeCount = 0.0f;
 			//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
 		}
+	}
 }
 
 void APlayerChara::DeadCount()
@@ -409,6 +416,19 @@ void APlayerChara::DeadCount()
 			GetMesh()->SetSimulatePhysics(true);
 		}
 	}
+}
+
+void APlayerChara::PlayEffects()
+{
+	if (isDashing || isDashLine) {
+		if (DashEffect == nullptr) {
+			UE_LOG(LogTemp, Warning, TEXT("DashEffect is not assetted."));
+			return;
+		}
+		UNiagaraFunctionLibrary::SpawnSystemAttached(
+			DashEffect, RootComponent, NAME_None, DashEffectLocationOffset, FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+	}
+
 }
 
 void APlayerChara::GetPlayerPosZ(float DeltaTime)
@@ -436,6 +456,8 @@ void APlayerChara::GetPlayerPosZ(float DeltaTime)
 		overStartHight = false;
 	}
 }
+
+
 
 void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {

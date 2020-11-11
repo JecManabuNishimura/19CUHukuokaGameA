@@ -52,7 +52,7 @@ void APlayerBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAc
 		pPlayer->CountShootEnemy += 1;
 
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->m_bGuarding ? TEXT("true"): TEXT("false"));
-		OtherActor->Destroy();
+		//OtherActor->Destroy();
 
 		this->Destroy();
 	}
