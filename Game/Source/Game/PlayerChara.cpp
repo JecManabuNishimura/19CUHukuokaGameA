@@ -667,6 +667,7 @@ FRotator APlayerChara::SensorToRotator()
 		if (isRead == false)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): No Data From Sensor. return ZeroRotator."));
+			withSensor = false;
 			return FRotator::ZeroRotator;
 		}
 		else
@@ -690,6 +691,7 @@ FRotator APlayerChara::SensorToRotator()
 		if (rotatorAxis.IsValidIndex(2) == false)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): Failed Add TArray<float> elements. return ZeroRotator."));
+			withSensor = false;
 			return FRotator::ZeroRotator;
 		}
 
@@ -703,6 +705,7 @@ FRotator APlayerChara::SensorToRotator()
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("ASensorTest::SensorToRotator(): ASensorTest::m_pArduinoSerial is NULL."));
+		withSensor = false;
 		return FRotator::ZeroRotator;
 	}
 }
