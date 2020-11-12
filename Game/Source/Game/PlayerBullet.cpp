@@ -1,5 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+//----------------------------------------------------------
+// ファイル名		：PlayerBullet.cpp
+// 概要				：プレイヤー弾の制御
+// 作成者			：19CU0220 曹飛
+// 更新内容			：2020/10/02 作成　弾の生成と発射
+//					：2020/11/13 更新　弾のスピードをBlueprint上で変更できるようになる
+//----------------------------------------------------------
 
 #include "PlayerBullet.h"
 #include "PlayerChara.h"
@@ -9,6 +14,7 @@
 // Sets default values
 APlayerBullet::APlayerBullet()
 	: pPlayer(NULL)
+	, playerBulletSpeed(100.f)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -39,7 +45,7 @@ void APlayerBullet::Tick(float DeltaTime)
 void APlayerBullet::BulletMovement()
 {
 	FVector NewPos = GetActorLocation();
-	NewPos.X += 100.f;
+	NewPos.X += playerBulletSpeed;
 	SetActorLocation(NewPos);
 }
 
@@ -57,5 +63,3 @@ void APlayerBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAc
 		this->Destroy();
 	}
 }
-
-

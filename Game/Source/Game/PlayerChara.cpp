@@ -1,3 +1,11 @@
+//----------------------------------------------------------
+// ファイル名		：PlayerChara.cpp
+// 概要				：プレイヤーの制御
+// 作成者			：19CU0220 曹飛
+// 更新内容			：2020/10/02 作成　プレイヤーの各操作
+//					：2020/11/12 更新　渡邊龍音　センサーを自動的に検出するようになる
+//----------------------------------------------------------
+
 // インクルード
 #include "PlayerChara.h"
 #include "Engine.h"
@@ -29,6 +37,7 @@ APlayerChara::APlayerChara()
 	, bulletDuration(1.0f)
 	, bulletXOffset(10.0f)
 	, playerSpeed(10.f)
+	, DashSpeed(1.5f)
 	, gravity(700.f)
 	, jumpPower(1200.f)
 	, jumpTime(0.f)

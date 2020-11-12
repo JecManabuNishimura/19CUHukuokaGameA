@@ -1,4 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//----------------------------------------------------------
+// ファイル名		：PlayerBullet.h
+// 概要				：プレイヤー弾の制御
+// 作成者			：19CU0220 曹飛
+// 更新内容			：2020/10/02 作成　弾の生成と発射
+//					：2020/11/13 更新　弾のスピードをBlueprint上で変更できるようになる
+//----------------------------------------------------------
 
 #pragma once
 
@@ -30,6 +36,9 @@ private:
 
 public:
 	void BulletMovement();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float playerBulletSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBoxComponent* collisionBox;

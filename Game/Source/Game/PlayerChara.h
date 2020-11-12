@@ -1,3 +1,11 @@
+//----------------------------------------------------------
+// ファイル名		：PlayerChara.h
+// 概要				：プレイヤーの制御
+// 作成者			：19CU0220 曹飛
+// 更新内容			：2020/10/02 作成　プレイヤーの各操作
+//					：2020/11/12 更新　渡邊龍音　センサーを自動的に検出するようになる
+//----------------------------------------------------------
+
 // インクルードガード
 #pragma once
 
@@ -195,6 +203,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float playerSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float DashSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float GoalTime;
