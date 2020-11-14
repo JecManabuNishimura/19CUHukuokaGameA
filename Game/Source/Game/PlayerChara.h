@@ -189,6 +189,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		FVector DashEffectLocationOffset;
 
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		FRotator DashEffectRotationOffset;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 selectPlay;
 
