@@ -65,6 +65,7 @@ APlayerChara::APlayerChara()
 	, GuardEnergy(100.f)
 	, DashEnergy(100.f)
 	, DashEffectLocationOffset(400.f, 0.f, 0.f)
+	, DashEffectRotationOffset(0.f, 0.f, 0.f)
 	, guardBulletUIDownSpeed(10.f)
 	, Guard_UIDownSpeed(0.5f)
 	, Dash_UIDownSpeed(0.5f)
@@ -439,8 +440,11 @@ void APlayerChara::PlayEffects()
 			UE_LOG(LogTemp, Warning, TEXT("DashEffect is not assetted."));
 			return;
 		}
-		UNiagaraFunctionLibrary::SpawnSystemAttached(
-			DashEffect, RootComponent, NAME_None, DashEffectLocationOffset, FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+		//DashEffectRotationOffset = FRotator(0.0f, 0.0f, DashEffectRotationOffset.Roll - 500.0f);
+		//UNiagaraFunctionLibrary::SpawnSystemAttached(
+		//	DashEffect, RootComponent, NAME_None, DashEffectLocationOffset, DashEffectRotationOffset, EAttachLocation::KeepRelativeOffset, true);
+		
+		//UE_LOG(LogTemp, Warning, TEXT("%s"), );
 	}
 
 }
@@ -749,6 +753,7 @@ void APlayerChara::MoveRightWithNoSensor(float _axisValue)
 	//---------------------------------------------------------------------
 }
 
+//	【入力バインド】ガードの制御
 void APlayerChara::GuardStartWithNoSensor(float _axisValue)
 {
 	// 2020/11/11 渡邊 センサー自動検出により変更--------------------------
@@ -759,6 +764,7 @@ void APlayerChara::GuardStartWithNoSensor(float _axisValue)
 	//---------------------------------------------------------------------
 }
 
+//	【入力バインド】キャラ移動:前後
 void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
 {
 	// 2020/11/11 渡邊 センサー自動検出により変更--------------------------
