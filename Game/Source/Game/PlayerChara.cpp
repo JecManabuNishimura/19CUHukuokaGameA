@@ -4,10 +4,12 @@
 // 作成者			：19CU0220 曹飛
 // 更新内容			：2020/10/02 作成　プレイヤーの各操作
 //					：2020/11/12 更新　渡邊龍音　センサーを自動的に検出するようになる
+//					：2020/11/16 変更　鍾家同　bulletActorをAPlayerBullet型に継承する
 //----------------------------------------------------------
 
 // インクルード
 #include "PlayerChara.h"
+#include "PlayerBullet.h"
 #include "Engine.h"
 #include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -406,8 +408,8 @@ void APlayerChara::Shooting(float DeltaTime)
 
 		FVector currentVector = GetActorLocation();
 		if (bulletTimeCount >= bulletDuration && !isJumping && !isGuarding) {
-			// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
-			GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
+			// 弾の作成：SpawnActor<生成するクラス型>(生成するクラス、始点座標、始点回転座標)
+			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
 			bulletTimeCount = 0.0f;
 			//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
 		}
@@ -497,7 +499,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		HP -= Fence_FilmDmg;
 	}
 
-	if (OtherActor->ActorHasTag("EnemyBullet") && canBeDamaged && !isDashing && !isDashLine)
+	if ((OtherActor->ActorHasTag("EnemyBullet") || OtherActor->ActorHasTag("EnemyMissile") || OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("EnergyEnemy")) && canBeDamaged && !isDashing && !isDashLine)
 	{
 		if (!isGuarding)
 		{

@@ -4,6 +4,7 @@
 // 作成者			：19CU0220 曹飛
 // 更新内容			：2020/10/02 作成　プレイヤーの各操作
 //					：2020/11/12 更新　渡邊龍音　センサーを自動的に検出するようになる
+//					：2020/11/16 変更　鍾家同　bulletActorをAPlayerBullet型に継承する
 //----------------------------------------------------------
 
 // インクルードガード
@@ -23,6 +24,7 @@ class USerial;
 class USpringArmComponent;
 class UCameraComponent;
 class AActor;
+class APlayerBullet;
 
 UENUM(BlueprintType)
 enum class PPlayerAttackType : uint8
@@ -161,7 +163,7 @@ public:
 
 	// Bullet type (弾の使用タイプ)
 	UPROPERTY(EditAnywhere, Category = "Bullet")
-		TSubclassOf<AActor> bulletActor;
+		TSubclassOf<APlayerBullet> bulletActor;
 
 	// Time Duration between two bullets.(発射間隔)
 	UPROPERTY(EditAnywhere, Category = "Bullet")
@@ -222,7 +224,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 CountShootEnemy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float GuardEnergy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -237,7 +239,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)			//	EnemyScore
 		float EnemyScore;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float PlayerScore;								//	Player獲得のScore
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

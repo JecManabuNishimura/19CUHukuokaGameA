@@ -7,6 +7,9 @@
 //					：2020/11/03 増加　敵撃破のエフェクトを生成
 //					：2020/11/04 増加　死亡エフェクトを生成
 //					：2020/11/13 変更　敵弾はゲームスタート後で発射する
+//					：2020/11/15 増加　EEnemyType列挙型を追加
+//					：2020/11/16 増加　EnergyEnemyの生成
+//					：2020/11/16 増加　曹飛　ShotEnemyの生成
 //----------------------------------------------------------
 
 #include "EnemyCharaATKControl.h"
@@ -22,7 +25,11 @@ AEnemyCharaATKControl::AEnemyCharaATKControl():
 	DeadEffectLocation(0.0f,0.0f,10.0f),
 	isDead(false),
 	health(5),
-	canPlayEffect(true)
+	canPlayEffect(true),
+	canAttack(false),
+	closeToRightRoad(true),
+	behindToPlayer(false),
+	isMoving(true)
 {
 }
 
@@ -34,14 +41,19 @@ void AEnemyCharaATKControl::BeginPlay()
 	pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AEnemyCharaATKControl::OnBeginOverlap);
+
+	currentMoveType = enemyMoveType;
 }
 
 void AEnemyCharaATKControl::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	switch (enemyATKType)
+	switch (enemyType)
 	{
+	case EEnemyType::ShootEnemy:
+		switch (enemyATKType)
+		{
 		case EEnemyAttackType::Straight:
 			if (CloseToPlayer() == true && !isDead) Shooting(DeltaTime);
 			break;
@@ -53,10 +65,46 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 		default:
 			UE_LOG(LogTemp, Warning, TEXT("There is something wrong to the EnemyATKType."));
 			break;
+		}
+		break;
+	case EEnemyType::EnergyEnemy:
+		if (behindToPlayer && !isDead) {
+			LeaveFromRoad(DeltaTime);
+		}
+		switch (enemyATKType)
+		{
+		case EEnemyAttackType::Straight:
+			if (CloseToPlayer() == false && !isDead) {
+				canAttack = false;
+				isMoving = true;
+			}
+			else if (CloseToPlayer() == true && !isDead) {
+				canAttack = true;
+				isMoving = true;
+				Shooting(DeltaTime);
+			}
+			break;
+
+		case EEnemyAttackType::None:
+			UE_LOG(LogTemp, Warning, TEXT("Please give the Enemy(%s) attack type."), *(this->GetName()));
+			break;
+
+		default:
+			UE_LOG(LogTemp, Warning, TEXT("There is something wrong to the EnemyATKType."));
+			break;
+		}
+		break;
 	}
 
-	if (isDead)
+
+
+	if (health <= 0) {
+		enemyMoveType = EEnemyMoveType::None;
+		SetActorEnableCollision(false);
+		isMoving = false;
+		isDead = true;
 		Dead();
+	}
 }
 
 // Playerとの距離が近いかどうか
@@ -68,10 +116,15 @@ bool AEnemyCharaATKControl::CloseToPlayer()
 
 	//UE_LOG(LogTemp, Warning, TEXT("value:%s"), *FString::SanitizeFloat(currentDistance));
 
-	// プレイヤーと一定距離入れば発射開始
+	// プレイヤーと一定距離に入れば発射開始
 	if (currentDistance <= shootableDistance && vectortoPlayer.X < 0.0f) {
 		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) can attack."), *(this->GetName()));
 		return true;
+	}
+	else if (vectortoPlayer.X > 0.0f) {
+		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) can attack."), *(this->GetName()));
+		behindToPlayer = true;
+		return false;
 	}
 	else return false;
 }
@@ -83,14 +136,33 @@ void AEnemyCharaATKControl::Shooting(float DeltaTime)
 
 	FVector currentVector = GetActorLocation();
 	FRotator currentRotator = GetActorRotation();
-	if (bulletTimeCount >= bulletDuration && pPlayer->isStart) {		// 弾の作成：SpawnActor<AActor>(生成するクラス、始点座標、始点回転座標)
-		GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, currentRotator);
-		bulletTimeCount = 0.0f;
-		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
+
+	if (canAttack) {
+		if (bulletTimeCount >= bulletDuration && pPlayer->isStart) {
+			// 弾の作成：SpawnActor<生成するクラス型>(生成するクラス、始点座標、始点回転座標)
+			GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, currentRotator);
+			bulletTimeCount = 0.0f;
+			//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
+		}
 	}
 
 	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue,);
 	//UE_LOG(LogTemp, Warning, TEXT("value:%s"),*FString::SanitizeFloat(currentDistance));
+}
+
+void AEnemyCharaATKControl::LeaveFromRoad(float DeltaTime)
+{
+	FRotator currentRotation = GetActorRotation();
+	if (this->GetActorLocation().Y >= 0) {
+		closeToRightRoad = true;
+		SetActorRotation(FMath::Lerp(FQuat(currentRotation), FQuat(FRotator(0.0f, 90.0f, 0.0f)), 0.1));
+		if (GetActorLocation().Y >= 1900.0f) Destroy();
+	}
+	else if (this->GetActorLocation().Y < 0) {
+		closeToRightRoad = false;
+		SetActorRotation(FMath::Lerp(FQuat(currentRotation), FQuat(FRotator(0.0f, -90.0f, 0.0f)), 0.1));
+		if (GetActorLocation().Y <= -1900.0f) Destroy();
+	}
 }
 
 void AEnemyCharaATKControl::Dead()
@@ -111,9 +183,7 @@ void AEnemyCharaATKControl::OnBeginOverlap(
 			health -= 1;
 		}
 		else if (health <= 0) {
-			this->SetActorEnableCollision(false);
 			health = 0;
-			isDead = true;
 		}
 	}
 }
