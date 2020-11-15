@@ -59,19 +59,19 @@ private:
 
 public:
 	// 敵の移動の種類
-	UPROPERTY(EditAnywhere, Category = "Enemy Move Generic")
-		EEnemyMoveType enemyType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Move Generic")
+		EEnemyMoveType enemyMoveType;
 	
 	// 直線の移動の速さ
-	UPROPERTY(EditAnyWhere, Category = "Enemy Move Generic")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Enemy Move Generic")
 		float forwardSpeed;
 	
 	// 正弦波移動のときの横移動の速さ
-	UPROPERTY(EditAnyWhere, Category = "Enemy Move Sine")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Enemy Move Sine")
 		float sinWaveSpeed;
 
 	// 正弦波移動のときの振れ幅
-	UPROPERTY(EditAnyWhere, Category = "Enemy Move Sine")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Enemy Move Sine")
 		float sinWaveFrequency;
 
 	// （仮）プレイヤーの移動速度

@@ -15,7 +15,7 @@ AEnemyChara::AEnemyChara()
 	, originPosY(0.0f)
 	, chargeTime(0.0f)
 	, isBlowing(false)
-	, enemyType(EEnemyMoveType::None)
+	, enemyMoveType(EEnemyMoveType::None)
 	, playerActor(NULL)
 	, forwardSpeed(1.0f)
 	, sinWaveSpeed(1.0f)
@@ -62,7 +62,7 @@ void AEnemyChara::Tick(float DeltaTime)
 	}
 
 	// 移動の種類に応じて分岐
-	switch (enemyType)
+	switch (enemyMoveType)
 	{
 		// 直線移動タイプ
 	case EEnemyMoveType::Line:
@@ -98,13 +98,13 @@ void AEnemyChara::Tick(float DeltaTime)
 		else if (pos.X < (playerPos.X + overtakeOffset + overtakeDistance))
 		{
 			// 内側に入る動きが直線的の場合
-			if (enemyType == EEnemyMoveType::Overtake_Line)
+			if (enemyMoveType == EEnemyMoveType::Overtake_Line)
 			{
 				Move_Overtake_Line(overtakeSpeed, forwardSpeed, pos, playerPos);
 			}
 
 			// 内側に入る動きがなめらかの場合
-			else if (enemyType == EEnemyMoveType::Overtake_Smooth)
+			else if (enemyMoveType == EEnemyMoveType::Overtake_Smooth)
 			{
 				Move_Overtake_Lerp(overtakeSpeed, forwardSpeed, pos, playerPos);
 			}

@@ -6,6 +6,10 @@
 //					：2020/11/02 変更　プレイヤー側でPlayerCharaNoSensorに関連するものを削除（PlayerCharaに統合された）
 //					：2020/11/03 増加　敵撃破のエフェクトを生成
 //					：2020/11/04 増加　死亡エフェクトを生成
+//					：2020/11/13 変更　敵弾はゲームスタート後で発射する
+//					：2020/11/15 増加　EEnemyType列挙型を追加
+//					：2020/11/16 増加　EnergyEnemyの生成
+//					：2020/11/16 増加　曹飛　ShotEnemyの生成
 //----------------------------------------------------------
 
 #pragma once
@@ -25,6 +29,13 @@ enum class EEnemyAttackType : uint8
 	None			UMETA(DisplayName = "no attack"),
 };
 
+UENUM(BlueprintType)
+enum class EEnemyType : uint8
+{
+	ShootEnemy		UMETA(DisplayName = "Shoot Enemy"),
+	EnergyEnemy		UMETA(DisplayName = "Energy Enemy")
+};
+
 UCLASS()
 class GAME_API AEnemyCharaATKControl : public AEnemyChara
 {
@@ -41,8 +52,12 @@ public:
 
 public:
 	// Enemy's Health
-	UPROPERTY(EditAnywhere,Category="HP")
+	UPROPERTY(EditAnywhere, Category = "HP")
 		int health;
+
+	// Enemy type
+	UPROPERTY(EditAnywhere, Category = "Enemy Type")
+		EEnemyType enemyType;
 
 	// Attacking type (攻撃タイプ)
 	UPROPERTY(EditAnywhere, Category = "Attack")
@@ -78,6 +93,12 @@ public:
 			class AActor* OtherActor, class UPrimitiveComponent* OtherComp,
 			int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shoot Enemy")
+		bool canAttack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Energy Enemy")
+		bool isMoving;
+
 private:
 
 	APlayerChara* pPlayer;
@@ -86,13 +107,19 @@ private:
 	float bulletTimeCount;
 
 	bool canPlayEffect;
+	bool closeToRightRoad;
+	bool behindToPlayer;
+
+	EEnemyMoveType currentMoveType;
 
 public:
 	// Playerとの距離が近いかどうか
 	bool CloseToPlayer();
-	//発射開始
+	// 発射開始
 	void Shooting(float DeltaTime);
+	// コースから離れる
+	void LeaveFromRoad(float DeltaTime);
 
 	void Dead();
-
+	
 };
