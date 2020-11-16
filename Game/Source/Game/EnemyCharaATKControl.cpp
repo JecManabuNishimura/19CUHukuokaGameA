@@ -29,7 +29,8 @@ AEnemyCharaATKControl::AEnemyCharaATKControl():
 	canAttack(false),
 	closeToRightRoad(true),
 	behindToPlayer(false),
-	isMoving(true)
+	isMoving(true),
+	energyEnemyScore(200)
 {
 }
 
@@ -96,10 +97,11 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 		break;
 	}
 
-
-
+	// エネミーの死亡処理
 	if (health <= 0) {
+		// 動かせない
 		enemyMoveType = EEnemyMoveType::None;
+		// 当たり判定をオフ
 		SetActorEnableCollision(false);
 		isMoving = false;
 		isDead = true;
@@ -179,6 +181,7 @@ void AEnemyCharaATKControl::OnBeginOverlap(
 {
 	if (OtherActor->ActorHasTag("PlayerBullet") || OtherActor->ActorHasTag("EnemyBullet")) {
 		UE_LOG(LogTemp, Warning, TEXT("Hit!!"));
+		if (this->ActorHasTag("EnergyEnemy")) pPlayer->PlayerScore += energyEnemyScore;
 		if (health > 0) {
 			health -= 1;
 		}
