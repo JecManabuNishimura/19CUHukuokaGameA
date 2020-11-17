@@ -51,9 +51,8 @@ void APlayerBullet::BulletMovement()
 
 void APlayerBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->ActorHasTag("Enemy"))
+	if (OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("EnergyEnemy"))
 	{
-		pPlayer->PlayerScore += pPlayer->EnemyScore;
 
 		pPlayer->CountShootEnemy += 1;
 

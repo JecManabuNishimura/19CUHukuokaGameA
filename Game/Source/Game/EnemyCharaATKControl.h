@@ -99,6 +99,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Energy Enemy")
 		bool isMoving;
 
+	UPROPERTY(EditAnywhere, Category = "Energy Enemy")
+		float energyEnemyScore;
+
 private:
 
 	APlayerChara* pPlayer;

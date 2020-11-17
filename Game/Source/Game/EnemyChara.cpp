@@ -175,7 +175,7 @@ void AEnemyChara::Tick(float DeltaTime)
 	default:
 
 		// エラーログの表示
-		UE_LOG(LogTemp, Warning, TEXT("Enemy : %s is not MoveType setting."), *(this->GetName()))
+		UE_LOG(LogTemp, Display, TEXT("Enemy : %s is not MoveType setting."), *(this->GetName()))
 			break;
 	}
 }
