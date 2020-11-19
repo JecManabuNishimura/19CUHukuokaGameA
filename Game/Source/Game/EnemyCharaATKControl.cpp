@@ -14,6 +14,7 @@
 
 #include "EnemyCharaATKControl.h"
 #include "PlayerChara.h"
+#include "EnemyBullet.h"
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"		// Player‚Ìî•ñŽæ“¾‚·‚é‚½‚ß
 #include "Engine.h"
 
@@ -179,8 +180,17 @@ void AEnemyCharaATKControl::OnBeginOverlap(
 	UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
 	bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->ActorHasTag("PlayerBullet") || OtherActor->ActorHasTag("EnemyBullet")) {
-		UE_LOG(LogTemp, Warning, TEXT("Hit!!"));
+	if (OtherActor->ActorHasTag("PlayerBullet")) {
+		if (health > 0) {
+			health -= 1;
+		}
+		else if (health <= 0) {
+			health = 0;
+		}
+	}
+	AEnemyBullet* pEnemyBullet = Cast<AEnemyBullet>(OtherActor);
+	if (OtherActor->ActorHasTag("EnemyBullet") && pEnemyBullet->isReflectedByPlayer) {
+		UE_LOG(LogTemp, Warning, TEXT("ReflectHit"));
 		if (this->ActorHasTag("EnergyEnemy")) pPlayer->PlayerScore += energyEnemyScore;
 		if (health > 0) {
 			health -= 1;

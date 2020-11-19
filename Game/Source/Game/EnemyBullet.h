@@ -40,9 +40,10 @@ private:
 private:
 	void PlayEffects();
 
-
 public:
 	void BulletMovement();
+
+	bool isReflectedByPlayer;
 
 	FVector GetEnemyPos();
 

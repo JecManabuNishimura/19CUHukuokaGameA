@@ -69,7 +69,7 @@ AStageSelect::AStageSelect() :
 
 	}
 
-	m_pSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("m_pSpringArm"));
+	/*m_pSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("m_pSpringArm"));
 	if (m_pSpringArm != NULL) {
 		m_pSpringArm->SetupAttachment(RootComponent);
 
@@ -92,7 +92,7 @@ AStageSelect::AStageSelect() :
 	if (m_pCamera != NULL) {
 		// カメラをスプリングアームにアタッチさせる
 		m_pCamera->SetupAttachment(m_pSpringArm, USpringArmComponent::SocketName);
-	}
+	}*/
 }
 
 // Called when the game starts or when spawned

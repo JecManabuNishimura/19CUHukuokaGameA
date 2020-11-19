@@ -21,6 +21,7 @@
 
 class AActor;
 class UParticleSystem;
+class AEnemyBullet;
 
 UENUM(BlueprintType)
 enum class EEnemyAttackType : uint8
