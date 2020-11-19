@@ -51,11 +51,8 @@ void APlayerBullet::BulletMovement()
 
 void APlayerBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("EnergyEnemy"))
+	if (OtherActor->ActorHasTag("ShotEnemy"))
 	{
-
-		pPlayer->CountShootEnemy += 1;
-
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->m_bGuarding ? TEXT("true"): TEXT("false"));
 		//OtherActor->Destroy();
 

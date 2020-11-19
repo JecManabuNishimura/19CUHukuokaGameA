@@ -16,6 +16,7 @@ AEnemyBullet::AEnemyBullet()
 	: pPlayer(NULL)
 	, eEnemy(NULL)
 	, isPlayerBeGuarding(false)
+	, isReflectedByPlayer(false)
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -41,8 +42,9 @@ void AEnemyBullet::BeginPlay()
 	Cube->SetMaterial(0, DynamicMaterial);
 
 	//	ƒvƒŒƒCƒ„[‚Æ“G‚ğŠl“¾
-	pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	eEnemy = Cast<AEnemyCharaATKControl>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+	UE_LOG(LogTemp, Warning, TEXT("%s"), isReflectedByPlayer ? TEXT("TRUE") : TEXT("FALSE"));
 }
 
 // Called every frame
@@ -91,10 +93,15 @@ void AEnemyBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 	if (OtherActor->ActorHasTag("Guard"))
 	{
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->m_bGuarding ? TEXT("true"): TEXT("false"));
-		isPlayerBeGuarding = pPlayer->isGuarding;
 
-		pPlayer->GuardEnergy -= pPlayer->guardBulletUIDownSpeed;
+		if (pPlayer != nullptr) return;
+		else if (pPlayer == nullptr) {
+			pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+			isPlayerBeGuarding = pPlayer->isGuarding;
+			pPlayer->GuardEnergy -= pPlayer->guardBulletUIDownSpeed;
+		}
 
+		isReflectedByPlayer = true;
 		//PlayEffects();
 	}
 }
