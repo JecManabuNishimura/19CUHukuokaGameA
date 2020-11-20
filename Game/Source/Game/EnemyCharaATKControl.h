@@ -34,7 +34,8 @@ UENUM(BlueprintType)
 enum class EEnemyType : uint8
 {
 	ShootEnemy		UMETA(DisplayName = "Shoot Enemy"),
-	EnergyEnemy		UMETA(DisplayName = "Energy Enemy")
+	EnergyEnemy		UMETA(DisplayName = "Energy Enemy"),
+	DashEnemy		UMETA(DisplayName="Dash Enemy")
 };
 
 UCLASS()

@@ -40,7 +40,8 @@ void AEnemyCharaATKControl::BeginPlay()
 	Super::BeginPlay();
 
 	// PlayerChara‘¤‚Ìî•ñ‚ğæ“¾
-	pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	if (pPlayer == nullptr)
+		pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AEnemyCharaATKControl::OnBeginOverlap);
 
@@ -188,6 +189,7 @@ void AEnemyCharaATKControl::OnBeginOverlap(
 			health = 0;
 		}
 	}
+
 	AEnemyBullet* pEnemyBullet = Cast<AEnemyBullet>(OtherActor);
 	if (OtherActor->ActorHasTag("EnemyBullet") && pEnemyBullet->isReflectedByPlayer) {
 		UE_LOG(LogTemp, Warning, TEXT("ReflectHit"));
