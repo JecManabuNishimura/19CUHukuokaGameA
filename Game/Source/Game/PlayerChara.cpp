@@ -34,6 +34,7 @@ APlayerChara::APlayerChara()
 	, nowPosZ(0.f)
 	, countPosZTime(0.f)
 	, overStartHight(false)
+	, hadDoOnce(false)
 	, tempSpeed(0.f)
 	, bulletTimeCount(0.0f)
 	, bulletDuration(1.0f)
@@ -45,6 +46,7 @@ APlayerChara::APlayerChara()
 	, jumpTime(0.f)
 	, nowJumpHeight(0.f)
 	, prevJumpHeight(0.f)
+	, isShoting(false)
 	, canJump(false)
 	, isJumping(false)
 	, isLanding(false)
@@ -56,6 +58,7 @@ APlayerChara::APlayerChara()
 	, canBeDamaged(true)
 	, haveGuardEnergy(true)
 	, haveDashEnergy(true)
+	, haveShotEnergy(true)
 	, isStart(false)
 	, isDead(false)
 	, isGoal(false)
@@ -64,21 +67,33 @@ APlayerChara::APlayerChara()
 	, HP(100.f)
 	, CoinCount(0)
 	, CountShootEnemy(0)
+	, ShotEnergy(100.f)
+	, ShotMaxEnergy(100.f)
 	, GuardEnergy(100.f)
+<<<<<<< HEAD
 	, DashEnergy(50.f)
 	, DashEnergyMax(50.f)
+=======
+	, GuardEnergyMax(100.f)
+	, DashEnergy(100.f)
+	, DashEnergyMax(100.f)
+>>>>>>> DashCamera
 	, DashEffectLocationOffset(400.f, 0.f, 0.f)
 	, DashEffectRotationOffset(0.f, 0.f, 0.f)
 	, guardBulletUIDownSpeed(10.f)
+	, Shot_UIDownSpeed(0.5f)
+	, Shot_UIUpSpeed(0.5f)
 	, Guard_UIDownSpeed(0.5f)
+	, Guard_UIUpSpeed(0.5f)
 	, Dash_UIDownSpeed(0.5f)
+	, Dash_UIUpSpeed(0.5f)
 	, DamageFrame(50.f)
 	, CoinScore(1000.f)
 	, EnemyScore(2000.f)
 	, PlayerScore(0.f)
 	, nowPage(1)
 	, maxPage(0)
-	, Fence_FilmDmg(10.f)
+	, Damage(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
 	, tempPitch(0.f)
@@ -248,18 +263,23 @@ void APlayerChara::UpdateMove(float _deltaTime)
 	FVector YRotation = GetActorForwardVector();
 
 	//	前に向くずっと移動する
-	if (isDashing || isDashLine)
+	if ((isDashing || isDashLine) && haveShotEnergy)
 	{
 		NewLocation.X += playerSpeed * 1.5f;
 	}
-	else if (!isGuarding && !isDashing)
+	else if (!isGuarding && !isDashing && haveShotEnergy)
 	{
 		NewLocation.X += playerSpeed;
 	}
-	else if (isGuarding)
+	else if (isGuarding && haveShotEnergy)
 	{
 		NewLocation.X += playerSpeed * 0.8f;
 	}
+	else if(!haveShotEnergy)
+	{
+		NewLocation.X += playerSpeed * 0.5f;
+	}
+
 
 	//	キャラクターのY軸移動
 	{
@@ -344,9 +364,9 @@ void APlayerChara::UpdateGuard()
 	}
 	else
 	{
-		if (GuardEnergy <= 100.f)
+		if (GuardEnergy <= GuardEnergyMax)
 		{
-			GuardEnergy += Guard_UIDownSpeed;
+			GuardEnergy += Guard_UIUpSpeed;
 		}
 		else
 		{
@@ -377,7 +397,7 @@ void APlayerChara::UpdateAccelerate()
 	{
 		if (DashEnergy <= DashEnergyMax)
 		{
-			DashEnergy += Dash_UIDownSpeed;
+			DashEnergy += Dash_UIUpSpeed;
 		}
 		else
 		{
@@ -399,12 +419,36 @@ void APlayerChara::RestartGame()
 	Player_Select_Widget->RemoveFromViewport();
 
 	selectPlay = 0;
+
+	hadDoOnce = false;
 }
 
 //発射開始
 void APlayerChara::Shooting(float DeltaTime)
 {
-	if (playerATKType == PPlayerAttackType::Straight) {
+	if (ShotEnergy <= 0.f)
+	{
+		isShoting = false;
+		haveShotEnergy = false;
+	}
+
+	if (isShoting && haveShotEnergy)
+	{
+		ShotEnergy -= Shot_UIDownSpeed;
+	}
+	else
+	{
+		if (ShotEnergy <= ShotMaxEnergy)
+		{
+			ShotEnergy += Shot_UIUpSpeed;
+		}
+		else
+		{
+			haveShotEnergy = true;
+		}
+	}
+
+	if (playerATKType == PPlayerAttackType::Straight && isShoting) {
 		bulletTimeCount += DeltaTime;
 
 		FVector currentVector = GetActorLocation();
@@ -419,20 +463,19 @@ void APlayerChara::Shooting(float DeltaTime)
 
 void APlayerChara::DeadCount()
 {
-	if (HP <= 0)
-	{
-		if (!isDead)
-		{
-			isDead = true;
-
-			if (Player_Select_Widget_Class != nullptr)
+	if (HP <= 0 || isDead)
+	{		
+			if (Player_Select_Widget_Class != nullptr && !hadDoOnce)
 			{
+				isDead = true;
+
 				Player_Select_Widget = CreateWidget(GetWorld(), Player_Select_Widget_Class);
 				Player_Select_Widget->AddToViewport();
+
+				hadDoOnce = true;
 			}
 
-			GetMesh()->SetSimulatePhysics(true);
-		}
+			//GetMesh()->SetSimulatePhysics(true);
 	}
 }
 
@@ -497,7 +540,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 
 		playerSpeed *= 0.5f;
 		canBeDamaged = false;
-		HP -= Fence_FilmDmg;
+		HP -= Damage;
 	}
 
 	if ((OtherActor->ActorHasTag("EnemyBullet") || OtherActor->ActorHasTag("EnemyMissile") || OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("EnergyEnemy")) && canBeDamaged && !isDashing && !isDashLine)
@@ -511,7 +554,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 			}
 			playerSpeed *= 0.5f;
 			canBeDamaged = false;
-			HP -= Fence_FilmDmg;
+			HP -= Damage;
 		}
 		else
 		{
@@ -519,10 +562,15 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		}
 	}
 
+<<<<<<< HEAD
 	if ((OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("DashEnemy")) && canBeDamaged && !isDashing && !isDashLine)
 	{
 		if (!isGuarding)
 		{
+=======
+	if ((OtherActor->ActorHasTag("GeneralEnemy") || OtherActor->ActorHasTag("DashEnemy") || OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("EnergyEnemy")) && canBeDamaged && !isDashing && !isDashLine)
+	{
+>>>>>>> DashCamera
 			if (Player_Damage_Widget_Class != nullptr)
 			{
 				Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
@@ -530,8 +578,12 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 			}
 			playerSpeed *= 0.5f;
 			canBeDamaged = false;
+<<<<<<< HEAD
 			HP -= Fence_FilmDmg;
 		}
+=======
+			HP -= Damage;
+>>>>>>> DashCamera
 	}
 
 	if (OtherActor->ActorHasTag("Coin"))
@@ -758,6 +810,8 @@ void APlayerChara::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	//	ダッシュ
 	InputComponent->BindAxis("DashAndJump", this, &APlayerChara::DashOrJumpStartWithNoSensor);
+
+	InputComponent->BindAxis("Shot", this, &APlayerChara::ShotStart);
 }
 
 //	【入力バインド】キャラ移動:左右
@@ -793,4 +847,17 @@ void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
 	//---------------------------------------------------------------------
 }
 
-//	====================================
+void APlayerChara::ShotStart(float _axisValue)
+{
+	if (haveShotEnergy)
+	{
+		if (_axisValue == 1.f)
+		{
+			isShoting = true;
+		}
+		else
+		{
+			isShoting = false;
+		}
+	}
+}

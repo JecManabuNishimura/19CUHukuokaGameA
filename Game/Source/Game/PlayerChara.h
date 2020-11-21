@@ -98,6 +98,7 @@ private:
 	//	【入力バインド】ダッシュ開始
 	void DashOrJumpStartWithNoSensor(float _axisValue);
 
+	void ShotStart(float _axisValue);
 	//	====================================
 
 private:
@@ -132,6 +133,8 @@ private:
 	float nowPosZ;
 	float countPosZTime;
 	bool overStartHight;
+
+	bool hadDoOnce;
 
 	float tempRotate;								//　元状態に戻すの回転角度
 
@@ -201,10 +204,22 @@ public:
 		float guardBulletUIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Shot_UIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Shot_UIUpSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float Guard_UIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Guard_UIUpSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float Dash_UIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Dash_UIUpSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float playerSpeed;
@@ -225,7 +240,16 @@ public:
 		int32 CountShootEnemy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ShotEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ShotMaxEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float GuardEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float GuardEnergyMax;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DashEnergy;
@@ -259,8 +283,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isGoal;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isDead;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool isShoting;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool haveShotEnergy;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isJumping;
@@ -281,7 +311,7 @@ public:
 		bool canBeDamaged;
 
 	UPROPERTY(EditAnywhere)
-		float Fence_FilmDmg;
+		float Damage;
 
 	// Is Open Com Port
 	UPROPERTY(BlueprintReadOnly, Category = "Sensor")
