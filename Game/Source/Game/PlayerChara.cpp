@@ -518,6 +518,21 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		}
 	}
 
+	if ((OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("DashEnemy")) && canBeDamaged && !isDashing && !isDashLine)
+	{
+		if (!isGuarding)
+		{
+			if (Player_Damage_Widget_Class != nullptr)
+			{
+				Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
+				Player_Damage_Widget->AddToViewport();
+			}
+			playerSpeed *= 0.5f;
+			canBeDamaged = false;
+			HP -= Fence_FilmDmg;
+		}
+	}
+
 	if (OtherActor->ActorHasTag("Coin"))
 	{
 		PlayerScore += CoinScore;
