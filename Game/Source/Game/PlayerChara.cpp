@@ -65,7 +65,8 @@ APlayerChara::APlayerChara()
 	, CoinCount(0)
 	, CountShootEnemy(0)
 	, GuardEnergy(100.f)
-	, DashEnergy(100.f)
+	, DashEnergy(50.f)
+	, DashEnergyMax(50.f)
 	, DashEffectLocationOffset(400.f, 0.f, 0.f)
 	, DashEffectRotationOffset(0.f, 0.f, 0.f)
 	, guardBulletUIDownSpeed(10.f)
@@ -374,7 +375,7 @@ void APlayerChara::UpdateAccelerate()
 	}
 	else
 	{
-		if (DashEnergy <= 100.f)
+		if (DashEnergy <= DashEnergyMax)
 		{
 			DashEnergy += Dash_UIDownSpeed;
 		}
