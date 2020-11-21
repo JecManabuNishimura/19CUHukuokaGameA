@@ -231,6 +231,9 @@ public:
 		float DashEnergy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float DashEnergyMax;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DamageFrame;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)			//	CoinScore
