@@ -76,9 +76,6 @@ private:
 	//	リスタート
 	void RestartGame();
 
-	//発射開始
-	void Shooting(float DeltaTime);
-
 	//	死亡カウント
 	void DeadCount();
 
