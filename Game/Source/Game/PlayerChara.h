@@ -86,6 +86,8 @@ private:
 	//	====================================
 	//	センサーが持ってない関数
 
+	void Shooting(float DeltaTime);
+
 	//	【入力バインド】キャラ移動:左右
 	void MoveRightWithNoSensor(float _axisValue);
 
