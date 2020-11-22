@@ -70,14 +70,9 @@ APlayerChara::APlayerChara()
 	, ShotEnergy(100.f)
 	, ShotMaxEnergy(100.f)
 	, GuardEnergy(100.f)
-<<<<<<< HEAD
-	, DashEnergy(50.f)
-	, DashEnergyMax(50.f)
-=======
 	, GuardEnergyMax(100.f)
 	, DashEnergy(100.f)
 	, DashEnergyMax(100.f)
->>>>>>> DashCamera
 	, DashEffectLocationOffset(400.f, 0.f, 0.f)
 	, DashEffectRotationOffset(0.f, 0.f, 0.f)
 	, guardBulletUIDownSpeed(10.f)
@@ -562,15 +557,8 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		}
 	}
 
-<<<<<<< HEAD
-	if ((OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("DashEnemy")) && canBeDamaged && !isDashing && !isDashLine)
-	{
-		if (!isGuarding)
-		{
-=======
 	if ((OtherActor->ActorHasTag("GeneralEnemy") || OtherActor->ActorHasTag("DashEnemy") || OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("EnergyEnemy")) && canBeDamaged && !isDashing && !isDashLine)
 	{
->>>>>>> DashCamera
 			if (Player_Damage_Widget_Class != nullptr)
 			{
 				Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
@@ -578,12 +566,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 			}
 			playerSpeed *= 0.5f;
 			canBeDamaged = false;
-<<<<<<< HEAD
-			HP -= Fence_FilmDmg;
-		}
-=======
 			HP -= Damage;
->>>>>>> DashCamera
 	}
 
 	if (OtherActor->ActorHasTag("Coin"))
