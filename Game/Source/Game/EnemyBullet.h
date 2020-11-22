@@ -6,8 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "Components/BoxComponent.h"
 #include "PlayerChara.h"
-#include "EnemyCharaATKControl.h"
-#include "EnemyChara.h"
 #include "EnemyBullet.generated.h"
 
 class UMaterialInstanceDynamic;
@@ -31,14 +29,11 @@ public:
 
 private:
 	APlayerChara* pPlayer;
-	AEnemyCharaATKControl* eEnemy;
+	//AEnemyCharaATKControl* eEnemy;
 
 	UMaterialInstanceDynamic* DynamicMaterial;
 
 	bool isPlayerBeGuarding;
-
-private:
-	void PlayEffects();
 
 public:
 	void BulletMovement();
@@ -47,7 +42,7 @@ public:
 
 	FVector GetEnemyPos();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component")
 		class UBoxComponent* collisionBox;
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
