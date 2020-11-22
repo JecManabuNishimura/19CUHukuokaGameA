@@ -810,8 +810,6 @@ void APlayerChara::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	//	ダッシュ
 	InputComponent->BindAxis("DashAndJump", this, &APlayerChara::DashOrJumpStartWithNoSensor);
-
-	InputComponent->BindAxis("Shot", this, &APlayerChara::ShotStart);
 }
 
 //	【入力バインド】キャラ移動:左右
@@ -845,19 +843,4 @@ void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
 		tempPitch = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
 	}
 	//---------------------------------------------------------------------
-}
-
-void APlayerChara::ShotStart(float _axisValue)
-{
-	if (haveShotEnergy)
-	{
-		if (_axisValue == 1.f)
-		{
-			isShoting = true;
-		}
-		else
-		{
-			isShoting = false;
-		}
-	}
 }
