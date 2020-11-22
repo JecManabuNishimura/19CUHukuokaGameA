@@ -14,6 +14,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"	// ACharacterを継承しているため
 #include "Components/CapsuleComponent.h"
+#include "Components/ActorComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "NiagaraFunctionLibrary.h"
@@ -57,6 +58,7 @@ public:
 
 	// 各入力関係メソッドとのバインド処理
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
 private:
 	//	カメラ更新処理
 	void UpdateSensor(float _deltaTime);
@@ -187,6 +189,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		UNiagaraSystem* DashEffect;
+
+	/*UPROPERTY(EditAnywhere, Category = "Effects")
+		class AActor* DashActor;*/
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		FVector DashEffectLocationOffset;

@@ -40,12 +40,11 @@ void AEnemyCharaATKControl::BeginPlay()
 	Super::BeginPlay();
 
 	// PlayerChara側の情報を取得
-	if (pPlayer == nullptr)
-		pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AEnemyCharaATKControl::OnBeginOverlap);
 
-	currentMoveType = enemyMoveType;
+	//currentMoveType = enemyMoveType;
 }
 
 void AEnemyCharaATKControl::Tick(float DeltaTime)
@@ -58,7 +57,7 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 		switch (enemyATKType)
 		{
 		case EEnemyAttackType::Straight:
-			if (CloseToPlayer() == true && !isDead) Shooting(DeltaTime);
+			if (canAttack) Shooting(DeltaTime);
 			break;
 
 		case EEnemyAttackType::None:
@@ -82,6 +81,7 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 				isMoving = true;
 			}
 			else if (CloseToPlayer() == true && !isDead) {
+				//UE_LOG(LogTemp, Warning, TEXT("closeToPlayer==true!!!!"));
 				canAttack = true;
 				isMoving = true;
 				Shooting(DeltaTime);
@@ -114,7 +114,7 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 // Playerとの距離が近いかどうか
 bool AEnemyCharaATKControl::CloseToPlayer()
 {
-	//APlayerChara* pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	//pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	FVector vectortoPlayer = pPlayer->GetActorLocation() - this->GetActorLocation();
 	float currentDistance = vectortoPlayer.Size();
 
@@ -123,6 +123,7 @@ bool AEnemyCharaATKControl::CloseToPlayer()
 	// プレイヤーと一定距離に入れば発射開始
 	if (currentDistance <= shootableDistance && vectortoPlayer.X < 0.0f) {
 		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) can attack."), *(this->GetName()));
+		
 		return true;
 	}
 	else if (vectortoPlayer.X > 0.0f) {
@@ -141,13 +142,12 @@ void AEnemyCharaATKControl::Shooting(float DeltaTime)
 	FVector currentVector = GetActorLocation();
 	FRotator currentRotator = GetActorRotation();
 
-	if (canAttack) {
-		if (bulletTimeCount >= bulletDuration && pPlayer->isStart) {
-			// 弾の作成：SpawnActor<生成するクラス型>(生成するクラス、始点座標、始点回転座標)
+	if (bulletTimeCount >= bulletDuration && pPlayer->isStart) {
+		// 弾の作成：SpawnActor<生成するクラス型>(生成するクラス、始点座標、始点回転座標)
+		if (bulletActor != NULL)
 			GetWorld()->SpawnActor<AActor>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, currentRotator);
-			bulletTimeCount = 0.0f;
-			//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
-		}
+		bulletTimeCount = 0.0f;
+		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
 	}
 
 	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue,);

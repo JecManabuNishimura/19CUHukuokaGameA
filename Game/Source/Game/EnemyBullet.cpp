@@ -5,16 +5,14 @@
 #include "PlayerChara.h"
 #include "Materials/MaterialInstanceDynamic.h"		//	color package
 #include "Materials/MaterialInterface.h"			//	color package
-#include "EnemyCharaATKControl.h"
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 #include "Components/BoxComponent.h"
 #include "Engine.h"
 #include "Components/SkeletalMeshComponent.h"
 
 // Sets default values
-AEnemyBullet::AEnemyBullet()
-	: pPlayer(NULL)
-	, eEnemy(NULL)
+AEnemyBullet::AEnemyBullet():
+	  pPlayer(NULL)
 	, isPlayerBeGuarding(false)
 	, isReflectedByPlayer(false)
 {
@@ -23,6 +21,9 @@ AEnemyBullet::AEnemyBullet()
 
 	collisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
 	RootComponent = collisionBox;
+
+	if (pPlayer == NULL)
+		pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 }
 
 // Called when the game starts or when spawned
@@ -42,7 +43,7 @@ void AEnemyBullet::BeginPlay()
 	Cube->SetMaterial(0, DynamicMaterial);
 
 	//	ÉvÉåÉCÉÑÅ[Ç∆ìGÇälìæ
-	eEnemy = Cast<AEnemyCharaATKControl>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	//eEnemy = Cast<AEnemyCharaATKControl>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
 	UE_LOG(LogTemp, Warning, TEXT("%s"), isReflectedByPlayer ? TEXT("TRUE") : TEXT("FALSE"));
 }
@@ -65,7 +66,7 @@ void AEnemyBullet::BulletMovement()
 	if (isPlayerBeGuarding)
 	{
 		FVector NewPos = GetActorLocation();
-		NewPos.X += 100.f;
+		NewPos.X += 300.0f;
 		SetActorLocation(NewPos);
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, *(FString::SanitizeFloat(NewPos.X)));
 
@@ -73,11 +74,6 @@ void AEnemyBullet::BulletMovement()
 		float blend = 1.0f;
 		DynamicMaterial->SetScalarParameterValue(TEXT("Blend"), blend);
 	}
-}
-
-void AEnemyBullet::PlayEffects()
-{
-	UGameplayStatics::SpawnEmitterAtLocation(this, GuardEffect, GetActorLocation());
 }
 
 
@@ -90,18 +86,14 @@ void AEnemyBullet::PlayEffects()
 
 void AEnemyBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->ActorHasTag("Guard"))
+	/*if (OtherActor->ActorHasTag("Guard"))
 	{
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->m_bGuarding ? TEXT("true"): TEXT("false"));
 
-		if (pPlayer != nullptr) return;
-		else if (pPlayer == nullptr) {
-			pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-			isPlayerBeGuarding = pPlayer->isGuarding;
-			pPlayer->GuardEnergy -= pPlayer->guardBulletUIDownSpeed;
-		}
+		
+		isPlayerBeGuarding = true;
+		pPlayer->GuardEnergy -= pPlayer->guardBulletUIDownSpeed;
 
 		isReflectedByPlayer = true;
-		//PlayEffects();
-	}
+	}*/
 }
