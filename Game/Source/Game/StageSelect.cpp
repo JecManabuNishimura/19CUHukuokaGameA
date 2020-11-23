@@ -11,6 +11,7 @@
 #include "Components/SceneComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values
@@ -34,38 +35,45 @@ AStageSelect::AStageSelect() :
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	m_MainSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("MainSceneComponent"));
-	RootComponent = m_MainSceneComponent;
+	//m_MainSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("MainSceneComponent"));
+	//RootComponent = m_MainSceneComponent;
+
+	m_BoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
+	if (m_BoxComponent != NULL) {
+		//m_BoxComponent->SetupAttachment(m_SceneComponent);
+		RootComponent = m_BoxComponent;
+		//m_BoxComponent->SetRelativeScale3D(FVector(20.0f, 20.0f, 20.0f));
+	}
 
 	m_SceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("SceneComponent"));
 	m_SceneComponent->SetupAttachment(RootComponent);
 
-	m_Stage01 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage03"));
+	m_Stage01 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage01"));
 	if (m_Stage01 != NULL) {
 		m_Stage01->SetupAttachment(m_SceneComponent);
 	}
 	m_Stage01->SetDrawSize(FVector2D(1280.0f, 720.0f));
-	m_Stage01->SetRelativeLocationAndRotation(FVector(-640.0f, 0.0f, 0.0f), FRotator(0.0f, -180.0f, 0.0f));
+	m_Stage01->SetRelativeLocationAndRotation(FVector(-700.0f, 0.0f, 0.0f), FRotator(0.0f, -180.0f, 0.0f));
 
-	m_Stage02 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage04"));
+	m_Stage02 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage02"));
 	if (m_Stage02 != NULL) {
 		m_Stage02->SetupAttachment(m_SceneComponent);
 	}
 	m_Stage02->SetDrawSize(FVector2D(1280.0f, 720.0f));
-	m_Stage02->SetRelativeLocationAndRotation(FVector(0.0f, 640.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
+	m_Stage02->SetRelativeLocationAndRotation(FVector(0.0f, 700.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
 
-	m_Stage03 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage01"));
+	m_Stage03 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage03"));
 	if (m_Stage03 != NULL) {
 		m_Stage03->SetupAttachment(m_SceneComponent);
 	}
 	m_Stage03->SetDrawSize(FVector2D(1280.0f, 720.0f));
-	m_Stage03->SetRelativeLocation(FVector(640.0f, 0.0f, 0.0f));
+	m_Stage03->SetRelativeLocation(FVector(700.0f, 0.0f, 0.0f));
 
-	m_Stage04 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage02"));
+	m_Stage04 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage04"));
 	if (m_Stage04 != NULL) {
 		m_Stage04->SetupAttachment(m_SceneComponent);
 		m_Stage04->SetDrawSize(FVector2D(1280.0f, 720.0f));
-		m_Stage04->SetRelativeLocationAndRotation(FVector(0.0f, -640.0f, 0.0f), FRotator(0.0f, -90.0f, 0.0f));
+		m_Stage04->SetRelativeLocationAndRotation(FVector(0.0f, -700.0f, 0.0f), FRotator(0.0f, -90.0f, 0.0f));
 
 	}
 
@@ -128,7 +136,7 @@ void AStageSelect::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 void AStageSelect::SelectRight()
 {
 	if (anyPressed) {
-		UE_LOG(LogTemp, Warning, TEXT("Right!!"));
+		//UE_LOG(LogTemp, Warning, TEXT("Right!!"));
 		turnRight = true;
 		anyPressed = false;
 		currentStage += 1;
@@ -145,7 +153,7 @@ void AStageSelect::SelectRight()
 void AStageSelect::SelectLeft()
 {
 	if (anyPressed) {
-		UE_LOG(LogTemp, Warning, TEXT("Right!!"));
+		//UE_LOG(LogTemp, Warning, TEXT("Right!!"));
 		turnRight = false;
 		anyPressed = false;
 		currentStage -= 1;
@@ -171,13 +179,13 @@ void AStageSelect::StageChanging(float _deltaTime)
 	FRotator presRotation = m_SceneComponent->GetRelativeRotation();
 	FVector presScale = m_SceneComponent->GetRelativeScale3D();
 
-	UE_LOG(LogTemp, Warning, TEXT("TurnRight:%s"), turnRight ? TEXT("TRUE") : TEXT("FALSE"));
-	UE_LOG(LogTemp, Warning, TEXT("anyPressed:%s"), anyPressed ? TEXT("TRUE") : TEXT("FALSE"));
+	//UE_LOG(LogTemp, Warning, TEXT("TurnRight:%s"), turnRight ? TEXT("TRUE") : TEXT("FALSE"));
+	//UE_LOG(LogTemp, Warning, TEXT("anyPressed:%s"), anyPressed ? TEXT("TRUE") : TEXT("FALSE"));
 	//UE_LOG(LogTemp, Warning, TEXT("preScale:%s"), *FString::SanitizeFloat(presScale.SizeSquared()));
 	//UE_LOG(LogTemp, Warning, TEXT("finishSmall:%s"), finishSmall ? TEXT("TRUE") : TEXT("FALSE"));
 	//UE_LOG(LogTemp, Warning, TEXT("finishRotating:%s"), finishRotating ? TEXT("TRUE") : TEXT("FALSE"));
-	UE_LOG(LogTemp, Warning, TEXT("presRotation:%s"), *presRotation.ToString());
-	UE_LOG(LogTemp, Warning, TEXT("rotatingRate:%s"), *FString::SanitizeFloat(rotatingRate));
+	//UE_LOG(LogTemp, Warning, TEXT("presRotation:%s"), *presRotation.ToString());
+	//UE_LOG(LogTemp, Warning, TEXT("rotatingRate:%s"), *FString::SanitizeFloat(rotatingRate));
 
 	if (turnRight) {
 		// èkè¨äJén

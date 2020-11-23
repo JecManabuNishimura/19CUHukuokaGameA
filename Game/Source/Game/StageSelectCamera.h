@@ -35,12 +35,39 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true")) USpringArmComponent* m_pSpringArm;	// スプリングアーム
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true")) UCameraComponent* m_pCamera;			// カメラ
+	// スプリングアーム
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+		USpringArmComponent* m_pSpringArm;
+	// カメラ
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+		UCameraComponent* m_pCamera;
+	// カメラのピッチ範囲(上下)
+	UPROPERTY(EditAnywhere, Category = "Camera")
+		FVector2D m_cameraPitchLimit;
+	// カメラのヨー範囲(左右)
+	UPROPERTY(EditAnywhere, Category = "Camera")
+		FVector2D m_cameraYawLimit;
+	UPROPERTY(EditAnywhere, Category = "LineTrace")
+		float length;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action")
+		bool isLookAtStageSelect;
+	UPROPERTY(editAnywhere, BlueprintReadWrite, Category = "Action")
+		bool isPlayingAction;
+	UPROPERTY(EditAnywhere, Category = "Action")
+		FVector FinalLocation;
+
 
 private:
-	float cameraRoll;
-	float cameraPitch;
+	FVector2D m_cameraRotateInput;
+
+	void CameraMovement(float _deltaTime);
+
+	void ObjectSelect();
+
+	// 選択されたアクターのリアクション
+	void ObjectEnlarge(float _deltaTime);
+
+	AActor* SelectedActor;
 
 	// ============【入力バインド】=============
 	// 入力バインド】カメラ移動:左右
