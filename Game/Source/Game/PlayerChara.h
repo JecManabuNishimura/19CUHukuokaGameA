@@ -14,6 +14,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"	// ACharacterを継承しているため
 #include "Components/CapsuleComponent.h"
+#include "Components/ActorComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "NiagaraFunctionLibrary.h"
@@ -57,6 +58,7 @@ public:
 
 	// 各入力関係メソッドとのバインド処理
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
 private:
 	//	カメラ更新処理
 	void UpdateSensor(float _deltaTime);
@@ -76,9 +78,6 @@ private:
 	//	リスタート
 	void RestartGame();
 
-	//発射開始
-	void Shooting(float DeltaTime);
-
 	//	死亡カウント
 	void DeadCount();
 
@@ -89,6 +88,8 @@ private:
 	//	====================================
 	//	センサーが持ってない関数
 
+	void Shooting(float DeltaTime);
+
 	//	【入力バインド】キャラ移動:左右
 	void MoveRightWithNoSensor(float _axisValue);
 
@@ -98,6 +99,7 @@ private:
 	//	【入力バインド】ダッシュ開始
 	void DashOrJumpStartWithNoSensor(float _axisValue);
 
+	void ShotStart(float _axisValue);
 	//	====================================
 
 private:
@@ -132,6 +134,8 @@ private:
 	float nowPosZ;
 	float countPosZTime;
 	bool overStartHight;
+
+	bool hadDoOnce;
 
 	float tempRotate;								//　元状態に戻すの回転角度
 
@@ -188,6 +192,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		UNiagaraSystem* DashEffect;
 
+	/*UPROPERTY(EditAnywhere, Category = "Effects")
+		class AActor* DashActor;*/
+
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		FVector DashEffectLocationOffset;
 
@@ -201,10 +208,22 @@ public:
 		float guardBulletUIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Shot_UIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Shot_UIUpSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float Guard_UIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Guard_UIUpSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float Dash_UIDownSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Dash_UIUpSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float playerSpeed;
@@ -225,10 +244,22 @@ public:
 		int32 CountShootEnemy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ShotEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ShotMaxEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float GuardEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float GuardEnergyMax;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DashEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float DashEnergyMax;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DamageFrame;
@@ -256,8 +287,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isGoal;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isDead;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool isShoting;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool haveShotEnergy;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isJumping;
@@ -278,7 +315,7 @@ public:
 		bool canBeDamaged;
 
 	UPROPERTY(EditAnywhere)
-		float Fence_FilmDmg;
+		float Damage;
 
 	// Is Open Com Port
 	UPROPERTY(BlueprintReadOnly, Category = "Sensor")

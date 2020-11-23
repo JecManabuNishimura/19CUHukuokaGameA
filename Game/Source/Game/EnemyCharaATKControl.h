@@ -21,7 +21,6 @@
 
 class AActor;
 class UParticleSystem;
-class AEnemyBullet;
 
 UENUM(BlueprintType)
 enum class EEnemyAttackType : uint8
@@ -77,6 +76,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Bullet")
 		float bulletDuration;
 
+	UPROPERTY(EditAnywhere, Category = "Bullet")
+		float bulletTimeCount;
+
 	// Using the Offset to prevent the collide with enemy.(弾の生成位置補正)
 	UPROPERTY(EditAnywhere, Category = "Offset")
 		float bulletXOffset;
@@ -109,13 +111,13 @@ private:
 	APlayerChara* pPlayer;
 
 	// 発射間隔カウントダウン
-	float bulletTimeCount;
+	
 
 	bool canPlayEffect;
 	bool closeToRightRoad;
 	bool behindToPlayer;
 
-	EEnemyMoveType currentMoveType;
+	//EEnemyMoveType currentMoveType;
 
 public:
 	// Playerとの距離が近いかどうか
