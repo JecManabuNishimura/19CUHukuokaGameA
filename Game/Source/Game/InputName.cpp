@@ -25,9 +25,9 @@ AInputName::AInputName()
 	//	デフォルトプレイヤーとして設定
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
-	firstName = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?", "#", " ",};
-	middleName = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?", "#", " ",};
-	lastName = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?", "#", " ",};
+	firstName = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?", "#"};
+	middleName = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?", "#"};
+	lastName = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?", "#"};
 }
 
 // Called when the game starts or when spawned
@@ -43,9 +43,9 @@ void AInputName::Tick(float DeltaTime)
 
 	if (tempSelectIndex < 0)
 	{
-		tempSelectIndex = 29;
+		tempSelectIndex = 28;
 	}
-	else if (tempSelectIndex > 29)
+	else if (tempSelectIndex > 28)
 	{
 		tempSelectIndex = 0;
 	}

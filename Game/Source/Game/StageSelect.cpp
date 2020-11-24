@@ -162,7 +162,7 @@ void AStageSelect::SelectLeft()
 
 void AStageSelect::SelectConfirm()
 {
-	UGameplayStatics::OpenLevel(this, "Game");
+	//UGameplayStatics::OpenLevel(this, "Game");
 
 }
 

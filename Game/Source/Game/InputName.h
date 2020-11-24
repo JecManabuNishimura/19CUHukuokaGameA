@@ -34,7 +34,7 @@ private:
 
 	void SpaceButton();
 public:
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int confirmIndex;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
