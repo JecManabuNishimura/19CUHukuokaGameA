@@ -66,7 +66,7 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 		UCameraComponent* m_pCamera;			// カメラ
 
-private:
+public:
 	UPROPERTY(EditAnywhere, Category = "Controllable Value")
 		float scalingTime;
 	// 縮小率
@@ -85,7 +85,7 @@ private:
 		float rotatingRate;
 
 	// Current Stage you selected.
-	UPROPERTY(VisibleAnywhere, Category = "Checkable Value")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category = "Checkable Value")
 		int currentStage;
 
 // 入力バインド

@@ -403,19 +403,22 @@ void APlayerChara::UpdateAccelerate()
 
 void APlayerChara::RestartGame()
 {
-	FVector restartLocation = GetActorLocation();
+	if (hadDoOnce)
+	{
+		FVector restartLocation = GetActorLocation();
 
-	SetActorLocation(FVector(restartLocation.X - 3000.f, -10.f, 30.f));
+		SetActorLocation(FVector(restartLocation.X - 3000.f, -10.f, 30.f));
 
-	HP = 100.f;
+		HP = 100.f;
 
-	isDead = false;
+		isDead = false;
 
-	Player_Select_Widget->RemoveFromViewport();
+		Player_Select_Widget->RemoveFromViewport();
 
-	selectPlay = 0;
+		selectPlay = 0;
 
-	hadDoOnce = false;
+		hadDoOnce = false;
+	}
 }
 
 //発射開始
@@ -793,6 +796,8 @@ void APlayerChara::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	//	ダッシュ
 	InputComponent->BindAxis("DashAndJump", this, &APlayerChara::DashOrJumpStartWithNoSensor);
+
+	InputComponent->BindAxis("Shot", this, &APlayerChara::ShotStart);
 }
 
 //	【入力バインド】キャラ移動:左右
@@ -826,4 +831,16 @@ void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
 		tempPitch = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
 	}
 	//---------------------------------------------------------------------
+}
+
+void APlayerChara::ShotStart(float _axisValue)
+{
+	if (_axisValue == 1 && haveShotEnergy)
+	{
+		isShoting = true;
+	}
+	else
+	{
+		isShoting = false;
+	}
 }
