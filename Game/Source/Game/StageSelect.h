@@ -16,6 +16,7 @@ class UWidgetComponent;
 class USceneComponent;
 class USpringArmComponent;
 class UCameraComponent;
+class UBoxComponent;
 
 UCLASS()
 class GAME_API AStageSelect : public APawn
@@ -44,6 +45,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Component", meta = (AllowPrivateAccess = "true"))
 		USceneComponent* m_SceneComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Component", meta = (AllowPrivateAccess = "true"))
+		UBoxComponent* m_BoxComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Component", meta = (AllowPrivateAccess = "true"))
 		UWidgetComponent* m_Stage01;
