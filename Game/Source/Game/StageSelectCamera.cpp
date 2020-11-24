@@ -21,7 +21,9 @@ AStageSelectCamera::AStageSelectCamera() :
 	length(5000.0f),
 	isLookAtStageSelect(false),
 	SelectedActor(NULL),
-	isPlayingAction(false)
+	canPlayAction(false),
+	isPlayingAction(false),
+	isHit(false)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -108,14 +110,18 @@ void AStageSelectCamera::ObjectSelect()
 	FVector End = GetActorLocation() + GetActorForwardVector() * length;
 	FHitResult OutHit;
 	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f);
+	//bool isHit;
 	//FCollisionQueryParams CollisionParams;
 	//CollisionParams.AddIgnoredActor(this);
-	bool isHit = GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldStatic/*, CollisionParams*/);
+	if (!isPlayingAction)
+		isHit = GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldStatic/*, CollisionParams*/);
+	else isHit = false;
 	if (isHit) {
 		UE_LOG(LogTemp, Warning, TEXT("%s"), *OutHit.GetActor()->GetName());
 		if (OutHit.GetActor()->ActorHasTag("StageSelect")) {
 			SelectedActor = OutHit.GetActor();
 			isLookAtStageSelect = true;
+			//canPlayAction = true;
 			isPlayingAction = true;
 		}
 		else isLookAtStageSelect = false;

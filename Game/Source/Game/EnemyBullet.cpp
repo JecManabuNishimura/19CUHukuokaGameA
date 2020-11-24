@@ -86,7 +86,7 @@ void AEnemyBullet::BulletMovement()
 
 void AEnemyBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	/*if (OtherActor->ActorHasTag("Guard"))
+	if (OtherActor->ActorHasTag("Guard"))
 	{
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->m_bGuarding ? TEXT("true"): TEXT("false"));
 
@@ -95,5 +95,5 @@ void AEnemyBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		pPlayer->GuardEnergy -= pPlayer->guardBulletUIDownSpeed;
 
 		isReflectedByPlayer = true;
-	}*/
+	}
 }
