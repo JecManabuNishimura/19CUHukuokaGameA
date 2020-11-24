@@ -51,8 +51,10 @@ public:
 		float length;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action")
 		bool isLookAtStageSelect;
-	UPROPERTY(editAnywhere, BlueprintReadWrite, Category = "Action")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
 		bool isPlayingAction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
+		bool canPlayAction;
 	UPROPERTY(EditAnywhere, Category = "Action")
 		FVector FinalLocation;
 
@@ -63,6 +65,8 @@ private:
 	void CameraMovement(float _deltaTime);
 
 	void ObjectSelect();
+
+	bool isHit;
 
 	// 選択されたアクターのリアクション
 	void ObjectEnlarge(float _deltaTime);
