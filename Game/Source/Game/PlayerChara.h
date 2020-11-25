@@ -14,7 +14,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"	// ACharacterを継承しているため
 #include "Components/CapsuleComponent.h"
-#include "Components/ActorComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "NiagaraFunctionLibrary.h"
@@ -58,7 +57,6 @@ public:
 
 	// 各入力関係メソッドとのバインド処理
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
 private:
 	//	カメラ更新処理
 	void UpdateSensor(float _deltaTime);
@@ -149,6 +147,8 @@ private:
 
 	bool haveDashEnergy;
 
+	float restartLocationX;
+
 	float tempDamageFrame;
 
 	float tempPitch;
@@ -191,9 +191,6 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		UNiagaraSystem* DashEffect;
-
-	/*UPROPERTY(EditAnywhere, Category = "Effects")
-		class AActor* DashActor;*/
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		FVector DashEffectLocationOffset;
@@ -244,6 +241,9 @@ public:
 		int32 CountShootEnemy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float passTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float ShotEnergy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -289,6 +289,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isDead;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool isFirstShoting;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isShoting;
