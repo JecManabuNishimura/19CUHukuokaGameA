@@ -119,6 +119,7 @@ void AStageSelectCamera::ObjectSelect()
 	if (isHit) {
 		UE_LOG(LogTemp, Warning, TEXT("%s"), *OutHit.GetActor()->GetName());
 		if (OutHit.GetActor()->ActorHasTag("StageSelect")) {
+			UE_LOG(LogTemp, Warning, TEXT("StageSelectHasHit"));
 			SelectedActor = OutHit.GetActor();
 			isLookAtStageSelect = true;
 			//canPlayAction = true;
