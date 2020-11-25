@@ -49,14 +49,16 @@ public:
 		FVector2D m_cameraYawLimit;
 	UPROPERTY(EditAnywhere, Category = "LineTrace")
 		float length;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FindObject")
 		bool isLookAtStageSelect;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FindObject")
 		bool isPlayingAction;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FindObject")
 		bool canPlayAction;
-	UPROPERTY(EditAnywhere, Category = "Action")
+	UPROPERTY(EditAnywhere, Category = "FindObject")
 		FVector FinalLocation;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Found")
+		bool isDestroyed;
 
 
 private:
