@@ -59,14 +59,17 @@ APlayerChara::APlayerChara()
 	, haveGuardEnergy(true)
 	, haveDashEnergy(true)
 	, haveShotEnergy(true)
+	, restartLocationX(0.f)
 	, isStart(false)
 	, isDead(false)
 	, isGoal(false)
+	, isFirstShoting(true)
 	, isDamageOver(false)
 	, GoalTime(0.f)
 	, HP(100.f)
 	, CoinCount(0)
 	, CountShootEnemy(0)
+	, passTime(0.f)
 	, ShotEnergy(100.f)
 	, ShotMaxEnergy(100.f)
 	, GuardEnergy(100.f)
@@ -111,6 +114,8 @@ void APlayerChara::BeginPlay()
 
 	tempDamageFrame = DamageFrame;
 	tempSpeed = playerSpeed;
+
+	restartLocationX = GetActorLocation().X;
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &APlayerChara::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &APlayerChara::OverlapEnds);;
@@ -200,6 +205,8 @@ void APlayerChara::Tick(float DeltaTime)
 
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DeltaTime * 60.f));
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isGuarding ? TEXT("true") : TEXT("false"));
+
+	passTime += DeltaTime;
 
 	if (withSensor)
 	{
@@ -405,9 +412,7 @@ void APlayerChara::RestartGame()
 {
 	if (hadDoOnce)
 	{
-		FVector restartLocation = GetActorLocation();
-
-		SetActorLocation(FVector(restartLocation.X - 3000.f, -10.f, 30.f));
+		SetActorLocation(FVector(restartLocationX, -10.f, 30.f));
 
 		HP = 100.f;
 
@@ -577,6 +582,11 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		PlayerScore += CoinScore;
 
 		CoinCount += 1;
+	}
+
+	if (OtherActor->ActorHasTag("CheckPoint"))
+	{
+		restartLocationX = GetActorLocation().X;
 	}
 
 	if (OtherActor->ActorHasTag("DashLine"))
@@ -835,12 +845,20 @@ void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
 
 void APlayerChara::ShotStart(float _axisValue)
 {
-	if (_axisValue == 1 && haveShotEnergy)
+	if (_axisValue == 1 && haveShotEnergy && isStart)
 	{
+		if (isFirstShoting)
+		{
+			FVector currentVector = GetActorLocation();
+			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
+			ShotEnergy -= 10.f;
+			isFirstShoting = false;
+		}
 		isShoting = true;
 	}
 	else
 	{
+		isFirstShoting = true;
 		isShoting = false;
 	}
 }
