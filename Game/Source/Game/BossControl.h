@@ -42,8 +42,10 @@ private:
 	// ボスの状態
 	enum BossState
 	{
+		CatchUp,		// 追いつく
 		Run,			// 移動
 		RunAfterAttack,	// 攻撃後の移動（ジャンプ角度にする）
+		RunAfterRush,	// 突進後の移動（ジャンプ角度にする）
 		Jump_In,		// ジャンプ（外→内）
 		Jump_Out,		// ジャンプ（内→外）
 		Attack,			// 攻撃
@@ -58,6 +60,10 @@ private:
 	UPROPERTY(EditAnyWhere, Category = "TEMP", Meta = (ToolTip = "Temporarily specify the type of boss attack."))
 		// ウェーブ攻撃時の移動速度
 		BossAttack m_TEMP_BOSS_ATTACK;
+	
+	UPROPERTY(EditAnyWhere, Category = "TEMP", Meta = (ToolTip = "Temporary fence position."))
+		// ウェーブ攻撃時の移動速度
+		float m_TEMP_FENCE_POS;
 	//--------------------------------------------------------------------------------------------------------------------------------------------
 
 	// ボス全般に使用するプロパティ------------------------------------------------------------------------------------------
@@ -112,6 +118,9 @@ private:
 	// 道を走るY軸の位置の一時保存用
 	float m_RunningRoadPosYTemp;
 
+	// 追いつく移動の際の位置保存
+	float m_BeforeCatchUpPosX;
+
 	// ボスの状態
 	BossState bossState;
 
@@ -122,19 +131,19 @@ private:
 
 	// 落雷攻撃のプロパティ--------------------------------------------------------------------------------------------------
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack LightningStrike", Meta = (ToolTip = "Movement speed during a lightning strike."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack LightningStrike", Meta = (ToolTip = "Movement speed during a lightning strike."))
 		// 落雷攻撃時の移動速度
 		float m_LightningStrikeMoveSpeed;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack LightningStrike", Meta = (ToolTip = "Time to continue a lightning strike."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack LightningStrike", Meta = (ToolTip = "Time to continue a lightning strike."))
 		// 落雷攻撃を続ける時間
 		float m_LightningStrikeDuration;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack LightningStrike", Meta = (ToolTip = "Y-axis range of lightning strikes."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack LightningStrike", Meta = (ToolTip = "Y-axis range of lightning strikes."))
 		// 落雷攻撃のY軸の範囲
 		float m_LightningStrikeWidth;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack LightningStrike", Meta = (ToolTip = "Interval for lightning strikes."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack LightningStrike", Meta = (ToolTip = "Interval for lightning strikes."))
 		// 落雷攻撃をする間隔
 		float m_LightningStrikeInterval;
 
@@ -145,35 +154,35 @@ private:
 
 	// ウェーブ攻撃のプロパティ----------------------------------------------------------------------------------------------
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Wave", Meta = (ToolTip = "Movement speed during a wave attack."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Wave", Meta = (ToolTip = "Movement speed during a wave attack."))
 		// ウェーブ攻撃時の移動速度
 		float m_WaveAttackMoveSpeed;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Wave", Meta = (ToolTip = "Time to continue a wave attack."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Wave", Meta = (ToolTip = "Time to continue a wave attack."))
 		// ウェーブ攻撃をする時間
 		float m_WaveAttackDuration;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Wave", Meta = (ToolTip = "Interval for wave attacks."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Wave", Meta = (ToolTip = "Interval for wave attacks."))
 		// ウェーブ攻撃をする間隔
 		float m_WaveAttackInterval;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Wave", Meta = (ClampMin = "0", ClampMax = "1", ToolTip = "The ratio of the time to generate a jump pad to \"Wave Attack Interval\"."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Wave", Meta = (ClampMin = "0", ClampMax = "1", ToolTip = "The ratio of the time to generate a jump pad to \"Wave Attack Interval\"."))
 		// ウェーブ攻撃をする間隔に対する、ジャンプ台生成をする時間の割合
 		float m_JumppadSpawnRatio;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Wave", Meta = (ToolTip = "Y-axis range of Jump pad generation."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Wave", Meta = (ToolTip = "Y-axis range of Jump pad generation."))
 		// 落雷攻撃のY軸の範囲
 		float m_JumppadGenerateWidth;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Wave", Meta = (ToolTip = "Jump pad generation position X to avoid wave attacks."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Wave", Meta = (ToolTip = "Jump pad generation position X to avoid wave attacks."))
 		// ウェーブ攻撃を避けるためのジャンプ台生成のX軸のオフセット
 		float m_JumppadPositionXAvoidWaveAttack;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Wave", Meta = (ToolTip = "Jump pad generation position Z to avoid wave attacks."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Wave", Meta = (ToolTip = "Jump pad generation position Z to avoid wave attacks."))
 		// ウェーブ攻撃を避けるためのジャンプ台のZ軸の位置
 		float m_JumppadPositionZAvoidWaveAttack;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Wave", Meta = (ToolTip = "Jump pad generation scale to avoid wave attacks."))
+	UPROPERTY(EditAnyWhere, Category = "BossAttack|Boss Attack Wave", Meta = (ToolTip = "Jump pad generation scale to avoid wave attacks."))
 		// ウェーブ攻撃を避けるためのジャンプ台のスケール
 		FVector m_JumppadScaleAvoidWaveAttack;
 
@@ -199,37 +208,41 @@ private:
 
 	// 突進攻撃のプロパティ--------------------------------------------------------------------------------------------------
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Rush", Meta = (ToopTip = "Movement speed during a rush attack (When leaving)"))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "Movement speed during a rush attack (When leaving)"))
 		// 突進攻撃時の通常移動速度
 		float m_RushAttackMoveSpeed;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Rush", Meta = (ToopTip = "Movement speed during a rush attack (When rush)"))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "Movement speed during a rush attack (When rush)"))
 		// 突進攻撃時の突進移動速度
 		float m_RushAttackSpeed;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Rush", Meta = (ToopTip = "X-axis offset to start the rush"))
-		// 突進を始めるX軸のオフセット
-		float m_RushStartXAxisOffset;
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "How many seconds does it take to reach top speed?"))
+		// 何秒で最大速度になるか
+		float m_RushReachTimeTopSpeed;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Rush", Meta = (ToopTip = "Position of Y-axis running on the road during a rush attack."))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "Interval for rush attack"))
+		// 突進攻撃をする時間
+		float m_RushAttackDuration;
+
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "Position of Y-axis running on the road during a rush attack."))
 		// 突進攻撃時の道を走るY軸の位置
 		float m_RushAttackRunningRoadPosY;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Rush", Meta = (ToopTip = "Time to turn around before rushing"))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "Time to turn around before rushing"))
 		// 突進前の振り向きにかける時間
 		float m_RushTurnTime;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Rush", Meta = (ToopTip = "Is the turning direction before the rush clockwise?"))
-		// 突進前の振り向きは時計回りか？
-		bool m_IsRushTurnDirectionRight;
-
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Rush", Meta = (ToopTip = "X-axis range to get the player's coordinates"))
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "X-axis range to get the player's coordinates"))
 		// プレイヤーの座標を取得するX軸の範囲
 		float m_GetPlayerCoordinatePosX;
 
-	UPROPERTY(EditAnyWhere, Category = "Boss Attack Rush", Meta = (ToopTip = "Rush distance"))
-		// 突進距離
-		float m_RushDistance;
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "Distance that BOSS passes through the player"))
+		// プレイヤーを突き抜けた後の移動距離
+		float m_RushThroughDistance;
+
+	UPROPERTY(EditAnyWhere, Category = "Boss Attack|Boss Attack Rush", Meta = (ToolTip = "Movement speed after rush"))
+		// 突進後、何秒でプレイヤーに追いつくか
+		float m_CatchUpTime;
 
 	// 頭を振るアニメーションが終了したかどうか受け取る
 	bool m_IsHeadAnimEnd;
@@ -237,12 +250,25 @@ private:
 	// 突進フラグ
 	bool m_IsRush;
 
+	// プレイヤーに体を向けたかどうか
+	bool m_IsLookPlayer;
+
 	// 突進のための移動を始める前のX軸の位置保存
-	float m_RushRunStartPosX;
+	FVector m_RushRunStartPos;
 
 	// 突進を始めたX軸の位置を保存
 	float m_RushStartPosX;
+
+	// 振り向きの目標地点を設定
+	float m_TargetRot;
 	//-----------------------------------------------------------------------------------------------------------------------
+
+	// BP用変数
+protected:
+
+	// GameInstanceで設定するプレイヤーのActor
+	UPROPERTY(BlueprintReadWrite)
+		AActor* m_PlayerActor;
 
 	// プライベート関数
 private:
@@ -288,4 +314,8 @@ public:
 		float GetRunAnimSpeed() const;
 
 	//-----------------------------------------------------------------------------------------------------------------------
+
+	// BP側の関数を呼び出す
+	UFUNCTION(BlueprintImplementableEvent)
+		void GetInstance();
 };
