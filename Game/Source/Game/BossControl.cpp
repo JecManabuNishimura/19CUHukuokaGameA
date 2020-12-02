@@ -6,6 +6,7 @@
  */
 
 #include "BossControl.h"
+#include "PlayerChara.h"
 #include "BossWaveControl.h"
  // GetWorld() に必要
 #include "Engine/World.h"
@@ -29,6 +30,7 @@ ABossControl::ABossControl()
 	, originPosY(0.0f)
 	, m_attackIntervalTemp(0.0f)
 	, m_RunningRoadPosYTemp(0.0f)
+	, m_BeforeCatchUpPosX(0.0f)
 	, bossState(BossState::Run)
 	, bossAttack(BossAttack::LightningStrike)
 
@@ -58,19 +60,26 @@ ABossControl::ABossControl()
 	// 突進攻撃プロパティ
 	, m_RushAttackMoveSpeed(200.0f)
 	, m_RushAttackSpeed(200.0f)
-	, m_RushStartXAxisOffset(1000.0f)
+	, m_RushReachTimeTopSpeed(3.0f)
+	, m_RushAttackDuration(3.0f)
 	, m_RushAttackRunningRoadPosY(500.0f)
 	, m_RushTurnTime(0.5f)
 	, m_IsHeadAnimEnd(false)
 	, m_IsRush(false)
-	, m_IsRushTurnDirectionRight(false)
+	, m_IsLookPlayer(false)
 	, m_GetPlayerCoordinatePosX(5000.0f)
-	, m_RushRunStartPosX(0.0f)
+	, m_RushRunStartPos(FVector::ZeroVector)
 	, m_RushStartPosX(0.0f)
-	, m_RushDistance(5000.0f)
+	, m_RushThroughDistance(5000.0f)
+	, m_CatchUpTime(5.0f)
+	, m_TargetRot(180.0f)
+
+	// BP用プロパティ
+	, m_PlayerActor(nullptr)
 
 	//TEMP////////////////////////////////////////////////////////////
 	, m_TEMP_BOSS_ATTACK(BossAttack::LightningStrike)
+	, m_TEMP_FENCE_POS(0.0f)
 	//////////////////////////////////////////////////////////////////
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -114,6 +123,9 @@ void ABossControl::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("BossBP's Location.Y is less than 0. (Left Side.) But it is set to turn left. (m_JumpDegreeZ is less than 0.) So fix to turn right."));
 		m_JumpDegreeZ *= -1.0f;
 	}
+
+	// m_PlayerActorにGameInstanceのplayerActorを代入
+	GetInstance();	
 }
 
 void ABossControl::Tick(float DeltaTime)
@@ -122,6 +134,30 @@ void ABossControl::Tick(float DeltaTime)
 
 	switch (bossState)
 	{
+		// プレイヤーに追いつく
+	case BossState::CatchUp:
+
+		UE_LOG(LogTemp, Verbose, TEXT("BossEnemy state is Catch up."));
+
+		// プレイヤーと一定時間で並走する
+		if (m_PlayerActor != nullptr && GetActorLocation().X < m_PlayerActor->GetActorLocation().X)
+		{
+			float newX = FMath::Lerp(m_BeforeCatchUpPosX, m_PlayerActor->GetActorLocation().X, (m_Timer / m_CatchUpTime));
+			FVector newPos(newX, GetActorLocation().Y, GetActorLocation().Z);
+
+			SetActorLocation(newPos);
+		}
+		// 通常移動に移行
+		else
+		{
+			// 走る状態に
+			bossState = BossState::Run;
+
+			// タイマーリセット
+			m_Timer = 0.0f;
+		}
+		break;
+
 		// 外を走っている状態
 	case BossState::Run:
 
@@ -150,8 +186,8 @@ void ABossControl::Tick(float DeltaTime)
 			// 攻撃が突進攻撃であれば
 			else if (bossAttack == BossAttack::Rush)
 			{
-				// X軸の位置を保存する
-				m_RushRunStartPosX = GetActorLocation().X;
+				// 位置を保存する
+				m_RushRunStartPos = GetActorLocation();
 
 				// ジャンプの着地点を上書き
 				m_RunningRoadPosYTemp = m_RushAttackRunningRoadPosY;
@@ -328,13 +364,15 @@ void ABossControl::Tick(float DeltaTime)
 		case BossAttack::Rush:
 		{
 			// ボスが設定した地点に移動するまで
-			if (GetActorLocation().X < m_RushRunStartPosX + m_RushStartXAxisOffset && m_IsRush == false)
+			if (m_Timer < m_RushAttackDuration && m_IsRush == false)
 			{
 				// 通常移動処理
-				MoveForward(m_RushAttackMoveSpeed, GetActorLocation());
+				float moveSpeed = FMath::Lerp(m_MoveSpeed, m_RushAttackMoveSpeed, (m_Timer / m_RushReachTimeTopSpeed));
+
+				MoveForward(moveSpeed, GetActorLocation());
 
 				// 位置を保存
-				m_RushStartPosX = GetActorLocation().X;
+				m_RushRunStartPos = GetActorLocation();
 			}
 			// 移動し終わったら
 			else if (m_IsRush == false)
@@ -348,24 +386,40 @@ void ABossControl::Tick(float DeltaTime)
 			// 突進開始
 			else
 			{
-				// 振り向きの目標地点を設定
-				float targetRot = 180.0f;
-
-				// 左回りなら-1を掛ける
-				if (m_IsRushTurnDirectionRight)
+				// プレイヤーの座標を取得
+				if (m_IsLookPlayer == false && m_PlayerActor != nullptr)
 				{
-					targetRot *= -1.0f;
+					m_IsLookPlayer = true;
+
+					float targetRad = GetRadianFromVector(this->GetActorLocation(), m_PlayerActor->GetActorLocation());
+					m_TargetRot = FMath::RadiansToDegrees(targetRad);
+					UE_LOG(LogTemp, Verbose, TEXT("Set rotation! rot = %f"), m_TargetRot);
+				}
+				else if (m_IsLookPlayer == false)
+				{
+					m_IsLookPlayer = true;
+
+					m_TargetRot = m_RushRunStartPos.Y > 0.0f ? -180.0f : 180.0f;
+					UE_LOG(LogTemp, Warning, TEXT("BossControl::m_PlayerActor is nullptr. Rush towards 180 degrees."));
 				}
 
 				// 振り向き
 				if (m_Timer <= m_RushTurnTime)
 				{
 					// 角度の補間
-					float rotZ = FMath::Lerp(0.0f, targetRot, m_Timer / m_RushTurnTime);
+					float rotZ = FMath::Lerp(30.f, m_TargetRot, m_Timer / m_RushTurnTime);
 
 					// 角度の設定
 					FRotator rot(GetActorRotation().Pitch, rotZ, GetActorRotation().Roll);
 					SetActorRotation(rot);
+
+					// 通常移動処理
+					MoveForward(m_RushAttackMoveSpeed, GetActorLocation());
+
+					float posY = FMath::Lerp(m_RushRunStartPos.Y, 0.0f, m_Timer / m_RushTurnTime);
+					FVector newPos(GetActorLocation().X, posY, GetActorLocation().Z);
+
+					SetActorLocation(newPos);
 				}
 				// 突進
 				else
@@ -375,18 +429,19 @@ void ABossControl::Tick(float DeltaTime)
 					{
 						// 頭振りアニメーションを行う
 						m_IsHeadAnim = true;
+						UE_LOG(LogTemp, Warning, TEXT("Head start"));
 					}
 					// 頭振りアニメーションが終わっていれば
 					else if (m_IsHeadAnimEnd)
 					{
-						// ボスが目的位置に到達していなければ
-						if (GetActorLocation().X > m_RushStartPosX - m_RushDistance)
+						// プレイヤーが有効でかつ、ボスが目的位置に到達しておらず、フェンスの中にいる
+						if (m_PlayerActor != nullptr && GetActorLocation().X > m_PlayerActor->GetActorLocation().X - m_RushThroughDistance
+							&& GetActorLocation().Y > -m_TEMP_FENCE_POS && GetActorLocation().Y < m_TEMP_FENCE_POS)
 						{
 							// 頭振りアニメーションを終了する
 							m_IsHeadAnim = false;
-
 							// 角度の設定
-							FRotator rot(GetActorRotation().Pitch, targetRot, GetActorRotation().Roll);
+							FRotator rot(GetActorRotation().Pitch, m_TargetRot, GetActorRotation().Roll);
 							SetActorRotation(rot);
 
 							// 突進移動
@@ -395,12 +450,23 @@ void ABossControl::Tick(float DeltaTime)
 						// 外に出る
 						else
 						{
-							UE_LOG(LogTemp, Warning, TEXT("OUT_OF_BOSS"));
+							bossState = BossState::RunAfterRush;
+
+							// プレイヤーの方向に向くフラグをリセット
+							m_IsLookPlayer = false;
+
+							// アニメーション関連のリセット
+							m_IsHeadAnim = false;
+							m_IsHeadAnimEnd = false;
+
+							// タイマーリセット
+							m_Timer = 0.0f;
 						}
 					}
 					// 頭振りアニメーション中
 					else
 					{
+						UE_LOG(LogTemp, Verbose, TEXT("Head keep"));
 					}
 				}
 			}
@@ -451,6 +517,39 @@ void ABossControl::Tick(float DeltaTime)
 		}
 		break;
 
+		// 突進後の移動
+	case BossState::RunAfterRush:
+		UE_LOG(LogTemp, Verbose, TEXT("BossEnemy state is Runnning (after rush)."));
+
+		// ジャンプ移行時間になったら
+		if (m_Timer >= m_RunningTimeAfterAttack)
+		{
+			// ジャンプ状態へ
+			bossState = BossState::Jump_Out;
+
+			// ジャンプ開始位置を保存
+			m_JumpLocationY = GetActorLocation().Y;
+
+			FRotator rot(GetActorRotation().Pitch, -360.0f, GetActorRotation().Roll);
+			SetActorRotation(rot);
+
+			// タイマーリセット
+			m_Timer = 0.0f;
+		}
+		// 回転を始める時間になったら
+		else if (m_Timer >= m_RunningTimeAfterAttack * m_RotateStateRatio)
+		{
+			SetActorRotationLerpDegree(m_TargetRot, -360.0f, (m_Timer - m_RunningTimeAfterAttack * m_RotateStateRatio), (m_RunningTimeAfterAttack - m_RunningTimeAfterAttack * m_RotateStateRatio));
+
+			MoveForward(m_MoveSpeed, GetActorLocation());
+		}
+		// 走る処理
+		else
+		{
+			MoveForward(m_MoveSpeed, GetActorLocation());
+		}
+		break;
+
 		// ジャンプで外に行く
 	case BossState::Jump_Out:
 		UE_LOG(LogTemp, Verbose, TEXT("BossEnemy state is Jump (out)."));
@@ -458,8 +557,19 @@ void ABossControl::Tick(float DeltaTime)
 		// ジャンプ時間が終了したら
 		if (m_Timer >= m_JumpTime)
 		{
-			// 通常状態へ
-			bossState = BossState::Run;
+			// 突進状態だったら
+			if (bossAttack == BossAttack::Rush)
+			{
+				// 追いつく状態に
+				bossState = BossState::CatchUp;
+				m_BeforeCatchUpPosX = GetActorLocation().X;
+			}
+			// それ以外の攻撃
+			else
+			{
+				// 通常状態へ
+				bossState = BossState::Run;
+			}
 			SetActorRotation(FRotator::ZeroRotator);
 
 			// タイマーリセット
