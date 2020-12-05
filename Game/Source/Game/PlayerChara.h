@@ -147,6 +147,9 @@ private:
 
 	bool haveDashEnergy;
 
+	float tempGoalTime;
+	float tempPlayerScore;
+
 	float restartLocationX;
 
 	float tempDamageFrame;
@@ -154,6 +157,10 @@ private:
 	float tempPitch;
 	float tempYaw;
 	float tempRoll;
+
+	float tempDataOfShot;
+	float tempDataOfDash;
+	float tempDataOfGuard;
 
 public:
 	// 2020/11/11 ìnÁ≤ é©ìÆåüèoÇ…ÇÊÇËïœçX-------------------
@@ -241,9 +248,6 @@ public:
 		int32 CountShootEnemy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float passTime;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float ShotEnergy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -274,6 +278,9 @@ public:
 		float PlayerScore;								//	PlayerälìæÇÃScore
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int deadCount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int nowPage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -286,6 +293,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isGoal;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool haveShowedRanking;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isDead;
@@ -323,6 +333,8 @@ public:
 	// Is Open Com Port
 	UPROPERTY(BlueprintReadOnly, Category = "Sensor")
 		bool isOpen;
+
+	void GetCoin();
 
 	UFUNCTION()
 		void OnBeginOverlap(class UPrimitiveComponent* HitComp,

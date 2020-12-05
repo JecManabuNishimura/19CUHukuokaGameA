@@ -9,8 +9,10 @@
 //----------------------------------------------------------
 
 #include "CoinItem.h"
+#include "PlayerChara.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 
 ACoinItem::ACoinItem()
 	: m_AddScore(100)
@@ -45,9 +47,6 @@ void ACoinItem::BeginPlay()
 	{
 		m_pBoxComp->OnComponentBeginOverlap.AddDynamic(this, &ACoinItem::OnOverlapBegin);
 	}
-
-	// Playerと触れるまでは毎フレーム処理する必要がない
-	PrimaryActorTick.SetTickFunctionEnable(false);
 
 	// 現在のスケールを保存
 	m_OriginScale = GetActorScale();
@@ -101,8 +100,12 @@ void ACoinItem::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor*
 			// プレイヤーのActorを保存
 			m_playerActor = OtherActor;
 
-			// Tick()有効化
-			PrimaryActorTick.SetTickFunctionEnable(true);
+			APlayerChara* pPlayer = Cast<APlayerChara>(OtherActor);
+
+			if (pPlayer)
+			{
+				pPlayer->GetCoin();
+			}
 
 			// コリジョン無効化
 			this->SetActorEnableCollision(false);
