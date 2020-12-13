@@ -15,7 +15,6 @@ AEnemyChara::AEnemyChara()
 	, originPosY(0.0f)
 	, chargeTime(0.0f)
 	, isBlowing(false)
-	, enemyMoveType(EEnemyMoveType::None)
 	, playerActor(NULL)
 	, forwardSpeed(1.0f)
 	, sinWaveSpeed(1.0f)
@@ -321,3 +320,7 @@ FVector AEnemyChara::CalcLerpPos(const FVector _startPos, const FVector _midPos,
 	return lerpPos[2];
 }
 
+void AEnemyChara::SetEnemyMoveType(EEnemyMoveType _moveType)
+{
+	enemyMoveType = _moveType;
+}

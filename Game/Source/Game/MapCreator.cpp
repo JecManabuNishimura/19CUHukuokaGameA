@@ -26,8 +26,6 @@ AMapCreator::AMapCreator()
 	// SubObjectの作成
 	m_SampleGround = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("SampleGround"));
 
-	m_SampleObjectArray.Add(CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("SampleObject")));
-
 	// 文字列配列の初期化
 	strArrayTemp.Reset();
 
@@ -51,6 +49,19 @@ AMapCreator::AMapCreator()
 void AMapCreator::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+	
+	// Enemy用設定
+	for (int i = 0; i < m_MapActorArray.Num(); ++i)
+	{
+		if (m_MapActorArray[i].isEnemy == true)
+		{
+			m_MapActorArray[i].geterateType = MapPlacementPattern::Single;
+		}
+		else
+		{
+			m_MapActorArray[i].enemyMoveType = EEnemyMoveType::None;
+		}
+	}
 	
 	// 行番号
 	int rowIndex = 0;
@@ -302,8 +313,26 @@ void AMapCreator::BeginPlay()
 							// 単体で配置する
 						case MapPlacementPattern::Single:
 
-							// Actorを一つだけ生成する
-							SpawnMapActor(m_MapActorArray[mapActorIndex], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
+							// 敵かどうか
+							if (m_MapActorArray[mapActorIndex].isEnemy == true)
+							{
+								// 敵を生成する
+								AEnemyChara* enemy = Cast<AEnemyChara>(SpawnMapActor(m_MapActorArray[mapActorIndex], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num())));
+								
+								if (enemy != nullptr)
+								{
+									enemy->SetEnemyMoveType(m_MapActorArray[mapActorIndex].enemyMoveType);
+								}
+								else
+								{
+									UE_LOG(LogTemp, Warning, TEXT("Failed to cast to AEnemyChara. m_MapActorArray[%d] May not be in the enemy class."), mapActorIndex);
+								}
+							}
+							else
+							{
+								// Actorを一つだけ生成する
+								SpawnMapActor(m_MapActorArray[mapActorIndex], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
+							}
 
 							break;
 

@@ -171,4 +171,6 @@ public:
 	// _posZ			：（任意）float型の変数のアドレスを指定すれば、そのアドレスの変数にZ座標のみを返す
 	FVector CalcLerpPos(const FVector _startPos, const FVector _midPos, const FVector _endPos, const float _interpolation
 						, float* _posX = NULL, float* _posY = NULL, float* _posZ = NULL);
+
+	void SetEnemyMoveType(EEnemyMoveType _moveType);
 };
