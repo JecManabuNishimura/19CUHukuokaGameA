@@ -1,5 +1,5 @@
 //----------------------------------------------------------
-// ファイル名		：PlayerCharaInStage.cpp
+// ファイル名		：StageSelectCamera.cpp
 // 概要				：StageSelectでプレイヤーの制御
 // 作成者			：19CU0222 鍾家同
 // 更新内容			：2020/11/23 作成　プレイヤーのカメラの動き
@@ -7,23 +7,39 @@
 
 
 #include "StageSelectCamera.h"
+#include "StageSelect.h"
+#include "Engine.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFrameWork/Actor.h"
 #include "Camera/CameraComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 
+
 // Sets default values
 AStageSelectCamera::AStageSelectCamera() :
-	m_pSpringArm(NULL),
-	m_pCamera(NULL),
+	//m_pSpringArm(NULL),
+	//m_pCamera(NULL),
 	m_cameraPitchLimit(FVector2D(-50.0f, 40.0f)),
 	m_cameraYawLimit(FVector2D(-150.0f, -20.0f)),
 	length(5000.0f),
 	isLookAtStageSelect(false),
 	SelectedActor(NULL),
-	canPlayAction(false),
+	pStageSelect(NULL),
+	canBPPlayAction(false),
+	canDisplayUI(false),
 	isPlayingAction(false),
-	isHit(false)
+	isHit(false),
+	canSpawnAttachedActor(false),
+	isEnterButtonPressed(false),
+	isCancelButtonPressed(false),
+	isStageSelectAttached(false),
+	isReturning(false),
+	isStartAttached(false),
+	SpawnMainActorLocation(300.0f, 0.0f, 0.0f),
+	SSCurrentRotation(0.0f, 0.0f, 0.0f),
+	CurrentStageNum(1),
+	currentTime(0.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -43,13 +59,17 @@ AStageSelectCamera::AStageSelectCamera() :
 		m_pSpringArm->bEnableCameraRotationLag = true;
 		// カメラ回転ラグの速度を設定
 		m_pSpringArm->CameraRotationLagSpeed = 10.0f;
-	}*/
+	}
 
 	// カメラのオブジェクトを生成
 	m_pCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("m_pCamera"));
 	if (m_pCamera != NULL) {
 		// カメラをスプリングアームにアタッチさせる
 		m_pCamera->SetupAttachment(RootComponent, USpringArmComponent::SocketName);
+	}*/
+
+	if (pStageSelect == NULL) {
+		pStageSelect = Cast<AStageSelect>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 	}
 }
 
@@ -57,7 +77,6 @@ AStageSelectCamera::AStageSelectCamera() :
 void AStageSelectCamera::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 // Called every frame
@@ -68,8 +87,15 @@ void AStageSelectCamera::Tick(float DeltaTime)
 	// カメラ更新処理
 	CameraMovement(DeltaTime);
 
-	if (!isPlayingAction) ObjectSelect();
-	else ObjectEnlarge(DeltaTime);
+	SelectObject();
+
+	AttachObject();
+	ReturnObject();
+
+	Timer(DeltaTime);
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isHit ? TEXT("TRUE") : TEXT("FALSE"));
+
+
 }
 
 // 【入力バインド】
@@ -79,6 +105,10 @@ void AStageSelectCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 	InputComponent->BindAxis("CameraUp", this, &AStageSelectCamera::CameraVertical);
 	InputComponent->BindAxis("CameraRight", this, &AStageSelectCamera::CameraHorizontal);
+	InputComponent->BindAction("Enter", IE_Pressed, this, &AStageSelectCamera::ButtonEnter);
+	InputComponent->BindAction("Back", IE_Pressed, this, &AStageSelectCamera::ButtonCancel);
+	InputComponent->BindAction("SelectRight", IE_Pressed, this, &AStageSelectCamera::ButtonRight);
+	InputComponent->BindAction("SelectLeft", IE_Pressed, this, &AStageSelectCamera::ButtonLeft);
 }
 
 // カメラ更新処理
@@ -102,9 +132,10 @@ void AStageSelectCamera::CameraMovement(float _deltaTime)
 
 	// 新しい角度を反映
 	SetActorRotation(NewRotation);
+
 }
 
-void AStageSelectCamera::ObjectSelect()
+void AStageSelectCamera::SelectObject()
 {
 	FVector Start = GetActorLocation();
 	FVector End = GetActorLocation() + GetActorForwardVector() * length;
@@ -113,19 +144,93 @@ void AStageSelectCamera::ObjectSelect()
 	//bool isHit;
 	//FCollisionQueryParams CollisionParams;
 	//CollisionParams.AddIgnoredActor(this);
-	if (!isPlayingAction)
+	if (!isReturning && !isStageSelectAttached)
 		isHit = GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldStatic/*, CollisionParams*/);
 	else isHit = false;
 	if (isHit) {
-		UE_LOG(LogTemp, Warning, TEXT("%s"), *OutHit.GetActor()->GetName());
+		//UE_LOG(LogTemp, Warning, TEXT("%s"), *OutHit.GetActor()->GetName());
 		if (OutHit.GetActor()->ActorHasTag("StageSelect")) {
-			UE_LOG(LogTemp, Warning, TEXT("StageSelectHasHit"));
+			//UE_LOG(LogTemp, Warning, TEXT("StageSelectHasHit"));
 			SelectedActor = OutHit.GetActor();
-			isLookAtStageSelect = true;
-			//canPlayAction = true;
-			isPlayingAction = true;
+			canBPPlayAction = true;
+			isStageSelectAttached = true;
 		}
-		else isLookAtStageSelect = false;
+		else if (OutHit.GetActor()->ActorHasTag("Start")) {
+			canDisplayUI = true;
+			isStageSelectAttached = true;
+		}
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("isHit:%s"), isHit ? TEXT("TRUE") : TEXT("FALSE"));
+
+}
+
+// 指定されたオブジェクトをカメラにアタッチ
+void AStageSelectCamera::AttachObject()
+{
+	AStageSelect* SpawnedMainActor = NULL;
+	// 指定されたオブジェクトが消滅された場合
+	if (canSpawnAttachedActor) {
+		if (StageSelectActor != NULL) {
+			if (!isReturning) {
+				SpawnedMainActor = GetWorld()->SpawnActor<AStageSelect>(StageSelectActor);
+				SpawnedMainActor->SetActorRelativeLocation(SpawnMainActorLocation);
+				SpawnedMainActor->SetActorRelativeRotation(SSCurrentRotation + FRotator(0.0f, 90.0f, 0.0f));
+				SpawnedMainActor->SetActorRelativeScale3D(FVector(2.0f, 2.0f, 2.0f));
+				SpawnedMainActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
+				SpawnedMainActor->currentStage = CurrentStageNum;
+				isLookAtStageSelect = true;
+				pStageSelect = SpawnedMainActor;
+			}
+			// ここではBlueprint上で作成する(StageSelectCameraBP)
+			if (isReturning) {}
+			canSpawnAttachedActor = false;
+		}
+
+	}
+	else if (canDisplayUI) {
+		isStartAttached = true;
+	}
+}
+
+// オブジェクトを元の位置に戻す
+void AStageSelectCamera::ReturnObject()
+{
+	if (isEnterButtonPressed) {
+		//canBPPlayAction = true;
+		isReturning = true;
+		if (pStageSelect != NULL) {
+			switch (pStageSelect->currentStage)
+			{
+			case 1:
+				SSCurrentRotation = FRotator(0.0f, 0.0f, 0.0f);
+				break;
+			case 2:
+				SSCurrentRotation = FRotator(0.0f, 90.0f, 0.0f);
+				break;
+			case 3:
+				SSCurrentRotation = FRotator(0.0f, 180.0f, 0.0f);
+				break;
+			case 4:
+				SSCurrentRotation = FRotator(0.0f, -90.0f, 0.0f);
+				break;
+			default:
+				break;
+			}
+			CurrentStageNum = pStageSelect->currentStage;
+			isStageSelectAttached = false;
+			isLookAtStageSelect = false;
+			pStageSelect->Destroy();
+		}
+	}
+	if (isCancelButtonPressed) {
+		//canBPPlayAction = true;
+		isReturning = true;
+		if (pStageSelect != NULL) {
+			CurrentStageNum = pStageSelect->currentStage;
+			isStageSelectAttached = false;
+			isLookAtStageSelect = false;
+			pStageSelect->Destroy();
+		}
 	}
 }
 
@@ -139,6 +244,32 @@ void AStageSelectCamera::ObjectEnlarge(float _deltaTime)
 	}*/
 }
 
+void AStageSelectCamera::Timer(float _deltaTime)
+{
+	// buttonフラグの制御：0.5秒後、フラグをfalse(元の状態に戻る)
+	if (isEnterButtonPressed || isCancelButtonPressed) {
+		currentTime += _deltaTime * 1.0f;
+		if (currentTime >= 0.5f) {
+			isEnterButtonPressed = false;
+			isCancelButtonPressed = false;
+			currentTime = 0.0f;
+		}
+	}
+
+	// オブジェクトを元に戻した直後カメラ検測しないため
+	if (isReturning) {
+		currentTime += _deltaTime * 1.0f;
+		if (currentTime >= 1.0f) {
+			isReturning = false;
+			currentTime = 0.0f;
+			if (isStageSelectAttached) isStageSelectAttached = false;
+			if (isLookAtStageSelect) isLookAtStageSelect = false;
+		}
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("%s"), isEnterButtonPressed ? TEXT("TRUE") : TEXT("FALSE"));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isEnterButtonPressed ? TEXT("true") : TEXT("false"));
+}
+
 // =======================【入力バインド】=========================
 // 入力バインド】カメラ移動:左右(Pitch)
 void AStageSelectCamera::CameraHorizontal(float _axisValue)
@@ -149,5 +280,29 @@ void AStageSelectCamera::CameraHorizontal(float _axisValue)
 void AStageSelectCamera::CameraVertical(float _axisValue)
 {
 	m_cameraRotateInput.Y = _axisValue;
+}
+void AStageSelectCamera::ButtonEnter()
+{
+	if (!isEnterButtonPressed && (isStageSelectAttached || isStartAttached)) {
+		isEnterButtonPressed = true;
+	}
+}
+void AStageSelectCamera::ButtonCancel()
+{
+	if (!isCancelButtonPressed && (isStageSelectAttached || isStartAttached)) {
+		isCancelButtonPressed = true;
+	}
+}
+void AStageSelectCamera::ButtonRight()
+{
+	if (pStageSelect != NULL) {
+		pStageSelect->SelectRight();
+	}
+}
+void AStageSelectCamera::ButtonLeft()
+{
+	if (pStageSelect != NULL) {
+		pStageSelect->SelectLeft();
+	}
 }
 // =================================================================

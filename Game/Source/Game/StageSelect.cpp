@@ -3,7 +3,7 @@
 // 概要				：ステージ画面で各ステージの切り替え
 // 作成者			：19CU0222 鍾家同
 // 更新内容			：2020/10/27
-//					：
+//					：2020/12/12 更新　画面の移動をStageSelectCameraで制御
 //----------------------------------------------------------
 
 #include "StageSelect.h"
@@ -12,6 +12,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values
@@ -30,9 +31,17 @@ AStageSelect::AStageSelect() :
 	nextRotation(0.0f, 0.0f, 0.0f),
 	currentStage(1),
 	pressCount(0),
-	stageAmount(4)
+	stageAmount(4),
+	m_Stage01(NULL),
+	m_Stage02(NULL),
+	m_Stage03(NULL),
+	m_Stage04(NULL),
+	ButtonRightPressed(false),
+	ButtonLeftPressed(false)
+	//isEnterButtonPressed(false),
+	//isCancelButtonPressed(false)
 {
- 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	//m_MainSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("MainSceneComponent"));
@@ -51,31 +60,55 @@ AStageSelect::AStageSelect() :
 	m_Stage01 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage01"));
 	if (m_Stage01 != NULL) {
 		m_Stage01->SetupAttachment(m_SceneComponent);
+		m_Stage01->SetDrawSize(FVector2D(1280.0f, 720.0f));
+		m_Stage01->SetRelativeLocationAndRotation(FVector(0.0f, 60.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
 	}
-	m_Stage01->SetDrawSize(FVector2D(1280.0f, 720.0f));
-	m_Stage01->SetRelativeLocationAndRotation(FVector(-700.0f, 0.0f, 0.0f), FRotator(0.0f, -180.0f, 0.0f));
 
 	m_Stage02 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage02"));
 	if (m_Stage02 != NULL) {
 		m_Stage02->SetupAttachment(m_SceneComponent);
+		m_Stage02->SetDrawSize(FVector2D(1280.0f, 720.0f));
+		m_Stage02->SetRelativeLocation(FVector(60.0f, 0.0f, 0.0f));
 	}
-	m_Stage02->SetDrawSize(FVector2D(1280.0f, 720.0f));
-	m_Stage02->SetRelativeLocationAndRotation(FVector(0.0f, 700.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
 
 	m_Stage03 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage03"));
 	if (m_Stage03 != NULL) {
+		m_Stage03->SetDrawSize(FVector2D(1280.0f, 720.0f));
+		m_Stage03->SetRelativeLocationAndRotation(FVector(0.0f, -60.0f, 0.0f), FRotator(0.0f, -90.0f, 0.0f));
 		m_Stage03->SetupAttachment(m_SceneComponent);
 	}
-	m_Stage03->SetDrawSize(FVector2D(1280.0f, 720.0f));
-	m_Stage03->SetRelativeLocation(FVector(700.0f, 0.0f, 0.0f));
 
 	m_Stage04 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage04"));
 	if (m_Stage04 != NULL) {
 		m_Stage04->SetupAttachment(m_SceneComponent);
 		m_Stage04->SetDrawSize(FVector2D(1280.0f, 720.0f));
-		m_Stage04->SetRelativeLocationAndRotation(FVector(0.0f, -700.0f, 0.0f), FRotator(0.0f, -90.0f, 0.0f));
-
+		m_Stage04->SetRelativeLocationAndRotation(FVector(-60.0f, 0.0f, 0.0f), FRotator(0.0f, -180.0f, 0.0f));
 	}
+
+	/*m_Stage01 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Stage01"));
+	if (m_Stage01 != NULL) {
+		m_Stage01->SetupAttachment(m_SceneComponent);
+		m_Stage01->SetRelativeLocationAndRotation(FVector(0.0f, 30.0f, 0.0f), FRotator(0.0f, 0.0f, 90.0f));
+		m_Stage01->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
+	}
+	m_Stage02 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Stage02"));
+	if (m_Stage02 != NULL) {
+		m_Stage02->SetupAttachment(m_SceneComponent);
+		m_Stage02->SetRelativeLocationAndRotation(FVector(30.0f, 0.0f, 0.0f), FRotator(-90.0f, 0.0f, 0.0f));
+		m_Stage02->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
+	}
+	m_Stage03 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Stage03"));
+	if (m_Stage03 != NULL) {
+		m_Stage03->SetupAttachment(m_SceneComponent);
+		m_Stage03->SetRelativeLocationAndRotation(FVector(0.0f, -30.0f, 0.0f), FRotator(0.0f, 0.0f, -90.0f));
+		m_Stage03->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
+	}
+	m_Stage04 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Stage04"));
+	if (m_Stage04 != NULL) {
+		m_Stage04->SetupAttachment(m_SceneComponent);
+		m_Stage04->SetRelativeLocationAndRotation(FVector(-30.0f, 0.0f, 0.0f), FRotator(90.0f, 0.0f, 0.0f));
+		m_Stage04->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
+	}*/
 
 	/*m_pSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("m_pSpringArm"));
 	if (m_pSpringArm != NULL) {
@@ -107,7 +140,6 @@ AStageSelect::AStageSelect() :
 void AStageSelect::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
@@ -121,6 +153,9 @@ void AStageSelect::Tick(float DeltaTime)
 
 	// 現在選択されたステージ
 	CurrentStage();
+
+	SelectRightFromSSCamera();
+	SelectLeftFromSSCamera();
 }
 
 // Called to bind functionality to input
@@ -131,47 +166,8 @@ void AStageSelect::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	InputComponent->BindAction("SelectRight", IE_Pressed, this, &AStageSelect::SelectRight);
 	InputComponent->BindAction("SelectLeft", IE_Pressed, this, &AStageSelect::SelectLeft);
 	InputComponent->BindAction("Enter", IE_Pressed, this, &AStageSelect::SelectConfirm);
-}
-
-void AStageSelect::SelectRight()
-{
-	if (anyPressed) {
-		//UE_LOG(LogTemp, Warning, TEXT("Right!!"));
-		turnRight = true;
-		anyPressed = false;
-		currentStage += 1;
-		if (currentStage >= stageAmount + 1) currentStage = 1;
-		pressCount += 1;
-	}
-	/*if (canEnter) {
-		currentStage += 1;
-		if (currentStage >= stageAmount + 1) currentStage = 1;
-		pressCount += 1;
-	}*/
-}
-
-void AStageSelect::SelectLeft()
-{
-	if (anyPressed) {
-		//UE_LOG(LogTemp, Warning, TEXT("Right!!"));
-		turnRight = false;
-		anyPressed = false;
-		currentStage -= 1;
-		if (currentStage <= 0) currentStage = stageAmount;
-		pressCount += 1;
-	}
-	/*if (canEnter) {
-		currentStage -= 1;
-		if (currentStage <= 0) currentStage = stageAmount;
-		pressCount += 1;
-	}*/
-	
-}
-
-void AStageSelect::SelectConfirm()
-{
-	//UGameplayStatics::OpenLevel(this, "Game");
-
+	//InputComponent->BindAction("Enter", IE_Pressed, this, &AStageSelect::ButtonEnter);
+	//InputComponent->BindAction("Back", IE_Pressed, this, &AStageSelect::ButtonCancel);
 }
 
 void AStageSelect::StageChanging(float _deltaTime)
@@ -244,7 +240,7 @@ void AStageSelect::StageChanging(float _deltaTime)
 		else if (!finishSmall) {
 			finishSmall = true;
 		}*/
-		
+
 		// 回転開始
 		if (/*finishSmall &&*/ !finishRotating && rotatingRate <= rotatingRateMax * (float) pressCount) {
 			canEnter = true;
@@ -286,3 +282,82 @@ void AStageSelect::CurrentStage()
 {
 
 }
+
+void AStageSelect::SelectRight()
+{
+	if (anyPressed) {
+		//UE_LOG(LogTemp, Warning, TEXT("Right!!"));
+		turnRight = true;
+		anyPressed = false;
+
+		currentStage += 1;
+		if (currentStage >= stageAmount + 1) currentStage = 1;
+		pressCount += 1;
+	}
+	/*if (canEnter) {
+		currentStage += 1;
+		if (currentStage >= stageAmount + 1) currentStage = 1;
+		pressCount += 1;
+	}*/
+}
+
+void AStageSelect::SelectLeft()
+{
+	if (anyPressed) {
+		//UE_LOG(LogTemp, Warning, TEXT("Right!!"));
+		turnRight = false;
+		anyPressed = false;
+		currentStage -= 1;
+		if (currentStage <= 0) currentStage = stageAmount;
+		pressCount += 1;
+	}
+	/*if (canEnter) {
+		currentStage -= 1;
+		if (currentStage <= 0) currentStage = stageAmount;
+		pressCount += 1;
+	}*/
+
+}
+
+void AStageSelect::SelectRightFromSSCamera()
+{
+	if (ButtonRightPressed) {
+		//UE_LOG(LogTemp, Warning, TEXT("Right!!"));
+		turnRight = true;
+		anyPressed = false;
+		ButtonRightPressed = false;
+		ButtonLeftPressed = false;
+		currentStage += 1;
+		if (currentStage >= stageAmount + 1) currentStage = 1;
+		pressCount += 1;
+	}
+}
+
+void AStageSelect::SelectLeftFromSSCamera()
+{
+	if (ButtonLeftPressed) {
+		//UE_LOG(LogTemp, Warning, TEXT("Right!!"));
+		turnRight = false;
+		anyPressed = false;
+		ButtonLeftPressed = false;
+		ButtonRightPressed = false;
+		currentStage -= 1;
+		if (currentStage <= 0) currentStage = stageAmount;
+		pressCount += 1;
+	}
+}
+
+void AStageSelect::SelectConfirm()
+{
+	//UGameplayStatics::OpenLevel(this, "Game");
+}
+
+/*void AStageSelect::ButtonEnter()
+{
+	isEnterButtonPressed = true;
+}
+
+void AStageSelect::ButtonCancel()
+{
+	isCancelButtonPressed = true;
+}*/
