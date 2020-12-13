@@ -63,6 +63,10 @@ struct FMapActorStructCpp
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly,
 		Meta = (EditCondition = "geterateType != MapPlacementPattern::SettingLock"))
 		EEnemyMoveType enemyMoveType = EEnemyMoveType::None;
+
+	// スタティックメッシュコンポーネント
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		UStaticMeshComponent* actorStaticMesh;
 };
 
 // マップCSV用構造体
@@ -116,7 +120,7 @@ struct FMapStructCpp : public FTableRowBase
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		FString Line_15;
 
-	UPROPERTY(BlueprintreadOnly)
+	UPROPERTY(BlueprintReadOnly)
 		int indexNum = 15;
 };
 
@@ -130,6 +134,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& e) override;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -195,6 +201,12 @@ private:
 	// 縦に連続生成する時用の行番号保存用
 	TArray<int> m_RowStartArray;
 
+	// 縦にフェンス生成する時用の列番号保存用
+	TArray<int> m_ColumnStartVertFenceArray;
+
+	// 縦にフェンス生成する時用の行番号保存用
+	TArray<int> m_RowStartFenceArray;
+
 	// フェンス生成用の列番号保存用
 	int m_FenceStart;
 
@@ -207,11 +219,17 @@ private:
 	// 縦に連続生成するActorの一時保存
 	TArray<FMapActorStructCpp> m_ContinuousVertActorTempArray;
 
+	// 縦にフェンス生成するActorの一時保存
+	TArray<FMapActorStructCpp> m_FenceActorTempArray;
+
 	// public変数
 public:
 	// 床のサンプルになるStaticMesh
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UInstancedStaticMeshComponent* m_SampleGround;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+	TArray<UInstancedStaticMeshComponent*> m_SampleObjectArray;
 
 	// privateメソッド
 private:
@@ -228,7 +246,7 @@ private:
 	float LocationY(const int _columnIndex, const int _strArrayLength);
 
 	// 連続生成ActorのYスケール算出
-	float ContinuousScaleY(const int _startColumn, const int _endColumn, const float _actorScaleY);
+	float ContinuousScale(const int _startColumn, const int _endColumn, const float _actorScaleY);
 
 	// 連続生成ActorのY位置算出
 	float ContinuousLocationY(const int _startColumn, const int _endColumn, const int _strArrayLength);

@@ -26,12 +26,16 @@ AMapCreator::AMapCreator()
 	// SubObjectの作成
 	m_SampleGround = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("SampleGround"));
 
+	m_SampleObjectArray.Add(CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("SampleObject")));
+
 	// 文字列配列の初期化
 	strArrayTemp.Reset();
 
 	// 連続配置用の配列の初期化
 	m_ColumnStartVertArray.Reset();
 	m_RowStartArray.Reset();
+	m_ColumnStartVertFenceArray.Reset();
+	m_RowStartFenceArray.Reset();
 
 	m_MapActorGround.geterateType = MapPlacementPattern::SettingLock;
 
@@ -41,6 +45,92 @@ AMapCreator::AMapCreator()
 	// マップActor一時保存変数を初期化
 	m_ContinuousActorTemp = MapActorStructCppReset();
 	m_ContinuousVertActorTempArray.Reset();
+	m_FenceActorTempArray.Reset();
+}
+
+void AMapCreator::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	
+	// 行番号
+	int rowIndex = 0;
+
+	// Actorのトランスフォームを固定
+	// 固定するLocation
+	FVector newLocation(0.0f, 0.0f, 0.0f);
+
+	// 固定するRotation
+	FRotator newRotation(0.0f, 0.0f, 0.0f);
+
+	// 固定するScale
+	FVector newScale(1.0f, 1.0f, 1.0f);
+
+	// LocationとRotationを固定
+	SetActorLocationAndRotation(newLocation, newRotation);
+
+	// Scaleを固定
+	SetActorScale3D(newScale);
+
+	// インスタンスメッシュがある
+	if (m_SampleGround != nullptr)
+	{
+		// インスタンスメッシュの削除
+		m_SampleGround->ClearInstances();
+
+		// 床のActorが設定されていれば
+		if (m_MapActorGround.actor != nullptr)
+		{
+			// C++で作成されたDefaultSubObjectにStaticMeshComponentがついていれば
+			m_MapActorGround.actorStaticMesh = Cast<UStaticMeshComponent>(m_MapActorGround.actor.GetDefaultObject()->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+
+			if (m_MapActorGround.actorStaticMesh != nullptr)
+			{
+				m_SampleGround->SetStaticMesh(m_MapActorGround.actorStaticMesh->GetStaticMesh());
+				m_SampleGround->SetMaterial(0, m_MapActorGround.actorStaticMesh->GetMaterial(0));
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("MapCreator::m_SampleGround is null."));
+	}
+
+	// メッシュ生成を行うかどうか
+	if (m_VisibleMapWire)
+	{
+		// m_IsLoadMapDataがfalseになるまでデータの読み込み
+		do
+		{
+			SetStrArrayMapData(strArrayTemp, rowIndex, m_IsLoadMapData);
+
+			//	マップに配置する床が設定されていない
+			if (m_MapActorGround.actor == nullptr)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("MapCreator::Need set m_MapActorGround."));
+			}
+			else
+			{
+				// 床の位置を算出
+				FVector groundPos(rowIndex * m_XAxis_Offset, (float)strArrayTemp.Num() / 2.0f, m_MapActorGround.location_Z);
+				FTransform groundTransform(m_MapActorGround.rotation, groundPos, m_MapActorGround.scale);
+
+				// インスタンスメッシュが存在している
+				if (m_SampleGround != nullptr)
+				{
+					m_SampleGround->AddInstance(groundTransform);
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("MapCreator::Need set m_SampleGround."));
+				}
+			}
+
+			// 次の行を読み込む
+			strArrayTemp.Reset();
+			++rowIndex;
+
+		} while (m_IsLoadMapData);
+	}
 }
 
 void AMapCreator::BeginPlay()
@@ -63,6 +153,9 @@ void AMapCreator::BeginPlay()
 	// CSVファイル読み込み
 	do
 	{
+		// Loading
+		UE_LOG(LogTemp, Verbose, TEXT("Map Loading Now..."));
+
 		// マップデータを読み込む
 		SetStrArrayMapData(strArrayTemp, rowIndex, m_IsLoadMapData);
 
@@ -148,14 +241,21 @@ void AMapCreator::BeginPlay()
 					m_IsGeneratePlayer = true;
 
 					// プレイヤーの生成
-					SpawnMapActor(m_PlayerActor, LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
+					if (m_PlayerActor.actor != nullptr)
+					{
+						SpawnMapActor(m_PlayerActor, LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
+					}
+					else
+					{
+						UE_LOG(LogTemp, Error, TEXT("PlayerChara is nullptr!"));
+					}
 				}
 				else
 				{
 					UE_LOG(LogTemp, Warning, TEXT("PlayerChara was generated!"));
 				}
 			}
-			// 文字がなにか入っている場合
+			// 上記以外の文字の場合
 			else
 			{
 				// マップにActorを生成する
@@ -182,7 +282,7 @@ void AMapCreator::BeginPlay()
 								// 縦方向に連続配置中で、連続配置が終わったかチェック
 								if (m_ColumnStartVertArray[j] == columnIndex && m_ContinuousVertActorTempArray[j].actor != m_MapActorArray[mapActorIndex].actor)
 								{
-									m_ContinuousVertActorTempArray[j].scale.Y = ContinuousScaleY(m_ColumnStartVertArray[j], columnIndex, m_ContinuousVertActorTempArray[j].scale.Y);
+									m_ContinuousVertActorTempArray[j].scale.Y = ContinuousScale(m_ColumnStartVertArray[j], columnIndex, m_ContinuousVertActorTempArray[j].scale.Y);
 									SpawnMapActor(m_ContinuousVertActorTempArray[j], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
 
 									// 要素の消去
@@ -289,6 +389,17 @@ void AMapCreator::BeginPlay()
 
 							// 始点と終点を指定して一つのActorを生成する（縦方向）
 						case MapPlacementPattern::V_Fence:
+
+							// フェンス配置の開始地点の情報を保存
+
+							// 生成Actorの保存
+							m_FenceActorTempArray.Add(m_MapActorArray[mapActorIndex]);
+
+							// 行の保存
+							m_RowStartFenceArray.Add(rowIndex);
+							// 列の保存
+							m_ColumnStartVertFenceArray.Add(columnIndex);
+
 							break;
 
 						default:
@@ -316,6 +427,34 @@ void AMapCreator::BeginPlay()
 
 							// 始点と終点を指定して一つのActorを生成する（縦方向）
 						case MapPlacementPattern::V_Fence:
+
+							// フェンス生成
+							// 生成を開始したフェンスがあれば
+							if (m_FenceActorTempArray.Num() > 0)
+							{
+								// 列要素分検索
+								for (int columnCheck = 0; columnCheck < m_ColumnStartVertFenceArray.Num(); ++columnCheck)
+								{
+									// 列が一致したら
+									if (m_ColumnStartVertFenceArray[columnCheck] == columnIndex)
+									{
+										// Actorも一致していれば
+										if (m_FenceActorTempArray[columnCheck].actor == m_MapActorArray[mapActorIndex].actor)
+										{
+											// Yスケールを設定
+											m_FenceActorTempArray[columnCheck].scale.Y = (rowIndex - m_RowStartFenceArray[columnCheck]) * m_FenceActorTempArray[columnCheck].scale.Y;
+
+											// 生成
+											SpawnMapActor(m_FenceActorTempArray[columnCheck], LocationX((rowIndex + m_RowStartFenceArray[columnCheck]) / 2.0f), LocationY(m_ColumnStartVertFenceArray[columnCheck], strArrayTemp.Num()));
+
+											// 要素の削除
+											m_FenceActorTempArray.RemoveAt(columnCheck);
+											m_ColumnStartVertFenceArray.RemoveAt(columnCheck);
+											m_RowStartFenceArray.RemoveAt(columnCheck);
+										}
+									}
+								}
+							}
 							break;
 
 						default:
@@ -338,76 +477,13 @@ void AMapCreator::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void AMapCreator::OnConstruction(const FTransform& Transform)
+void AMapCreator::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& e)
 {
-	Super::OnConstruction(Transform);
-
-	// 行番号
-	int rowIndex = 0;
-
-	// Actorのトランスフォームを固定
-	// 固定するLocation
-	FVector newLocation(0.0f, 0.0f, 0.0f);
-
-	// 固定するRotation
-	FRotator newRotation(0.0f, 0.0f, 0.0f);
-
-	// 固定するScale
-	FVector newScale(1.0f, 1.0f, 1.0f);
-
-	// LocationとRotationを固定
-	SetActorLocationAndRotation(newLocation, newRotation);
-
-	// Scaleを固定
-	SetActorScale3D(newScale);
-
-	// インスタンスメッシュがある
-	if (m_SampleGround != nullptr)
+	if (e.ChangeType == EPropertyChangeType::ArrayAdd && e.GetPropertyName() == "m_SampleObjectArray")
 	{
-		// インスタンスメッシュの削除
-		m_SampleGround->ClearInstances();
+		m_SampleObjectArray[m_SampleObjectArray.Num() - 1] = m_SampleObjectArray[0];
 	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("MapCreator::m_SampleGround is null."));
-	}
-
-	// メッシュ生成を行うかどうか
-	if (m_VisibleMapWire)
-	{
-		// m_IsLoadMapDataがfalseになるまでデータの読み込み
-		do
-		{
-			SetStrArrayMapData(strArrayTemp, rowIndex, m_IsLoadMapData);
-
-			//	マップに配置する床が設定されていない
-			if (m_MapActorGround.actor == nullptr)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("MapCreator::Need set m_MapActorGround."));
-			}
-			else
-			{
-				// 床の位置を算出
-				FVector groundPos(rowIndex * m_XAxis_Offset, (float)strArrayTemp.Num() / 2.0f, m_MapActorGround.location_Z);
-				FTransform groundTransform(m_MapActorGround.rotation, groundPos, m_MapActorGround.scale);
-
-				// インスタンスメッシュが存在している
-				if (m_SampleGround != nullptr)
-				{
-					m_SampleGround->AddInstance(groundTransform);
-				}
-				else
-				{
-					UE_LOG(LogTemp, Warning, TEXT("MapCreator::Need set m_SampleGround."));
-				}
-			}
-
-			// 次の行を読み込む
-			strArrayTemp.Reset();
-			++rowIndex;
-
-		} while (m_IsLoadMapData);
-	}
+	Super::PostEditChangeChainProperty(e);
 }
 
 // 文字列配列に一行分のマップデータを保存
@@ -466,7 +542,7 @@ void AMapCreator::SpawnContinuousActor(const int _rowIndex, const int _startColu
 	// Actorの生成
 	// スケールの算出
 	FVector newScale(m_ContinuousActorTemp.scale.X,
-		ContinuousScaleY(_startColumn, _endColumn, m_ContinuousActorTemp.scale.Y),
+		ContinuousScale(_startColumn, _endColumn, m_ContinuousActorTemp.scale.Y),
 		m_ContinuousActorTemp.scale.Z);
 
 	// スケールの適用
@@ -494,7 +570,7 @@ float AMapCreator::LocationY(const int _columnIndex, const int _strArrayLength)
 }
 
 // 連続生成ActorのYスケール算出
-float AMapCreator::ContinuousScaleY(const int _startColumn, const int _endColumn, const float _actorScaleY)
+float AMapCreator::ContinuousScale(const int _startColumn, const int _endColumn, const float _actorScaleY)
 {
 	int diff = _endColumn - _startColumn;
 	return _actorScaleY * diff;
@@ -527,9 +603,10 @@ AActor* AMapCreator::SpawnMapActor(FMapActorStructCpp _spawnActor, const float _
 	params.Template = nullptr;
 
 	FVector pos(_locationX, _locationY, _spawnActor.location_Z);
-	AActor* spawnActor = GetWorld()->SpawnActor<AActor>(_spawnActor.actor, pos, _spawnActor.rotation, params);
+	AActor* spawnActor = GetWorld()->SpawnActor<AActor>(_spawnActor.actor, pos, FRotator::ZeroRotator, params);
 
 	spawnActor->SetActorScale3D(_spawnActor.scale);
+	spawnActor->SetActorRotation(_spawnActor.rotation);
 
 	return spawnActor;
 }
