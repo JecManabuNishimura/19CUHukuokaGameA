@@ -211,26 +211,30 @@ void AMapCreator::BeginPlay()
 			return;
 		}
 
+
 		// 文字列配列を一つずつ読みこむ
 		for (int columnIndex = 0; columnIndex < strArrayTemp.Num(); ++columnIndex)
 		{
-			// 一番最初の文字がNL（地面を生成しない場合）でなければ
-			if (strArrayTemp[0] != m_NotGroundGenerateStr)
+			// 行の最初の列であれば
+			if (columnIndex == 0)
 			{
-				// 地面生成
-				if (m_MapActorGround.actor != nullptr)
+				// 一番最初の文字がNL（地面を生成しない場合）でなければ
+				if (strArrayTemp[0] != m_NotGroundGenerateStr)
 				{
-					SpawnMapActor(m_MapActorGround, LocationX(rowIndex), 0.0f);
+					// 地面生成
+					if (m_MapActorGround.actor != nullptr)
+					{
+						SpawnMapActor(m_MapActorGround, LocationX(rowIndex), 0.0f);
+					}
+					else
+					{
+						UE_LOG(LogTemp, Error, TEXT("m_MapActorGround.actor is nullptr!"))
+					}
 				}
 				else
 				{
-					UE_LOG(LogTemp, Error, TEXT("m_MapActorGround.actor is nullptr!"))
+					break;
 				}
-			}
-			// 地面を生成しない場合は他のActorも生成しないのでスキップする
-			else
-			{
-				break;
 			}
 
 			// 文字なしの場合
