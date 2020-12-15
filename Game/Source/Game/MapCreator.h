@@ -19,7 +19,7 @@ UENUM(BlueprintType)
 enum class MapPlacementPattern : uint8
 {
 	SettingLock		UMETA(Hidden),									// 設定不可
-	Single			UMETA(DisplayName = "Single"),				// 単体で配置する
+	Single			UMETA(DisplayName = "Single"),					// 単体で配置する
 	Continuous		UMETA(DisplayName = "Continuous (Horizontal)"),	// 連続配置で一つのActorになる（横方向）
 	V_Continuous	UMETA(DisplayName = "Continuous (Vertical)"),	// 連続配置で一つのActorになる（縦方向）
 	Fence			UMETA(DisplayName = "Fence (Horizontal)"),		// 始点と終点を指定して一つのActorを生成する（横方向）
@@ -69,7 +69,7 @@ struct FMapActorStructCpp
 		EEnemyMoveType enemyMoveType = EEnemyMoveType::None;
 
 	// スタティックメッシュコンポーネント
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite)
 		UStaticMeshComponent* actorStaticMesh;
 };
 
@@ -138,9 +138,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-
-	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& e) override;
-
+	
 public:
 	virtual void Tick(float DeltaTime) override;
 
@@ -231,9 +229,6 @@ public:
 	// 床のサンプルになるStaticMesh
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UInstancedStaticMeshComponent* m_SampleGround;
-
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-	TArray<UInstancedStaticMeshComponent*> m_SampleObjectArray;
 
 	// privateメソッド
 private:

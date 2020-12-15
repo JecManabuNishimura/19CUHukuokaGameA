@@ -173,6 +173,7 @@ void AMapCreator::BeginPlay()
 		// マップデータがなければおわり
 		if (m_IsLoadMapData == false)
 		{
+			UE_LOG(LogTemp, Verbose, TEXT("Map Loading Finished."));
 			// 縦方向の連続配置チェック
 			if (m_ColumnStartVertArray.Num() > 0)
 			{
@@ -206,6 +207,7 @@ void AMapCreator::BeginPlay()
 				}
 			}
 
+			this->Destroy();
 			return;
 		}
 
@@ -504,15 +506,6 @@ void AMapCreator::BeginPlay()
 void AMapCreator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-}
-
-void AMapCreator::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& e)
-{
-	if (e.ChangeType == EPropertyChangeType::ArrayAdd && e.GetPropertyName() == "m_SampleObjectArray")
-	{
-		m_SampleObjectArray[m_SampleObjectArray.Num() - 1] = m_SampleObjectArray[0];
-	}
-	Super::PostEditChangeChainProperty(e);
 }
 
 // 文字列配列に一行分のマップデータを保存
