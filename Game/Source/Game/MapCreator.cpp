@@ -614,27 +614,31 @@ float AMapCreator::ContinuousLocationY(const int _startColumn, const int _endCol
 // マップにActorを生成
 AActor* AMapCreator::SpawnMapActor(FMapActorStructCpp _spawnActor, const float _locationX, const float _locationY)
 {
-	// 生成パラメータの設定
-	FActorSpawnParameters params;
+	if (_spawnActor.actor != nullptr)
+	{
+		// 生成パラメータの設定
+		FActorSpawnParameters params;
 
-	params.bAllowDuringConstructionScript = true;
-	params.bDeferConstruction = false;
-	params.bNoFail = true;
-	params.Instigator = nullptr;
-	params.Name = { };
-	params.ObjectFlags = EObjectFlags::RF_NoFlags;
-	params.OverrideLevel = nullptr;
-	params.Owner = this;
-	params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	params.Template = nullptr;
+		params.bAllowDuringConstructionScript = true;
+		params.bDeferConstruction = false;
+		params.bNoFail = true;
+		params.Instigator = nullptr;
+		params.Name = { };
+		params.ObjectFlags = EObjectFlags::RF_NoFlags;
+		params.OverrideLevel = nullptr;
+		params.Owner = this;
+		params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		params.Template = nullptr;
 
-	FVector pos(_locationX, _locationY, _spawnActor.location_Z);
-	AActor* spawnActor = GetWorld()->SpawnActor<AActor>(_spawnActor.actor, pos, FRotator::ZeroRotator, params);
+		FVector pos(_locationX, _locationY, _spawnActor.location_Z);
+		AActor* spawnActor = GetWorld()->SpawnActor<AActor>(_spawnActor.actor, pos, FRotator::ZeroRotator, params);
 
-	spawnActor->SetActorScale3D(_spawnActor.scale);
-	spawnActor->SetActorRotation(_spawnActor.rotation);
+		spawnActor->SetActorScale3D(_spawnActor.scale);
+		spawnActor->SetActorRotation(_spawnActor.rotation);
 
-	return spawnActor;
+		return spawnActor;
+	}
+	else return nullptr;
 }
 
 // FMapActorStructCppをリセットする関数
