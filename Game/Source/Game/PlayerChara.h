@@ -121,6 +121,11 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Jump")		//	ジャンプ力
 		float jumpPower;
 
+	UPROPERTY(EditAnywhere, Category = "Jump")		//	ジャンプ力
+		float superJumpPower;
+
+	float tempJumpPower;
+
 	float jumpTime;								//	ジャンプ時間
 	float nowJumpHeight;							//	現在フレームのジャンプ量
 	float prevJumpHeight;							//	前フレームのジャンプ量
@@ -231,6 +236,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float playerSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float playerMaxSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float DashSpeed;

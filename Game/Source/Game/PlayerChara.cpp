@@ -39,10 +39,13 @@ APlayerChara::APlayerChara()
 	, bulletTimeCount(0.0f)
 	, bulletDuration(1.0f)
 	, bulletXOffset(10.0f)
-	, playerSpeed(10.f)
+	, playerSpeed(0.f)
+	, playerMaxSpeed(200.f)
 	, DashSpeed(1.5f)
 	, gravity(700.f)
 	, jumpPower(1200.f)
+	, superJumpPower(2400.f)
+	, tempJumpPower(0.f)
 	, jumpTime(0.f)
 	, nowJumpHeight(0.f)
 	, prevJumpHeight(0.f)
@@ -119,13 +122,17 @@ void APlayerChara::BeginPlay()
 	Super::BeginPlay();
 
 	tempDamageFrame = DamageFrame;
-	tempSpeed = playerSpeed;
+	tempSpeed = playerMaxSpeed;
 
 	tempDataOfShot = ShotEnergy;
 	tempDataOfDash = DashEnergy;
 	tempDataOfGuard = GuardEnergy;
 
+	tempJumpPower = jumpPower;
+
 	restartLocationX = GetActorLocation().X;
+
+	playerSpeed = 0.f;
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &APlayerChara::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &APlayerChara::OverlapEnds);;
@@ -275,6 +282,11 @@ void APlayerChara::UpdateMove(float _deltaTime)
 	FVector NewLocation = GetActorLocation();
 	FVector YRotation = GetActorForwardVector();
 
+	if (playerSpeed < playerMaxSpeed)
+	{
+		playerSpeed += 0.016f * playerMaxSpeed;
+	}
+
 	//	‘O‚ÉŒü‚­‚¸‚Á‚ÆˆÚ“®‚·‚é
 	if ((isDashing || isDashLine) && haveShotEnergy)
 	{
@@ -310,7 +322,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 		}
 		else
 		{
-			playerSpeed += tempSpeed * 0.02f;
+			playerSpeed += playerMaxSpeed * 0.02f;
 		}
 	}
 }
@@ -338,6 +350,7 @@ void APlayerChara::UpdateJump(float _deltaTime)
 
 		if (nowJumpHeight < 0.0f)
 		{
+			jumpPower = tempJumpPower;
 			jumpTime = 0.f;
 			isJumping = false;
 			isLanding = true;
@@ -424,9 +437,11 @@ void APlayerChara::RestartGame()
 {
 	if (hadDoOnce)
 	{
-		SetActorLocation(FVector(restartLocationX - 1000.f, 0.f, 110.f));
+		SetActorLocation(FVector(restartLocationX - 30.f, 0.f, 110.f));
 
 		HP = 90.f;
+
+		playerSpeed = 0.f;
 
 		ShotEnergy = tempDataOfShot;
 
@@ -563,8 +578,6 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 {
 	if (OtherActor->ActorHasTag("JumpPad"))
 	{
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(1.11111111111f));
-
 		canJump = true;
 	}
 
@@ -615,6 +628,15 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 	if (OtherActor->ActorHasTag("DashLine"))
 	{
 		isDashLine = true;
+
+		canJump = true;
+	}
+
+	if (OtherActor->ActorHasTag("SuperJump"))
+	{
+		jumpPower = superJumpPower;
+
+		canJump = true;
 	}
 
 	//if (OtherActor->ActorHasTag("CheckPoint"))
@@ -638,10 +660,15 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 
 void APlayerChara::OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	//if (OtherActor->ActorHasTag("JumpPad"))
-	//{
-	//	canJump = false;
-	//}
+	if (OtherActor->ActorHasTag("JumpPad"))
+	{
+		canJump = false;
+	}
+
+	if (OtherActor->ActorHasTag("SuperJump"))
+	{
+		canJump = false;
+	}
 
 	if (OtherActor->ActorHasTag("DashLine"))
 	{
