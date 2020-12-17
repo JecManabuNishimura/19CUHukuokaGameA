@@ -242,6 +242,9 @@ private:
 	// 連続配置Actorの生成を行う
 	void SpawnContinuousActor(const int _rowIndex, const int _startColumn, const int _endColumn);
 
+	// フェンスActorの生成を行う
+	void SpawnFenceActor(FMapActorStructCpp _actor, const int _rowIndex, const int _startColumn, const int _endColumn);
+
 	// X座標算出
 	float LocationX(const int _rowIndex);
 
