@@ -29,14 +29,14 @@ UCLASS()
 class GAME_API AEnemyChara : public ACharacter
 {
 	GENERATED_BODY()
-		
+
 public:
 	AEnemyChara();
 
 protected:
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -61,11 +61,11 @@ public:
 	// 敵の移動の種類
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Move Generic")
 		EEnemyMoveType enemyMoveType;
-	
+
 	// 直線の移動の速さ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Enemy Move Generic")
 		float forwardSpeed;
-	
+
 	// 正弦波移動のときの横移動の速さ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Enemy Move Sine")
 		float sinWaveSpeed;
@@ -89,7 +89,7 @@ public:
 
 	// 突進の時の速度
 	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
-		float bodyBlowSpeed;	
+		float bodyBlowSpeed;
 
 	// 突進の時の溜め時間
 	UPROPERTY(EditAnyWhere, Category = "Enemy Body Blow")
@@ -104,7 +104,7 @@ public:
 		float bodyBlowTurnShorten;
 
 	// Playerを代入
-	UPROPERTY(EditAnywhere, Category = "Enemy Move Overtake")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Move Overtake")
 		AActor* playerActor;
 
 	// 追い抜くときの速度
@@ -139,7 +139,7 @@ public:
 	// _pos			：現在の位置
 	void Move_Sin(const float _speedForward, const float _speedSide, const float _frequency, const float _deltaTime, const FVector _pos);
 
-	
+
 	// 追い越し・直線での移動
 	// 内側に入る時に速度も徐々に補間（_overtakeSpeed -> _speed）します。
 	//
@@ -170,7 +170,12 @@ public:
 	// _posY			：（任意）float型の変数のアドレスを指定すれば、そのアドレスの変数にY座標のみを返す
 	// _posZ			：（任意）float型の変数のアドレスを指定すれば、そのアドレスの変数にZ座標のみを返す
 	FVector CalcLerpPos(const FVector _startPos, const FVector _midPos, const FVector _endPos, const float _interpolation
-						, float* _posX = NULL, float* _posY = NULL, float* _posZ = NULL);
+		, float* _posX = NULL, float* _posY = NULL, float* _posZ = NULL);
 
+	// 敵の移動方法を変更する
 	void SetEnemyMoveType(EEnemyMoveType _moveType);
+
+	// プレイヤーのActorをGameInstanceから取得する
+	UFUNCTION(BlueprintImplementableEvent)
+		void GetPlayerFromGameInstance();
 };

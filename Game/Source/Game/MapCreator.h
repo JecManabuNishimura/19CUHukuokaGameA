@@ -69,7 +69,7 @@ struct FMapActorStructCpp
 		EEnemyMoveType enemyMoveType = EEnemyMoveType::None;
 
 	// スタティックメッシュコンポーネント
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly)
 		UStaticMeshComponent* actorStaticMesh;
 };
 
@@ -138,7 +138,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	
+
 public:
 	virtual void Tick(float DeltaTime) override;
 
@@ -224,8 +224,12 @@ private:
 	// 縦にフェンス生成するActorの一時保存
 	TArray<FMapActorStructCpp> m_FenceActorTempArray;
 
+	// サンプルになるStaticMesh
+	TArray<UInstancedStaticMeshComponent*> m_SampleMapObject;
+
 	// public変数
 public:
+
 	// 床のサンプルになるStaticMesh
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UInstancedStaticMeshComponent* m_SampleGround;

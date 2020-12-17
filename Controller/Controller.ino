@@ -1,4 +1,6 @@
+
 #include <Wire.h>
+#include <avr/wdt.h>
 
 // MPU-6050のアドレス、レジスタ設定値
 #define MPU6050_WHO_AM_I     0x75  // Read Only
@@ -10,7 +12,8 @@
 #define YAW_POTENTIOMETER_READ	analogRead(YAW_POTENTIOMETER_PIN)	// A
 
 // センサー正規化の値
-const float ROTATION_COLLECTION = 90.0f;		// X, Y軸のセンサーの値（0.0～1.0）に対して掛ける値
+//const float ROTATION_COLLECTION = 90.0f;		// X, Y軸のセンサーの値（0.0～1.0）に対して掛ける値
+const float ROTATION_COLLECTION = 900.0f;		// X, Y軸のセンサーの値（0.0～1.0）に対して掛ける値
 const float POTENTIOMETER_OFFSET = 512.0f;		// ポテンショメーターの最大値（1024）と最小値（0）の中間の値 0～1024の値を -512～512に変換する
 const float POTENTIOMETER_COLLECTION = 5.689f;	// 正規化したポテンショメーターの値に対して割る値 512を90°に変換する
 
@@ -44,7 +47,7 @@ void loop() {
   if (Serial.available() > 0)
   {
   	int input = Serial.read();
-
+  	
   	if (input != 's')
   	{
   		return;
@@ -87,12 +90,6 @@ void loop() {
     // シリアル出力
     Serial.print(accArray[0], 1);		Serial.print(",");		// Roll	 	X
     Serial.print(accArray[1], 1);		Serial.print(",");		// Pitch 	Y
-    Serial.print(accArray[2], 1);		Serial.println("");		// Yaw	 	Z    
-
-    digitalWrite(13, HIGH);
-  }
-  else
-  {
-  	digitalWrite(13, LOW);
+    Serial.print(accArray[2], 1);		Serial.println("");		// Yaw	 	Z   
   }
 }

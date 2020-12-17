@@ -2,6 +2,7 @@
 
 
 #include "MapObjectBase.h"
+#include "Components/StaticMeshComponent.h"
 
 // Sets default values
 AMapObjectBase::AMapObjectBase()
@@ -9,8 +10,11 @@ AMapObjectBase::AMapObjectBase()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	UStaticMeshComponent* staticMeshObj = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	staticMeshComponent = staticMeshObj;
+	// RootConponent�̍쐬
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+
+	staticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
+	staticMeshComponent->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned

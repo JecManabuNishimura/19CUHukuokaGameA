@@ -23,8 +23,12 @@ AMapCreator::AMapCreator()
 	// Tickを実行する必要はないので更新を切る
 	PrimaryActorTick.bCanEverTick = false;
 
+	// RootConponentの作成
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+
 	// SubObjectの作成
 	m_SampleGround = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("SampleGround"));
+	m_SampleGround->SetupAttachment(RootComponent);
 
 	// 文字列配列の初期化
 	strArrayTemp.Reset();
@@ -49,7 +53,7 @@ AMapCreator::AMapCreator()
 void AMapCreator::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	
+
 	// Enemy用設定
 	for (int i = 0; i < m_MapActorArray.Num(); ++i)
 	{
@@ -62,7 +66,7 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 			m_MapActorArray[i].enemyMoveType = EEnemyMoveType::None;
 		}
 	}
-	
+
 	// 行番号
 	int rowIndex = 0;
 
@@ -82,33 +86,81 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 	// Scaleを固定
 	SetActorScale3D(newScale);
 
-	// インスタンスメッシュがある
+	// 床のインスタンスメッシュの削除
 	if (m_SampleGround != nullptr)
 	{
-		// インスタンスメッシュの削除
 		m_SampleGround->ClearInstances();
+	}
 
-		// 床のActorが設定されていれば
-		if (m_MapActorGround.actor != nullptr)
+	// マップオブジェクト用インスタンスメッシュ配列の初期化
+	if (m_SampleMapObject.Num() > 0)
+	{
+		for (int i = 0; i < m_SampleMapObject.Num(); ++i)
 		{
-			// C++で作成されたDefaultSubObjectにStaticMeshComponentがついていれば
-			m_MapActorGround.actorStaticMesh = Cast<UStaticMeshComponent>(m_MapActorGround.actor.GetDefaultObject()->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-
-			if (m_MapActorGround.actorStaticMesh != nullptr)
+			if (m_SampleMapObject[i] != nullptr)
 			{
-				m_SampleGround->SetStaticMesh(m_MapActorGround.actorStaticMesh->GetStaticMesh());
-				m_SampleGround->SetMaterial(0, m_MapActorGround.actorStaticMesh->GetMaterial(0));
+				// インスタンス削除
+				m_SampleMapObject[i]->ClearInstances();
 			}
 		}
 	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("MapCreator::m_SampleGround is null."));
-	}
+	// マップオブジェクト用インスタンスメッシュ配列リセット
+	m_SampleMapObject.Reset();
 
 	// メッシュ生成を行うかどうか
 	if (m_VisibleMapWire)
 	{
+		// インスタンスメッシュがある
+		if (m_SampleGround != nullptr)
+		{
+			// 床のActorが設定されていれば
+			if (m_MapActorGround.actor != nullptr)
+			{
+				// C++で作成されたDefaultSubObjectにStaticMeshComponentがついていれば
+				m_MapActorGround.actorStaticMesh = Cast<UStaticMeshComponent>(m_MapActorGround.actor.GetDefaultObject()->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+
+				// スタティックメッシュを取得できていれば
+				if (m_MapActorGround.actorStaticMesh != nullptr)
+				{
+					// インスタンスメッシュにスタティックメッシュとマテリアルを設定
+					m_SampleGround->SetStaticMesh(m_MapActorGround.actorStaticMesh->GetStaticMesh());
+					m_SampleGround->SetMaterial(0, m_MapActorGround.actorStaticMesh->GetMaterial(0));
+				}
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("MapCreator::m_SampleGround is null."));
+		}
+
+		// 他のActorのメッシュをインスタンスメッシュに設定する
+		for (int i = 0; i < m_MapActorArray.Num(); ++i)
+		{
+			// インスタンスメッシュコンポーネントの設定
+			m_SampleMapObject.Add(NewObject<UInstancedStaticMeshComponent>(this));
+			m_SampleMapObject[m_SampleMapObject.Num() - 1]->RegisterComponent();
+			m_SampleMapObject[m_SampleMapObject.Num() - 1]->AttachToComponent(RootComponent, { EAttachmentRule::SnapToTarget, true });
+
+			// インスタンスメッシュコンポーネントが設定できていれば
+			if (m_SampleMapObject[i] != nullptr)
+			{
+				// Actorが設定されていれば
+				if (m_MapActorArray[i].actor != nullptr)
+				{
+					// C++で作成されたDefaultSubObjectにStaticMeshComponentがついていれば
+					m_MapActorArray[i].actorStaticMesh = Cast<UStaticMeshComponent>(m_MapActorArray[i].actor.GetDefaultObject()->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+
+					// スタティックメッシュを取得できていれば
+					if (m_MapActorArray[i].actorStaticMesh != nullptr)
+					{
+						// インスタンスメッシュにスタティックメッシュとマテリアルを設定
+						m_SampleMapObject[i]->SetStaticMesh(m_MapActorArray[i].actorStaticMesh->GetStaticMesh());
+						m_SampleMapObject[i]->SetMaterial(0, m_MapActorArray[i].actorStaticMesh->GetMaterial(0));
+					}
+				}
+			}
+		}
+
 		// m_IsLoadMapDataがfalseになるまでデータの読み込み
 		do
 		{
@@ -133,6 +185,220 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 				else
 				{
 					UE_LOG(LogTemp, Warning, TEXT("MapCreator::Need set m_SampleGround."));
+				}
+			}
+
+			// 文字配列を一列ずつ見ていく
+			for (int columnIndex = 0; columnIndex < strArrayTemp.Num(); ++columnIndex)
+			{
+				// 他のActorの生成
+				for (int mapActorIndex = 0; mapActorIndex < m_MapActorArray.Num(); ++mapActorIndex)
+				{
+					// 文字配列の要素とm_MapActorArrayに設定した文字が一致していたら
+					if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateChar)
+					{
+						/*
+						// 横方向に連続配置中で、連続配置が終わったかチェック
+						if (m_IsContinuous == true && m_ContinuousActorTemp.actor != m_MapActorArray[mapActorIndex].actor)
+						{
+							m_IsContinuous = false;
+
+							//SpawnContinuousActor(rowIndex, m_ColumnStart, columnIndex);
+						}
+
+						// 縦方向の連続配置チェック
+						if (m_ColumnStartVertArray.Num() > 0)
+						{
+							// 縦方向に連続配置中のActor分チェックする
+							for (int j = 0; j < m_ColumnStartVertArray.Num(); ++j)
+							{
+								// 縦方向に連続配置中で、連続配置が終わったかチェック
+								if (m_ColumnStartVertArray[j] == columnIndex && m_ContinuousVertActorTempArray[j].actor != m_MapActorArray[mapActorIndex].actor)
+								{
+									m_ContinuousVertActorTempArray[j].scale.Y = ContinuousScale(m_ColumnStartVertArray[j], columnIndex, m_ContinuousVertActorTempArray[j].scale.Y);
+									//SpawnMapActor(m_ContinuousVertActorTempArray[j], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
+
+									// 要素の消去
+									// 保存していたActorの削除
+									m_ContinuousVertActorTempArray.RemoveAt(j);
+									// 列の削除
+									m_ColumnStartVertArray.RemoveAt(j);
+									// 行の削除
+									m_RowStartArray.RemoveAt(j);
+								}
+							}
+						}
+						*/
+
+						// 生成ルールによって分岐
+						switch (m_MapActorArray[mapActorIndex].geterateType)
+						{
+							// 単体で配置する
+						case MapPlacementPattern::Single:
+
+							
+							;
+							FTransform transform(m_MapActorArray[mapActorIndex].rotation, pos, m_MapActorArray[mapActorIndex].scale);
+
+							// 一つだけ生成する
+							m_SampleMapObject[mapActorIndex]->AddInstance(transform);
+							break;
+
+							/*
+							// 横方向に連続配置で一つのActorになる
+						case MapPlacementPattern::Continuous:
+
+							// 横の連続配置の開始
+							if (m_IsContinuous == false)
+							{
+								m_IsContinuous = true;
+
+								// 連続配置を開始したActorの保存
+								m_ContinuousActorTemp = m_MapActorArray[mapActorIndex];
+
+								// 位置の保存
+								m_ColumnStart = columnIndex;
+							}
+							break;
+
+							// 縦方向に連続配置で一つのActorになる
+						case MapPlacementPattern::V_Continuous:
+
+							// 連続配置を開始したActorの保存
+							m_ContinuousVertActorTempArray.Add(m_MapActorArray[mapActorIndex]);
+
+							// 位置の保存
+							// 列
+							m_ColumnStartVertArray.Add(columnIndex);
+
+							// 行
+							m_RowStartArray.Add(rowIndex);
+
+							// 要素が2つ以上ある場合
+							if (m_ColumnStartVertArray.Num() >= 2)
+							{
+								// 一番新しく追加した要素が同じ列の場合
+								if (m_ColumnStartVertArray[m_ColumnStartVertArray.Num() - 1] == columnIndex)
+								{
+									for (int i = 0; i < m_ContinuousVertActorTempArray.Num() - 2; ++i)
+									{
+										// 追加したActorが同じActorであれば破棄
+										if (m_ContinuousVertActorTempArray[m_ContinuousVertActorTempArray.Num() - 1].actor == m_ContinuousVertActorTempArray[i].actor)
+										{
+											// 連続配置を開始したActorの保存
+											m_ContinuousVertActorTempArray.RemoveAt(m_ContinuousVertActorTempArray.Num() - 1);
+
+											// 位置の保存
+											// 列
+											m_ColumnStartVertArray.RemoveAt(m_ColumnStartVertArray.Num() - 1);
+
+											// 行
+											m_RowStartArray.RemoveAt(m_RowStartArray.Num() - 1);
+
+											break;
+										}
+									}
+								}
+							}
+							break;
+
+						default:
+							break;
+						}
+					}
+					// 文字配列の要素と連続配置するm_MapActorArrayに設定したStartの文字が一致していたら
+					else if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateCharStart)
+					{
+						// 生成ルールによって分岐
+						switch (m_MapActorArray[mapActorIndex].geterateType)
+						{
+							// 始点と終点を指定して一つのActorを生成する（横方向）
+						case MapPlacementPattern::Fence:
+
+							// フェンス配置の開始
+							if (m_IsFence == false)
+							{
+								m_IsFence = true;
+
+								// フェンス生成開始の列を保存
+								m_FenceStart = columnIndex;
+							}
+							break;
+
+							// 始点と終点を指定して一つのActorを生成する（縦方向）
+						case MapPlacementPattern::V_Fence:
+
+							// フェンス配置の開始地点の情報を保存
+
+							// 生成Actorの保存
+							m_FenceActorTempArray.Add(m_MapActorArray[mapActorIndex]);
+
+							// 行の保存
+							m_RowStartFenceArray.Add(rowIndex);
+							// 列の保存
+							m_ColumnStartVertFenceArray.Add(columnIndex);
+
+							break;
+
+						default:
+							break;
+						}
+					}
+					// 文字配列の要素と連続配置するm_MapActorArrayに設定したEndの文字が一致していたら
+					else if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateCharEnd)
+					{
+						// 生成ルールによって分岐
+						switch (m_MapActorArray[mapActorIndex].geterateType)
+						{
+							// 始点と終点を指定して一つのActorを生成する（横方向）
+						case MapPlacementPattern::Fence:
+
+							// フェンス生成
+							// フェンス生成が開始されていれば
+							if (m_IsFence == true)
+							{
+								m_IsFence = false;
+
+								SpawnFenceActor(m_MapActorArray[mapActorIndex], rowIndex, m_FenceStart, columnIndex);
+							}
+							break;
+
+							// 始点と終点を指定して一つのActorを生成する（縦方向）
+						case MapPlacementPattern::V_Fence:
+
+							// フェンス生成
+							// 生成を開始したフェンスがあれば
+							if (m_FenceActorTempArray.Num() > 0)
+							{
+								// 列要素分検索
+								for (int columnCheck = 0; columnCheck < m_ColumnStartVertFenceArray.Num(); ++columnCheck)
+								{
+									// 列が一致したら
+									if (m_ColumnStartVertFenceArray[columnCheck] == columnIndex)
+									{
+										// Actorも一致していれば
+										if (m_FenceActorTempArray[columnCheck].actor == m_MapActorArray[mapActorIndex].actor)
+										{
+											// Yスケールを設定
+											m_FenceActorTempArray[columnCheck].scale.Y = (rowIndex - m_RowStartFenceArray[columnCheck]) * m_FenceActorTempArray[columnCheck].scale.Y;
+
+											// 生成
+											SpawnMapActor(m_FenceActorTempArray[columnCheck], LocationX((rowIndex + m_RowStartFenceArray[columnCheck]) / 2.0f), LocationY(m_ColumnStartVertFenceArray[columnCheck], strArrayTemp.Num()));
+
+											// 要素の削除
+											m_FenceActorTempArray.RemoveAt(columnCheck);
+											m_ColumnStartVertFenceArray.RemoveAt(columnCheck);
+											m_RowStartFenceArray.RemoveAt(columnCheck);
+										}
+									}
+								}
+							}
+							break;
+							*/
+						default:
+							break;
+						}
+					}
 				}
 			}
 
@@ -324,7 +590,7 @@ void AMapCreator::BeginPlay()
 							{
 								// 敵を生成する
 								AEnemyChara* enemy = Cast<AEnemyChara>(SpawnMapActor(m_MapActorArray[mapActorIndex], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num())));
-								
+
 								if (enemy != nullptr)
 								{
 									enemy->SetEnemyMoveType(m_MapActorArray[mapActorIndex].enemyMoveType);
@@ -456,7 +722,7 @@ void AMapCreator::BeginPlay()
 							{
 								m_IsFence = false;
 
-								SpawnContinuousActor(rowIndex, m_FenceStart, columnIndex);
+								SpawnFenceActor(m_MapActorArray[mapActorIndex], rowIndex, m_FenceStart, columnIndex);
 							}
 							break;
 
@@ -576,6 +842,24 @@ void AMapCreator::SpawnContinuousActor(const int _rowIndex, const int _startColu
 
 	// 座標を指定してActorを生成
 	SpawnMapActor(m_ContinuousActorTemp, LocationX(_rowIndex), ContinuousLocationY(_startColumn, _endColumn, strArrayTemp.Num()));
+
+	// Actorの一時保存していたものをリセット
+	m_ContinuousActorTemp = MapActorStructCppReset();
+}
+
+void AMapCreator::SpawnFenceActor(FMapActorStructCpp _actor, const int _rowIndex, const int _startColumn, const int _endColumn)
+{
+	// Actorの生成
+	// スケールの算出
+	FVector newScale(_actor.scale.X,
+		ContinuousScale(_startColumn, _endColumn, _actor.scale.Y),
+		_actor.scale.Z);
+
+	// スケールの適用
+	_actor.scale = newScale;
+
+	// 座標を指定してActorを生成
+	SpawnMapActor(_actor, LocationX(_rowIndex), ContinuousLocationY(_startColumn, _endColumn, strArrayTemp.Num()));
 
 	// Actorの一時保存していたものをリセット
 	m_ContinuousActorTemp = MapActorStructCppReset();

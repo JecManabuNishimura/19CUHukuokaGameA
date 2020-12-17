@@ -59,6 +59,13 @@ void AEnemyChara::Tick(float DeltaTime)
 	{
 		playerPos = playerActor->GetActorLocation();
 	}
+	// ƒvƒŒƒCƒ„[‚ªnull‚Ìê‡
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("playerActor is NULL. try to Get playerActor."));
+		// GameInstance‚©‚çæ“¾‚·‚é
+		GetPlayerFromGameInstance();
+	}
 
 	// ˆÚ“®‚Ìí—Ş‚É‰‚¶‚Ä•ªŠò
 	switch (enemyMoveType)
