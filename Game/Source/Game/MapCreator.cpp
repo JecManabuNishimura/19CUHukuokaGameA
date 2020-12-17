@@ -236,12 +236,11 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 							// ’P‘Ì‚Å”z’u‚·‚é
 						case MapPlacementPattern::Single:
 
-							
-							;
-							FTransform transform(m_MapActorArray[mapActorIndex].rotation, pos, m_MapActorArray[mapActorIndex].scale);
-
 							// ˆê‚Â‚¾‚¯¶¬‚·‚é
-							m_SampleMapObject[mapActorIndex]->AddInstance(transform);
+							m_SampleMapObject[mapActorIndex]->AddInstance(
+								FTransform(m_MapActorArray[mapActorIndex].rotation,
+									FVector(LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()), m_MapActorArray[mapActorIndex].location_Z),
+									m_MapActorArray[mapActorIndex].scale));
 							break;
 
 							/*
