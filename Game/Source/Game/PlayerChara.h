@@ -108,8 +108,6 @@ private:
 	TArray<FRotator> prevRotator;
 	FRotator prevDiffRot;
 
-	SensorManager* sensor;
-
 	// 2020/11/11 ìnÁ≤ UPROPERTYÇÃçÌèú -------------------------------------------------
 	// For Arduino Com Port
 		int serialPort;
