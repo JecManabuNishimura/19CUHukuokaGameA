@@ -27,7 +27,6 @@
 // ƒRƒ“ƒXƒgƒ‰ƒNƒ^
 APlayerChara::APlayerChara()
 	: m_pArduinoSerial(NULL)
-	, sensor(NULL)
 	, withSensor(false)
 	, serialPort(4)
 	, isOpen(false)
@@ -768,23 +767,23 @@ FRotator APlayerChara::SensorToRotator()
 //	Ç°¤Î¥»¥ó¥µ©`°æ
 void APlayerChara::UpdateSensor(float _deltaTime)
 {
-	FRotator tempRot = SensorManager::GetSensorDataRotator();
-	tempRoll = tempRot.Roll;
-	tempPitch = tempRot.Pitch;
-	tempYaw = tempRot.Yaw;
+	//FRotator tempRot = SensorManager::GetSensorDataRotator();
+	//tempRoll = tempRot.Roll;
+	//tempPitch = tempRot.Pitch;
+	//tempYaw = tempRot.Yaw;
 
 	//// ‰ÁŽZ
-	//for (int i = 0; i < prevRotator.Num(); ++i)
-	//{
-	//	tempRoll += prevRotator[i].Roll;
-	//	tempPitch += prevRotator[i].Pitch;
-	//	tempYaw += prevRotator[i].Yaw;
-	//}
+	for (int i = 0; i < prevRotator.Num(); ++i)
+	{
+		tempRoll += prevRotator[i].Roll;
+		tempPitch += prevRotator[i].Pitch;
+		tempYaw += prevRotator[i].Yaw;
+	}
 
-	//// •½‹Ï’l‚ðŽZo
-	//tempRoll /= prevRotator.Num();
-	//tempPitch /= prevRotator.Num();
-	//tempYaw /= prevRotator.Num();
+	// •½‹Ï’l‚ðŽZo
+	tempRoll /= prevRotator.Num();
+	tempPitch /= prevRotator.Num();
+	tempYaw /= prevRotator.Num();
 
 	//	guardEnergy‚ª0‚É‚È‚Á‚½‚çA‰¡‰ñ“]‚ÌŠp“x‚ð‹­§‚É0‚É–ß‚é
 	if (!haveGuardEnergy)
@@ -831,7 +830,8 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 		// ƒCƒ“ƒfƒbƒNƒX”Ô†0‚Ì—v‘f‚ðíœ
 		prevRotator.RemoveAt(0);
 
-		FRotator rotTemp = SensorManager::GetSensorDataRotator();
+		//FRotator rotTemp = SensorManager::GetSensorDataRotator();
+		FRotator rotTemp = SensorToRotator();
 
 		// ƒZƒ“ƒT[‚©‚ç‚Ì’l‚ªŠ®‘S‚É0‚©”»•Ê
 		if (rotTemp == FRotator::ZeroRotator)
