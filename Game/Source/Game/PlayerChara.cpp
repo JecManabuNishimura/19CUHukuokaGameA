@@ -27,6 +27,7 @@
 // ÉRÉìÉXÉgÉâÉNÉ^
 APlayerChara::APlayerChara()
 	: m_pArduinoSerial(NULL)
+	, sensor(NULL)
 	, withSensor(false)
 	, serialPort(4)
 	, isOpen(false)
@@ -676,6 +677,7 @@ void APlayerChara::OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor*
 	}
 }
 
+//	«∞§Œ•ª•Û•µ©`∞Ê
 void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
@@ -690,90 +692,7 @@ void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	prevRotator.Reset();
 }
 
-//	ÉZÉìÉTÅ[ÇÃçXêVèàóù
-void APlayerChara::UpdateSensor(float _deltaTime)
-{
-	tempRoll = 0.f;
-	tempPitch = 0.f;
-	tempYaw = 0.f;
-
-	// â¡éZ
-	for (int i = 0; i < prevRotator.Num(); ++i)
-	{
-		tempRoll += prevRotator[i].Roll;
-		tempPitch += prevRotator[i].Pitch;
-		tempYaw += prevRotator[i].Yaw;
-	}
-
-	// ïΩãœílÇéZèo
-	tempRoll /= prevRotator.Num();
-	tempPitch /= prevRotator.Num();
-	tempYaw /= prevRotator.Num();
-
-	//	guardEnergyÇ™0Ç…Ç»Ç¡ÇΩÇÁÅAâ°âÒì]ÇÃäpìxÇã≠êßÇ…0Ç…ñﬂÇÈ
-	if (!haveGuardEnergy)
-	{
-		if (tempRotate >= 85.f || tempRotate <= -85.f)
-		{
-			tempYaw = 0.f;
-		}
-		else if (tempRotate < 85.f && tempYaw < 0.f)
-		{
-			tempRotate += 2.f;
-			tempYaw += tempRotate;
-		}
-		else if (tempRotate > -85.f && tempYaw > 0.f)
-		{
-			tempRotate -= 2.f;
-			tempYaw += tempRotate;
-		}
-	}
-
-	// ActorÇ…âÒì]ó ÇîΩâf
-	if (isGuarding)
-	{
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(tempRoll)); = tempPitch;
-		tempPitch = 0.f;
-	}
-	else if (isDashing)
-	{
-		tempYaw = 0.f;
-	}
-	FRotator rot(tempPitch, tempYaw, tempRoll);
-
-	float angle = 5.f;
-	if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
-	{
-		rot = prevDiffRot;
-	}
-
-	SetActorRotation(rot);
-
-	// ÉäÉXÉgÇçXêV
-	if (prevRotator.IsValidIndex(0) == true)
-	{
-		// ÉCÉìÉfÉbÉNÉXî‘çÜ0ÇÃóvëfÇçÌèú
-		prevRotator.RemoveAt(0);
-
-		FRotator rotTemp = SensorToRotator();
-
-		// ÉZÉìÉTÅ[Ç©ÇÁÇÃílÇ™äÆëSÇ…0Ç©îªï 
-		if (rotTemp == FRotator::ZeroRotator)
-		{
-			// åªç›ÇÃïΩãœílÇë„ì¸
-			prevRotator.Add(rot);
-		}
-		else
-		{
-			// ÉZÉìÉTÅ[Ç©ÇÁÇÃílÇë„ì¸
-			prevRotator.Add(rotTemp);
-		}
-	}
-
-	prevDiffRot = rot;
-}
-
-
+//	«∞§Œ•ª•Û•µ©`∞Ê
 FRotator APlayerChara::SensorToRotator()
 {
 	bool isRead = false;		// ÉfÅ[É^Çì«Ç›éÊÇÍÇΩÇ©ÅH
@@ -844,6 +763,90 @@ FRotator APlayerChara::SensorToRotator()
 		withSensor = false;
 		return FRotator::ZeroRotator;
 	}
+}
+
+//	«∞§Œ•ª•Û•µ©`∞Ê
+void APlayerChara::UpdateSensor(float _deltaTime)
+{
+	FRotator tempRot = SensorManager::GetSensorDataRotator();
+	tempRoll = tempRot.Roll;
+	tempPitch = tempRot.Pitch;
+	tempYaw = tempRot.Yaw;
+
+	//// â¡éZ
+	//for (int i = 0; i < prevRotator.Num(); ++i)
+	//{
+	//	tempRoll += prevRotator[i].Roll;
+	//	tempPitch += prevRotator[i].Pitch;
+	//	tempYaw += prevRotator[i].Yaw;
+	//}
+
+	//// ïΩãœílÇéZèo
+	//tempRoll /= prevRotator.Num();
+	//tempPitch /= prevRotator.Num();
+	//tempYaw /= prevRotator.Num();
+
+	//	guardEnergyÇ™0Ç…Ç»Ç¡ÇΩÇÁÅAâ°âÒì]ÇÃäpìxÇã≠êßÇ…0Ç…ñﬂÇÈ
+	if (!haveGuardEnergy)
+	{
+		if (tempRotate >= 85.f || tempRotate <= -85.f)
+		{
+			tempYaw = 0.f;
+		}
+		else if (tempRotate < 85.f && tempYaw < 0.f)
+		{
+			tempRotate += 2.f;
+			tempYaw += tempRotate;
+		}
+		else if (tempRotate > -85.f && tempYaw > 0.f)
+		{
+			tempRotate -= 2.f;
+			tempYaw += tempRotate;
+		}
+	}
+
+	// ActorÇ…âÒì]ó ÇîΩâf
+	if (isGuarding)
+	{
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(tempRoll)); = tempPitch;
+		tempPitch = 0.f;
+	}
+	else if (isDashing)
+	{
+		tempYaw = 0.f;
+	}
+	FRotator rot(tempPitch, tempYaw, tempRoll);
+
+	float angle = 5.f;
+	if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
+	{
+		rot = prevDiffRot;
+	}
+
+	SetActorRotation(rot);
+
+	// ÉäÉXÉgÇçXêV
+	if (prevRotator.IsValidIndex(0) == true)
+	{
+		// ÉCÉìÉfÉbÉNÉXî‘çÜ0ÇÃóvëfÇçÌèú
+		prevRotator.RemoveAt(0);
+
+		FRotator rotTemp = SensorManager::GetSensorDataRotator();
+
+		// ÉZÉìÉTÅ[Ç©ÇÁÇÃílÇ™äÆëSÇ…0Ç©îªï 
+		if (rotTemp == FRotator::ZeroRotator)
+		{
+			// åªç›ÇÃïΩãœílÇë„ì¸
+			prevRotator.Add(rot);
+		}
+		else
+		{
+			// ÉZÉìÉTÅ[Ç©ÇÁÇÃílÇë„ì¸
+			prevRotator.Add(rotTemp);
+		}
+	}
+
+	prevDiffRot = rot;
 }
 
 //	====================================
