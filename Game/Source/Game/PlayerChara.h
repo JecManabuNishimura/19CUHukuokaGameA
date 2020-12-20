@@ -189,6 +189,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Offset")
 		float bulletXOffset;
 
+	UPROPERTY(EditAnywhere, Category = "Offset")
+		float bulletYOffset;
+
 	UPROPERTY(EditAnywhere, Category = "UI HUD")	//	Dead‚ÌUI
 		TSubclassOf<UUserWidget> Player_Select_Widget_Class;
 	UUserWidget* Player_Select_Widget;

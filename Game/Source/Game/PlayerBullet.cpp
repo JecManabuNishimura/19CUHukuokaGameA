@@ -56,6 +56,6 @@ void APlayerBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAc
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, pPlayer->m_bGuarding ? TEXT("true"): TEXT("false"));
 		//OtherActor->Destroy();
 
-		this->Destroy();
+		//this->Destroy();
 	}
 }

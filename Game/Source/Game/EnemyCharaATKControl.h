@@ -89,7 +89,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		FVector DeadEffectLocation;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dead")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dead")
 		bool isDead;
 
 	UFUNCTION()

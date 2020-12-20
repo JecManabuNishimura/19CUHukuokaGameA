@@ -39,6 +39,7 @@ APlayerChara::APlayerChara()
 	, bulletTimeCount(0.0f)
 	, bulletDuration(1.0f)
 	, bulletXOffset(10.0f)
+	, bulletYOffset(0.f)
 	, playerSpeed(0.f)
 	, playerMaxSpeed(200.f)
 	, DashSpeed(1.5f)
@@ -492,7 +493,7 @@ void APlayerChara::Shooting(float DeltaTime)
 		FVector currentVector = GetActorLocation();
 		if (bulletTimeCount >= bulletDuration && !isJumping && !isGuarding) {
 			// 弾の作成：SpawnActor<生成するクラス型>(生成するクラス、始点座標、始点回転座標)
-			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
+			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset + this->GetActorUpVector() * bulletYOffset, FRotator().ZeroRotator);
 			bulletTimeCount = 0.0f;
 			//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) is attacking. Using bullet type: %s"), *(this->GetName()), *(bulletActor->GetName()));
 		}
@@ -910,7 +911,7 @@ void APlayerChara::ShotStart(float _axisValue)
 		if (isFirstShoting)
 		{
 			FVector currentVector = GetActorLocation();
-			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset, FRotator().ZeroRotator);
+			GetWorld()->SpawnActor<APlayerBullet>(bulletActor, currentVector + this->GetActorForwardVector() * bulletXOffset + this->GetActorUpVector() * bulletYOffset, FRotator().ZeroRotator);
 			ShotEnergy -= 10.f;
 			isFirstShoting = false;
 		}
