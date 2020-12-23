@@ -763,6 +763,11 @@ void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void APlayerChara::UpdateSensor(float _deltaTime)
 {
 	FRotator tempRot = SensorManager::GetSensorDataRotator();
+
+	if (tempRot == SENSOR_ERROR_ROTATOR)
+	{
+		return;
+	}
 	tempRoll = tempRot.Roll;
 	tempPitch = tempRot.Pitch;
 	tempYaw = tempRot.Yaw;
@@ -812,14 +817,13 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 
 	FRotator rot(tempPitch, tempYaw, tempRoll);
 
-	FRotator rotTemp = SensorManager::GetSensorDataRotator();
 	//float angle = 5.f;
 	//if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
 	//{
 	//	rot = prevDiffRot;
 	//}
 
-	//SetActorRotation(rot);
+	SetActorRotation(rot);
 
 	//// リストを更新
 	//if (prevRotator.IsValidIndex(0) == true)

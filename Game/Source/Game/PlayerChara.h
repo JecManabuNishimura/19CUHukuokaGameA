@@ -170,6 +170,7 @@ private:
 public:
 	// 2020/11/11 渡邊 自動検出により変更-------------------
 	//	センサーが持っていますか
+	UPROPERTY(EditAnywhere, Category = "Sensor")
 		bool withSensor;
 	//------------------------------------------------------
 

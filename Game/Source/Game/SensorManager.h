@@ -8,6 +8,7 @@
 #include "..\..\UE4Duino\Source\UE4Duino\Public\Serial.h"
 
 #define SENSOR_ERROR_READ FVector(999.9f, 999.9f, 999.9f)
+#define SENSOR_ERROR_ROTATOR FRotator(999.9f, 999.9f, 999.9f)
 
 class GAME_API SensorManager
 {
