@@ -10,6 +10,7 @@
 // ƒCƒ“ƒNƒ‹[ƒh
 #include "PlayerChara.h"
 #include "PlayerBullet.h"
+#include "SensorManager.h"
 #include "Engine.h"
 #include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -147,76 +148,76 @@ void APlayerChara::BeginPlay()
 			pCharMoveComp->AirControl = 0.8f;
 		}
 
+		SensorManager::ConnectToSensor();
 
-		// 2020/11/11 “nç² ©“®ŒŸo‚É•ÏX-----------------------------------------begin--
-		for (int i = 0; i < 20 && isOpen == false; ++i)
+		//	PlayerChara‚ª‚Á‚Ä‚¢‚éƒƒbƒVƒ…ƒRƒ“ƒ|[ƒlƒ“ƒg‚Ì‘Š‘ÎˆÊ’u‚ğ•ÏX
+		USkeletalMeshComponent* pMeshComp = GetMesh();
+		if (pMeshComp != NULL)
 		{
-			// ƒVƒŠƒAƒ‹ƒ|[ƒg‚ğŠJ‚¯‚é
-			//m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
-			m_pArduinoSerial = USerial::OpenComPort(isOpen, i, 115200);
-
-			if (isOpen == false)
-			{
-				UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), i);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), i);
-				withSensor = true;
-				serialPort = i;
-			}
+			//	ZÀ•W‚ğ‰º‚°‚é
+			pMeshComp->SetRelativeLocation(FVector(0.f, 0.f, -85.f));
 		}
-		//---------------------------------------------------------------------------end---
 
-		// 10‰ñ•ª‚Ìƒf[ƒ^‚ğ“ü‚ê‚é
-		int errorCount = 0;
-		for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
+		// VR's
+		FName DeviceName = UHeadMountedDisplayFunctionLibrary::GetHMDDeviceName();
+
+		if (DeviceName == "SteamVR" || DeviceName == "OculusHMD")
 		{
-			FRotator rotTemp;
-			rotTemp = SensorToRotator();
 
-			// ƒZƒ“ƒT[‚Ì’l‚ª“Ç‚İæ‚ê‚Ä‚¢‚È‚¯‚ê‚Î‚â‚è’¼‚µ
-			if (rotTemp == FRotator::ZeroRotator)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
-				++errorCount;
-				if (errorCount >= 10)
-				{
-					UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
-					break;
-				}
-			}
-			else
-			{
-				UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
-			}
+			UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Floor);
 
-			prevRotator.Add(rotTemp);
-		}
+		} // end if()
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Can't find VR Origin(HMD)"));
+		} // end else
+
+		//// 2020/11/11 “nç² ©“®ŒŸo‚É•ÏX-----------------------------------------begin--
+		//for (int i = 0; i < 20 && isOpen == false; ++i)
+		//{
+		//	// ƒVƒŠƒAƒ‹ƒ|[ƒg‚ğŠJ‚¯‚é
+		//	//m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
+		//	m_pArduinoSerial = USerial::OpenComPort(isOpen, i, 115200);
+
+		//	if (isOpen == false)
+		//	{
+		//		UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), i);
+		//	}
+		//	else
+		//	{
+		//		UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), i);
+		//		withSensor = true;
+		//		serialPort = i;
+		//	}
+		//}
+		////---------------------------------------------------------------------------end---
+
+		//// 10‰ñ•ª‚Ìƒf[ƒ^‚ğ“ü‚ê‚é
+		//int errorCount = 0;
+		//for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
+		//{
+		//	FRotator rotTemp;
+		//	rotTemp = SensorToRotator();
+
+		//	// ƒZƒ“ƒT[‚Ì’l‚ª“Ç‚İæ‚ê‚Ä‚¢‚È‚¯‚ê‚Î‚â‚è’¼‚µ
+		//	if (rotTemp == FRotator::ZeroRotator)
+		//	{
+		//		UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
+		//		++errorCount;
+		//		if (errorCount >= 10)
+		//		{
+		//			UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
+		//			break;
+		//		}
+		//	}
+		//	else
+		//	{
+		//		UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
+		//	}
+
+		//	prevRotator.Add(rotTemp);
+		//}
 	}
-
-	//	PlayerChara‚ª‚Á‚Ä‚¢‚éƒƒbƒVƒ…ƒRƒ“ƒ|[ƒlƒ“ƒg‚Ì‘Š‘ÎˆÊ’u‚ğ•ÏX
-	USkeletalMeshComponent* pMeshComp = GetMesh();
-	if (pMeshComp != NULL)
-	{
-		//	ZÀ•W‚ğ‰º‚°‚é
-		pMeshComp->SetRelativeLocation(FVector(0.f, 0.f, -85.f));
-	}
-
-	// VR's
-	FName DeviceName = UHeadMountedDisplayFunctionLibrary::GetHMDDeviceName();
-
-	if (DeviceName == "SteamVR" || DeviceName == "OculusHMD")
-	{
-
-		UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Floor);
-
-	} // end if()
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Can't find VR Origin(HMD)"));
-	} // end else
-
 }
 
 // –ˆƒtƒŒ[ƒ€‚ÌXVˆ—
@@ -436,30 +437,30 @@ void APlayerChara::UpdateAccelerate()
 
 void APlayerChara::RestartGame()
 {
-	if (hadDoOnce)
-	{
-		SetActorLocation(FVector(restartLocationX - 30.f, 0.f, 110.f));
+	//if (hadDoOnce)
+	//{
+	//	SetActorLocation(FVector(restartLocationX, 0.f, 110.f));
 
-		HP = 90.f;
+	//	HP = 90.f;
 
-		playerSpeed = 0.f;
+	//	playerSpeed = 0.f;
 
-		ShotEnergy = tempDataOfShot;
+	//	ShotEnergy = tempDataOfShot;
 
-		DashEnergy = tempDataOfDash;
+	//	DashEnergy = tempDataOfDash;
 
-		GuardEnergy = tempDataOfGuard;
+	//	GuardEnergy = tempDataOfGuard;
 
-		isDead = false;
+	//	isDead = false;
 
-		Player_Select_Widget->RemoveFromViewport();
+	//	Player_Select_Widget->RemoveFromViewport();
 
-		selectPlay = 0;
+	//	selectPlay = 0;
 
-		deadCount++;
+	//	deadCount++;
 
-		hadDoOnce = false;
-	}
+	//	hadDoOnce = false;
+	//}
 }
 
 //”­ËŠJn
@@ -513,8 +514,6 @@ void APlayerChara::DeadCount()
 				isDashing = false;
 
 				isGuarding = false;
-
-				restartLocationX = GetActorLocation().X;
 
 				Player_Select_Widget = CreateWidget(GetWorld(), Player_Select_Widget_Class);
 				Player_Select_Widget->AddToViewport();
@@ -645,6 +644,8 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 	//	tempGoalTime = GoalTime;
 
 	//	tempPlayerScore = PlayerScore;
+
+	//	restartLocationX = GetActorLocation().X;
 	//}
 
 	if (OtherActor->ActorHasTag("Goal"))
@@ -677,114 +678,112 @@ void APlayerChara::OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor*
 	}
 }
 
-//	Ç°¤Î¥»¥ó¥µ©`°æ
+//	ÅV”Å
 void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	if (m_pArduinoSerial != NULL)
-	{
-		m_pArduinoSerial->Close();
-		m_pArduinoSerial = NULL;
-	}
-
-	// ‰ñ“]—Ê‚Ì•Û‘¶—p”z—ñ‚Ì‰Šú‰»
-	prevRotator.Reset();
+	SensorManager::DisconnectToSensor();
 }
 
-//	Ç°¤Î¥»¥ó¥µ©`°æ
-FRotator APlayerChara::SensorToRotator()
-{
-	bool isRead = false;		// ƒf[ƒ^‚ğ“Ç‚İæ‚ê‚½‚©H
-	FString fStr;				// “Ç‚İæ‚èƒf[ƒ^Ši”[—p
-	int tryCnt = 0;				// “Ç‚İæ‚ë‚¤‚Æ‚µ‚½‰ñ”
-	const int tryCntMax = 500;	// Å‘å‚Ì“Ç‚İæ‚é‰ñ”
+//	ÅV”Å
+//FRotator APlayerChara::SensorToRotator()
+//{
+//	bool isRead = false;		// ƒf[ƒ^‚ğ“Ç‚İæ‚ê‚½‚©H
+//	FString fStr;				// “Ç‚İæ‚èƒf[ƒ^Ši”[—p
+//	int tryCnt = 0;				// “Ç‚İæ‚ë‚¤‚Æ‚µ‚½‰ñ”
+//	const int tryCntMax = 500;	// Å‘å‚Ì“Ç‚İæ‚é‰ñ”
+//
+//	// ƒVƒŠƒAƒ‹‚ÌƒIƒuƒWƒFƒNƒg‚ª‚ ‚ê‚Î
+//	if (m_pArduinoSerial != NULL)
+//	{
+//		// ƒf[ƒ^‚Ì“Ç‚İæ‚è
+//		// ƒf[ƒ^‚ª“Ç‚İæ‚ê‚é‚©AÅ‘å“Ç‚İæ‚è‰ñ”‚É‚È‚é‚Ü‚ÅŒJ‚è•Ô‚·
+//		do
+//		{
+//			m_pArduinoSerial->Println(FString(TEXT("s")));
+//
+//			fStr = m_pArduinoSerial->Readln(isRead);
+//			++tryCnt;
+//		} while (isRead == false && tryCnt < tryCntMax);
+//
+//		TArray<FString> splitTextArray;
+//		splitTextArray.Reset();
+//
+//		UE_LOG(LogTemp, VeryVerbose, TEXT("ASensorTest::SensorToRotator(): Try Read Count: %d / %d"), tryCnt, tryCntMax);
+//
+//		// “Ç‚İæ‚ê‚È‚©‚Á‚½‚çZeroRotator‚ğ•Ô‚µ‚ÄI—¹
+//		if (isRead == false)
+//		{
+//			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): No Data From Sensor. return ZeroRotator."));
+//			withSensor = false;
+//			return FRotator::ZeroRotator;
+//		}
+//		else
+//		{
+//			UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): Get Data From Sensor."));
+//		}
+//
+//		// ƒZƒ“ƒT[ƒf[ƒ^‚ğƒJƒ“ƒ}‹æØ‚è‚ÅsplitTextArray‚É“ü‚ê‚é
+//		fStr.ParseIntoArray(splitTextArray, TEXT(","));
+//
+//		// ‚»‚ê‚¼‚ê‚ğintŒ^‚É•ÏŠ·‚·‚é
+//		TArray<float> rotatorAxis;
+//		rotatorAxis.Reset();
+//
+//		for (int i = 0; i < splitTextArray.Num(); ++i)
+//		{
+//			rotatorAxis.Add(FCString::Atof(*splitTextArray[i]));
+//		}
+//
+//		// Roll(X), Pitch(Y), Yaw(Z)‚Ì—v‘fi3ŒÂ•ªj“Ç‚İæ‚ê‚Ä‚¢‚È‚¯‚ê‚ÎZeroRotator‚ğ•Ô‚·
+//		if (rotatorAxis.IsValidIndex(2) == false)
+//		{
+//			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): Failed Add TArray<float> elements. return ZeroRotator."));
+//			withSensor = false;
+//			return FRotator::ZeroRotator;
+//		}
+//
+//		UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): Rotator Roll:%f Pitch:%f Yaw:%f"), rotatorAxis[0], rotatorAxis[1], rotatorAxis[2]);
+//
+//		// FRotatorŒ^‚Ì•Ï”‚ğfloatŒ^‚ğg—p‚µ‚Ä‰Šú‰»
+//		FRotator rot(rotatorAxis[1], rotatorAxis[2], -rotatorAxis[0]);
+//
+//		return rot;
+//	}
+//	else
+//	{
+//		UE_LOG(LogTemp, Error, TEXT("ASensorTest::SensorToRotator(): ASensorTest::m_pArduinoSerial is NULL."));
+//		withSensor = false;
+//		return FRotator::ZeroRotator;
+//	}
+//}
 
-	// ƒVƒŠƒAƒ‹‚ÌƒIƒuƒWƒFƒNƒg‚ª‚ ‚ê‚Î
-	if (m_pArduinoSerial != NULL)
-	{
-		// ƒf[ƒ^‚Ì“Ç‚İæ‚è
-		// ƒf[ƒ^‚ª“Ç‚İæ‚ê‚é‚©AÅ‘å“Ç‚İæ‚è‰ñ”‚É‚È‚é‚Ü‚ÅŒJ‚è•Ô‚·
-		do
-		{
-			m_pArduinoSerial->Println(FString(TEXT("s")));
-
-			fStr = m_pArduinoSerial->Readln(isRead);
-			++tryCnt;
-		} while (isRead == false && tryCnt < tryCntMax);
-
-		TArray<FString> splitTextArray;
-		splitTextArray.Reset();
-
-		UE_LOG(LogTemp, VeryVerbose, TEXT("ASensorTest::SensorToRotator(): Try Read Count: %d / %d"), tryCnt, tryCntMax);
-
-		// “Ç‚İæ‚ê‚È‚©‚Á‚½‚çZeroRotator‚ğ•Ô‚µ‚ÄI—¹
-		if (isRead == false)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): No Data From Sensor. return ZeroRotator."));
-			withSensor = false;
-			return FRotator::ZeroRotator;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): Get Data From Sensor."));
-		}
-
-		// ƒZƒ“ƒT[ƒf[ƒ^‚ğƒJƒ“ƒ}‹æØ‚è‚ÅsplitTextArray‚É“ü‚ê‚é
-		fStr.ParseIntoArray(splitTextArray, TEXT(","));
-
-		// ‚»‚ê‚¼‚ê‚ğintŒ^‚É•ÏŠ·‚·‚é
-		TArray<float> rotatorAxis;
-		rotatorAxis.Reset();
-
-		for (int i = 0; i < splitTextArray.Num(); ++i)
-		{
-			rotatorAxis.Add(FCString::Atof(*splitTextArray[i]));
-		}
-
-		// Roll(X), Pitch(Y), Yaw(Z)‚Ì—v‘fi3ŒÂ•ªj“Ç‚İæ‚ê‚Ä‚¢‚È‚¯‚ê‚ÎZeroRotator‚ğ•Ô‚·
-		if (rotatorAxis.IsValidIndex(2) == false)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): Failed Add TArray<float> elements. return ZeroRotator."));
-			withSensor = false;
-			return FRotator::ZeroRotator;
-		}
-
-		UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): Rotator Roll:%f Pitch:%f Yaw:%f"), rotatorAxis[0], rotatorAxis[1], rotatorAxis[2]);
-
-		// FRotatorŒ^‚Ì•Ï”‚ğfloatŒ^‚ğg—p‚µ‚Ä‰Šú‰»
-		FRotator rot(rotatorAxis[1], rotatorAxis[2], -rotatorAxis[0]);
-
-		return rot;
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("ASensorTest::SensorToRotator(): ASensorTest::m_pArduinoSerial is NULL."));
-		withSensor = false;
-		return FRotator::ZeroRotator;
-	}
-}
-
-//	Ç°¤Î¥»¥ó¥µ©`°æ
+//	ÅV”Å
 void APlayerChara::UpdateSensor(float _deltaTime)
 {
-	//FRotator tempRot = SensorManager::GetSensorDataRotator();
-	//tempRoll = tempRot.Roll;
-	//tempPitch = tempRot.Pitch;
-	//tempYaw = tempRot.Yaw;
+	FRotator tempRot = SensorManager::GetSensorDataRotator();
 
-	//// ‰ÁZ
-	for (int i = 0; i < prevRotator.Num(); ++i)
+	if (tempRot == SENSOR_ERROR_ROTATOR)
 	{
-		tempRoll += prevRotator[i].Roll;
-		tempPitch += prevRotator[i].Pitch;
-		tempYaw += prevRotator[i].Yaw;
+		return;
 	}
+	tempRoll = tempRot.Roll;
+	tempPitch = tempRot.Pitch;
+	tempYaw = tempRot.Yaw;
 
-	// •½‹Ï’l‚ğZo
-	tempRoll /= prevRotator.Num();
-	tempPitch /= prevRotator.Num();
-	tempYaw /= prevRotator.Num();
+	////// ‰ÁZ
+	//for (int i = 0; i < prevRotator.Num(); ++i)
+	//{
+	//	tempRoll += prevRotator[i].Roll;
+	//	tempPitch += prevRotator[i].Pitch;
+	//	tempYaw += prevRotator[i].Yaw;
+	//}
+
+	//// •½‹Ï’l‚ğZo
+	//tempRoll /= prevRotator.Num();
+	//tempPitch /= prevRotator.Num();
+	//tempYaw /= prevRotator.Num();
 
 	//	guardEnergy‚ª0‚É‚È‚Á‚½‚çA‰¡‰ñ“]‚ÌŠp“x‚ğ‹­§‚É0‚É–ß‚é
 	if (!haveGuardEnergy)
@@ -815,39 +814,39 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 	{
 		tempYaw = 0.f;
 	}
+
 	FRotator rot(tempPitch, tempYaw, tempRoll);
 
-	float angle = 5.f;
-	if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
-	{
-		rot = prevDiffRot;
-	}
+	//float angle = 5.f;
+	//if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
+	//{
+	//	rot = prevDiffRot;
+	//}
 
 	SetActorRotation(rot);
 
-	// ƒŠƒXƒg‚ğXV
-	if (prevRotator.IsValidIndex(0) == true)
-	{
-		// ƒCƒ“ƒfƒbƒNƒX”Ô†0‚Ì—v‘f‚ğíœ
-		prevRotator.RemoveAt(0);
+	//// ƒŠƒXƒg‚ğXV
+	//if (prevRotator.IsValidIndex(0) == true)
+	//{
+	//	// ƒCƒ“ƒfƒbƒNƒX”Ô†0‚Ì—v‘f‚ğíœ
+	//	prevRotator.RemoveAt(0);
 
-		//FRotator rotTemp = SensorManager::GetSensorDataRotator();
-		FRotator rotTemp = SensorToRotator();
+	//	FRotator rotTemp = SensorToRotator();
 
-		// ƒZƒ“ƒT[‚©‚ç‚Ì’l‚ªŠ®‘S‚É0‚©”»•Ê
-		if (rotTemp == FRotator::ZeroRotator)
-		{
-			// Œ»İ‚Ì•½‹Ï’l‚ğ‘ã“ü
-			prevRotator.Add(rot);
-		}
-		else
-		{
-			// ƒZƒ“ƒT[‚©‚ç‚Ì’l‚ğ‘ã“ü
-			prevRotator.Add(rotTemp);
-		}
-	}
+	//	// ƒZƒ“ƒT[‚©‚ç‚Ì’l‚ªŠ®‘S‚É0‚©”»•Ê
+	//	if (rotTemp == FRotator::ZeroRotator)
+	//	{
+	//		// Œ»İ‚Ì•½‹Ï’l‚ğ‘ã“ü
+	//		prevRotator.Add(rot);
+	//	}
+	//	else
+	//	{
+	//		// ƒZƒ“ƒT[‚©‚ç‚Ì’l‚ğ‘ã“ü
+	//		prevRotator.Add(rotTemp);
+	//	}
+	//}
 
-	prevDiffRot = rot;
+	//prevDiffRot = rot;
 }
 
 //	====================================
