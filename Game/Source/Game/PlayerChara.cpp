@@ -231,7 +231,10 @@ void APlayerChara::Tick(float DeltaTime)
 	if (withSensor)
 	{
 		//	センサーの更新処理
-		UpdateSensor(DeltaTime);
+		if (!isDead && !isGoal && isStart)
+		{
+			UpdateSensor(DeltaTime);
+		}		
 	}
 
 	if (!isDead && !isGoal && isStart)
@@ -311,7 +314,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 	//	キャラクターのY軸移動
 	{
 		YRotation.Y = 0.f;
-		NewLocation.Y += 0.4f * tempRoll;
+		NewLocation.Y += 0.4f * -tempRoll;
 		SetActorLocation(NewLocation);
 	}
 
