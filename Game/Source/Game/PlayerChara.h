@@ -113,6 +113,8 @@ private:
 		int serialPort;
 	//----------------------------------------------------------------------------------
 
+		bool isButtonRelerse;
+
 	//	UPROPERTYにすることで、ブループリント上で変数の確認、編集などができる
 	//	「BlueprintReadOnly」に指定しているため、ブループリントで見ることだけ可能で、編集はできない
 	UPROPERTY(EditAnywhere, Category = "Jump")

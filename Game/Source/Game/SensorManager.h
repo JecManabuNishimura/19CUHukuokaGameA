@@ -105,7 +105,10 @@ public:
 	static FVector GetSensorAverage(int _qualityLoop = 100);
 
 	// センサーからの生のデータを取得
-	static FVector GetSensorDataRaw(int _tryNum = 500);
+	static FVector GetSensorDataRaw( FString* _strAdr = nullptr, int _tryNum = 500);
+
+	// センサーのボタンが押されているかを取得
+	static bool GetSensorButton(int _tryNum = 500);
 
 	// センサーのデータをFRotatorとして取得
 	static FRotator GetSensorDataRotator(int _tryNum = 500);

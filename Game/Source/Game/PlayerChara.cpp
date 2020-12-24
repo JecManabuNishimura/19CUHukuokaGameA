@@ -30,6 +30,7 @@ APlayerChara::APlayerChara()
 	: m_pArduinoSerial(NULL)
 	, withSensor(false)
 	, serialPort(4)
+	, isButtonRelerse(true)
 	, isOpen(false)
 	, startPosZ(0.f)
 	, nowPosZ(0.f)
@@ -139,7 +140,7 @@ void APlayerChara::BeginPlay()
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &APlayerChara::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &APlayerChara::OverlapEnds);;
 
-	if (withSensor)
+	if (/*withSensor*/true)
 	{
 		UCharacterMovementComponent* pCharMoveComp = GetCharacterMovement();
 		if (pCharMoveComp != NULL)
@@ -228,12 +229,25 @@ void APlayerChara::Tick(float DeltaTime)
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DeltaTime * 60.f));
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isGuarding ? TEXT("true") : TEXT("false"));
 
-	if (withSensor)
+	if (/*withSensor*/true)
 	{
 		//	センサーの更新処理
 		if (!isDead && !isGoal && isStart)
 		{
 			UpdateSensor(DeltaTime);
+
+			if (SensorManager::GetSensorButton())
+			{
+				if (isButtonRelerse == true)
+				{
+					ShotStart(1.0f);
+				}
+				isButtonRelerse = false;
+			}
+			else
+			{
+				isButtonRelerse = true;
+			}
 		}		
 	}
 

@@ -204,7 +204,7 @@ FVector SensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 }
 
 // センサーからの生のデータを取得
-FVector SensorManager::GetSensorDataRaw(int _tryNum/* = 500*/)
+FVector SensorManager::GetSensorDataRaw(FString* _strAdr/* = nullptr*/, int _tryNum/* = 500*/)
 {
 	bool isRead = false;		// データを読み取れたか
 	FString fStr = "";			// 読み取りデータ格納用
@@ -255,7 +255,7 @@ FVector SensorManager::GetSensorDataRaw(int _tryNum/* = 500*/)
 		TArray<float> sensorDataArray;
 		sensorDataArray.Reset();
 
-		for (int i = 0; i < splitTextArray.Num(); ++i)
+		for (int i = 0; i < splitTextArray.Num() && i < 3; ++i)
 		{
 			sensorDataArray.Add(FCString::Atof(*splitTextArray[i]));
 		}
@@ -265,6 +265,29 @@ FVector SensorManager::GetSensorDataRaw(int _tryNum/* = 500*/)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Failed Add TArray<float> elements. return SENSOR_ERROR_READ."));
 			return SENSOR_ERROR_READ;
+		}
+
+		// ボタンの状態を読み取りたい
+		if (_strAdr != nullptr)
+		{
+			// splitTextArrayの要素番号 3にアクセスできなければ OFFにする
+			if (splitTextArray.IsValidIndex(3) == false)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Failed Get ButtonCondition. Set to \"OFF\"."));
+				*_strAdr = "OFF";
+			}
+			// アクセスできた
+			else
+			{
+				if (splitTextArray[3] == "ON")
+				{
+					*_strAdr = "ON";
+				}
+				else
+				{
+					*_strAdr = "OFF";
+				}
+			}
 		}
 
 		UE_LOG(LogTemp, Verbose, TEXT("SensorData : %f  Y:%f  Z:%f"), sensorDataArray[0], sensorDataArray[1], sensorDataArray[2]);
@@ -280,10 +303,26 @@ FVector SensorManager::GetSensorDataRaw(int _tryNum/* = 500*/)
 	}
 }
 
+// センサーのボタンが押されているかを取得
+bool SensorManager::GetSensorButton(int _tryNum/* = 500*/)
+{
+	FString result;
+	GetSensorDataRaw(&result, _tryNum);
+
+	if (result == "ON")
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 // センサーのデータをFRotatorとして取得
 FRotator SensorManager::GetSensorDataRotator(int _tryNum/* = 500*/)
 {
-	FVector tempVector = GetSensorDataRaw(_tryNum);
+	FVector tempVector = GetSensorDataRaw(nullptr, _tryNum);
 
 	return FRotator(tempVector.Y, tempVector.Z, tempVector.X);
 }
