@@ -140,7 +140,7 @@ void APlayerChara::BeginPlay()
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &APlayerChara::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &APlayerChara::OverlapEnds);;
 
-	if (/*withSensor*/true)
+	if (withSensor)
 	{
 		UCharacterMovementComponent* pCharMoveComp = GetCharacterMovement();
 		if (pCharMoveComp != NULL)
@@ -229,7 +229,7 @@ void APlayerChara::Tick(float DeltaTime)
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DeltaTime * 60.f));
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isGuarding ? TEXT("true") : TEXT("false"));
 
-	if (/*withSensor*/true)
+	if (withSensor)
 	{
 		//	センサーの更新処理
 		if (!isDead && !isGoal && isStart)
