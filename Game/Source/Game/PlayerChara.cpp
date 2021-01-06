@@ -667,12 +667,6 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 
 	if (OtherActor->ActorHasTag("Goal"))
 	{
-		if (Player_Goal_Widget_Class != nullptr)
-		{
-			Player_Goal_Widget = CreateWidget(GetWorld(), Player_Goal_Widget_Class);
-			Player_Goal_Widget->AddToViewport();
-		}
-
 		isGoal = true;
 	}
 }
