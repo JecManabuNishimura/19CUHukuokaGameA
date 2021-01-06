@@ -5,6 +5,7 @@
 // 更新内容			：2020/10/02 作成　プレイヤーの各操作
 //					：2020/11/12 更新　渡邊龍音　センサーを自動的に検出するようになる
 //					：2020/11/16 変更　鍾家同　bulletActorをAPlayerBullet型に継承する
+//					：2021/01/06 変更　鍾家同　GoalWidgetの生成タイミングを変更(VR版のため)
 //----------------------------------------------------------
 
 // インクルード
@@ -667,6 +668,13 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 
 	if (OtherActor->ActorHasTag("Goal"))
 	{
+		// VR版には影響を及ぼさないため
+		/*if (Player_Goal_Widget_Class != nullptr)
+		{
+			Player_Goal_Widget = CreateWidget(GetWorld(), Player_Goal_Widget_Class);
+			Player_Goal_Widget->AddToViewport();
+		}*/
+
 		isGoal = true;
 	}
 }
