@@ -4,7 +4,7 @@
 
 #include "SensorManager.h"
 
-USerial* SensorManager::m_ArduinoSerial	 = NULL;
+USerial* SensorManager::m_ArduinoSerial = NULL;
 bool	 SensorManager::m_IsOpen = false;
 int		 SensorManager::m_SerialPort = -1;
 FVector	 SensorManager::m_Standard = FVector::ZeroVector;
@@ -98,7 +98,87 @@ void SensorManager::SetStandard(int _qualityLoop/* = 100*/)
 }
 
 // 最大値を設定する
-void SensorManager::SetMaxIncline(SensorElement _element, int _qualityLoop/* = 100*/)
+void SensorManager::SetMaxIncline(FString _element, int _getMaxLoop/* = 100*/, int _qualityLoop/* = 100*/)
+{
+	int elementNum = 0;
+
+	// 要素（_element）の変換
+	// X軸
+	if (_element == "x" || _element == "X")
+	{
+		elementNum = 0;
+	}
+	// Y軸
+	else if (_element == "y" || _element == "Y")
+	{
+		elementNum = 1;
+	}
+	// Z軸
+	else if (_element == "z" || _element == "Z")
+	{
+		elementNum = 2;
+	}
+	// 軸が正しくない
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("The first argument of SensorManager::SetMaxIncline is incorrect. Enter one of \"X\", \"Y\", \"Z\""));
+		return;
+	}
+
+	// センサーデータをfloat型で保持
+	float sensorArray[3] = {};
+
+	// 最大値
+	float maxArray[3] = {};
+
+	for (int loop = 0; loop < _getMaxLoop; ++loop)
+	{
+		// センサーデータを取得
+		FVector rowData = GetSensorDataRaw(nullptr, _qualityLoop);
+
+		// 配列に格納
+		sensorArray[0] = rowData.X;
+		sensorArray[1] = rowData.Y;
+		sensorArray[2] = rowData.Z;
+
+		// X, Y, Zそれぞれの最大値チェック
+		for (int i = 0; i < 3; ++i)
+		{
+			if (sensorArray[i] > maxArray[i])
+			{
+				maxArray[i] = sensorArray[i];
+			}
+		}
+	}
+
+	// m_MaxIncline操作用ポインタ配列
+	float* maxInclineAdrArray[3] = {};
+
+	// m_MaxInclineのアドレスを追加
+	maxInclineAdrArray[0] = &(m_MaxIncline.X);
+	maxInclineAdrArray[1] = &(m_MaxIncline.Y);
+	maxInclineAdrArray[2] = &(m_MaxIncline.Z);
+
+	// m_MaxInclineの指定した要素に、取得したセンサーデータを代入
+	if (maxInclineAdrArray[elementNum] != nullptr)
+	{
+		if (maxArray[elementNum] != SENSOR_ERROR_READ.X)
+		{
+			*maxInclineAdrArray[elementNum] = maxArray[elementNum];
+		}
+		else
+		{
+			*maxInclineAdrArray[elementNum] = 0.0f;
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Could not get m_MaxIncline address."));
+	}
+}
+
+// デッドゾーンを設定する
+void SensorManager::SetDeadZone(int _qualityLoop/* = 100*/)
 {
 	// センサーデータをfloat型で保持
 	float sensorArray[3] = {};
@@ -111,29 +191,24 @@ void SensorManager::SetMaxIncline(SensorElement _element, int _qualityLoop/* = 1
 	sensorArray[1] = rowData.Y;
 	sensorArray[2] = rowData.Z;
 
-	// m_MaxIncline操作用ポインタ配列
-	float* maxInclineAdrArray[3] = {};
+	// m_Deadzone操作用ポインタ配列
+	float* deadZoneAdrArray[3] = {};
 
-	// m_MaxInclineのアドレスを追加
-	maxInclineAdrArray[0] = &(m_MaxIncline.X);
-	maxInclineAdrArray[1] = &(m_MaxIncline.Y);
-	maxInclineAdrArray[2] = &(m_MaxIncline.Z);
+	// m_Deadzoneのアドレスを追加
+	deadZoneAdrArray[0] = &(m_Deadzone.X);
+	deadZoneAdrArray[1] = &(m_Deadzone.Y);
+	deadZoneAdrArray[2] = &(m_Deadzone.Z);
 
-	// m_MaxInclineの指定した要素に、取得したセンサーデータを代入
-	if (maxInclineAdrArray[_element] != nullptr)
+	for (int i = 0; i < 3; ++i)
 	{
-		if (sensorArray[_element] != SENSOR_ERROR_READ.X)
+		if (sensorArray[i] != SENSOR_ERROR_READ.X)
 		{
-			*maxInclineAdrArray[_element] = sensorArray[_element];
+			*deadZoneAdrArray[i] = sensorArray[i];
 		}
 		else
 		{
-			*maxInclineAdrArray[_element] = 0.0f;
+			*deadZoneAdrArray[i] = 0.0f;
 		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Could not get m_MaxIncline address."));
 	}
 }
 
@@ -144,19 +219,19 @@ void SensorManager::ResetSensorProperty(bool _isResetStandard/* = true*/, bool _
 	if (_isResetStandard)
 	{
 		UE_LOG(LogTemp, Verbose, TEXT("SensorManager::m_Standard is Reset."))
-		m_Standard = FVector::ZeroVector;
+			m_Standard = FVector::ZeroVector;
 	}
 	// 最大値の初期化
 	if (_isResetMaxIncline)
 	{
 		UE_LOG(LogTemp, Verbose, TEXT("SensorManager::m_MaxIncline is Reset."))
-		m_MaxIncline = FVector::ZeroVector;
+			m_MaxIncline = FVector::ZeroVector;
 	}
 	// デッドゾーンの初期化
 	if (_isResetDeadZone)
 	{
 		UE_LOG(LogTemp, Verbose, TEXT("SensorManager::m_Deadzone is Reset."))
-		m_Deadzone = FVector::ZeroVector;
+			m_Deadzone = FVector::ZeroVector;
 	}
 }
 
@@ -178,21 +253,22 @@ FVector SensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 		}
 	}
 
-	// 合計格納用FVector
-	FVector sumVector = FVector::ZeroVector;
-
-	// 加算
-	for (int i = 0; i < sensorDataArray.Num(); ++i)
-	{
-		sumVector.X += sensorDataArray[i].X;
-		sumVector.Y += sensorDataArray[i].Y;
-		sumVector.Z += sensorDataArray[i].Z;
-	}
-
 	// 要素があれば平均値を返す
 	if (sensorDataArray.Num() > 0)
 	{
+		// 合計格納用FVector
+		FVector sumVector = FVector::ZeroVector;
+
+		// 加算
+		for (int i = 0; i < sensorDataArray.Num(); ++i)
+		{
+			sumVector.X += sensorDataArray[i].X;
+			sumVector.Y += sensorDataArray[i].Y;
+			sumVector.Z += sensorDataArray[i].Z;
+		}
+
 		FVector result = sumVector / (float)sensorDataArray.Num();
+
 		UE_LOG(LogTemp, Verbose, TEXT("return Average SensorData. X = %f Y = %f, Z = %f"), result.X, result.Y, result.Z);
 		return result;
 	}
@@ -201,6 +277,60 @@ FVector SensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 		UE_LOG(LogTemp, Warning, TEXT("Could not get Average SensorData. return SENSOR_ERROR_READ (%f, %f, %f)."), SENSOR_ERROR_READ.X, SENSOR_ERROR_READ.Y, SENSOR_ERROR_READ.Z);
 		return SENSOR_ERROR_READ;
 	}
+}
+
+// センサーの最大値に対する傾きの割合を取得する
+FVector SensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*/)
+{
+	FVector sensorData = GetSensorDataRaw(nullptr, _tryNum);
+
+	FVector resultData = SENSOR_ERROR_READ;
+
+	// 最大傾きが設定されている
+	if (GetMaxIncline() != FVector::ZeroVector)
+	{
+		// 最大値を分割したときの値
+		FVector maxInclineRatio = GetMaxIncline() / _divNum;
+
+		// センサーとの値を比較する値
+		FVector comparison = maxInclineRatio;
+
+		// 値の代入回数
+		int substitutionNum = 0;
+
+		for (int i = 1; (substitutionNum < 3) && (i < _divNum); ++i)
+		{
+			// X軸の比較
+			if (sensorData.X <= comparison.X && resultData.X == SENSOR_ERROR_READ.X)
+			{
+				resultData.X = (float)i / (float)_divNum;
+				substitutionNum++;
+			}
+
+			// Y軸の比較
+			if (sensorData.Y <= comparison.Y && resultData.Y == SENSOR_ERROR_READ.Y)
+			{
+				resultData.Y = (float)i / (float)_divNum;
+				substitutionNum++;
+			}
+
+			// Z軸の比較
+			if (sensorData.Z <= comparison.Z && resultData.Z == SENSOR_ERROR_READ.Z)
+			{
+				resultData.Z = (float)i / (float)_divNum;
+				substitutionNum++;
+			}
+
+			comparison += maxInclineRatio;
+		}
+	}
+	// 設定されていない
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Max incline value is may not set. Must be set by calling a \"SensorManager::SetMaxIncline()\" Function."));
+	}
+
+	return resultData;
 }
 
 // センサーからの生のデータを取得
