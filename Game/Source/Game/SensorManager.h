@@ -13,12 +13,6 @@
 class GAME_API SensorManager
 {
 public:
-	enum SensorElement
-	{
-		X = 0,
-		Y = 1,
-		Z = 2,
-	};
 
 	// privateクラス変数
 private:
@@ -93,7 +87,7 @@ public:
 	static void SetStandard(int _qualityLoop = 100);
 
 	// 最大値を設定する
-	static void SetMaxIncline(SensorElement _element, int _qualityLoop = 100);
+	static void SetMaxIncline(FString _element, int _getMaxLoop = 100, int _qualityLoop = 100);
 
 	// デッドゾーンを設定する
 	static void SetDeadZone(int _qualityLoop = 100);
@@ -104,8 +98,14 @@ public:
 	// センサーの平均値を取得する
 	static FVector GetSensorAverage(int _qualityLoop = 100);
 
+	// センサーの最大値に対する傾きの割合を取得する
+	static FVector GetSensorRatio(int _divNum = 5, int _tryNum = 500);
+
 	// センサーからの生のデータを取得
-	static FVector GetSensorDataRaw(int _tryNum = 500);
+	static FVector GetSensorDataRaw(FString* _strAdr = nullptr, int _tryNum = 500);
+
+	// センサーのボタンが押されているかを取得
+	static bool GetSensorButton(int _tryNum = 500);
 
 	// センサーのデータをFRotatorとして取得
 	static FRotator GetSensorDataRotator(int _tryNum = 500);
