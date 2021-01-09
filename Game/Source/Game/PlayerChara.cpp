@@ -599,17 +599,24 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		canJump = true;
 	}
 
-	if (OtherActor->ActorHasTag("Fence_Film") && canBeDamaged && !isDashing && !isGuarding)
+	if (OtherActor->ActorHasTag("Fence_Film") && canBeDamaged && !isDashing && !isDashing)
 	{
-		if (Player_Damage_Widget_Class != nullptr)
+		if (!isGuarding)
 		{
-			Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
-			Player_Damage_Widget->AddToViewport();
-		}
+			if (Player_Damage_Widget_Class != nullptr)
+			{
+				Player_Damage_Widget = CreateWidget(GetWorld(), Player_Damage_Widget_Class);
+				Player_Damage_Widget->AddToViewport();
+			}
 
-		playerSpeed *= 0.5f;
-		canBeDamaged = false;
-		HP -= Damage;
+			playerSpeed *= 0.5f;
+			canBeDamaged = false;
+			HP -= Damage;
+		}
+		else
+		{
+			GuardEnergy -= guardBulletUIDownSpeed;
+		}
 	}
 
 	if ((OtherActor->ActorHasTag("EnemyBullet") || OtherActor->ActorHasTag("EnemyMissile") || OtherActor->ActorHasTag("ShotEnemy") || OtherActor->ActorHasTag("EnergyEnemy")) && canBeDamaged && !isDashing && !isDashLine)
