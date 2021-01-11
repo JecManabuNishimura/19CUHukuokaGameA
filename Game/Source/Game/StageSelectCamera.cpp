@@ -95,7 +95,6 @@ void AStageSelectCamera::Tick(float DeltaTime)
 	Timer(DeltaTime);
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isHit ? TEXT("TRUE") : TEXT("FALSE"));
 
-
 }
 
 // y“ü—ÍƒoƒCƒ“ƒhz
@@ -144,7 +143,7 @@ void AStageSelectCamera::SelectObject()
 	//bool isHit;
 	//FCollisionQueryParams CollisionParams;
 	//CollisionParams.AddIgnoredActor(this);
-	if (!isReturning && !isStageSelectAttached)
+	if (!isReturning && !isStageSelectAttached && !isStartAttached)
 		isHit = GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_WorldStatic/*, CollisionParams*/);
 	else isHit = false;
 	if (isHit) {
@@ -157,7 +156,7 @@ void AStageSelectCamera::SelectObject()
 		}
 		else if (OutHit.GetActor()->ActorHasTag("Start")) {
 			canDisplayUI = true;
-			isStageSelectAttached = true;
+			isStartAttached = true;
 		}
 	}
 	//UE_LOG(LogTemp, Warning, TEXT("isHit:%s"), isHit ? TEXT("TRUE") : TEXT("FALSE"));
@@ -187,7 +186,7 @@ void AStageSelectCamera::AttachObject()
 		}
 
 	}
-	else if (canDisplayUI) {
+	if (canDisplayUI) {
 		isStartAttached = true;
 	}
 }
