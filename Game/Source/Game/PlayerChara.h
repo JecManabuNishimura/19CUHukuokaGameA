@@ -273,11 +273,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float GuardEnergyMax;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float DashEnergy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DashEnergyMax;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float AddDashEnergy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DamageFrame;
@@ -293,12 +296,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int deadCount;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		int nowPage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		int maxPage;
 
 	//	=============================================================
 	//	ÉvÉåÉCÉÑÅ[ÇÃèÛë‘

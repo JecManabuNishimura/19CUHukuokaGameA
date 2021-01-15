@@ -85,6 +85,7 @@ APlayerChara::APlayerChara()
 	, GuardEnergyMax(100.f)
 	, DashEnergy(100.f)
 	, DashEnergyMax(100.f)
+	, AddDashEnergy(10.f)
 	, DashEffectLocationOffset(400.f, 0.f, 0.f)
 	, DashEffectRotationOffset(0.f, 0.f, 0.f)
 	, guardBulletUIDownSpeed(10.f)
@@ -99,8 +100,6 @@ APlayerChara::APlayerChara()
 	, EnemyScore(2000.f)
 	, PlayerScore(0.f)
 	, tempPlayerScore(0.f)
-	, nowPage(1)
-	, maxPage(0)
 	, Damage(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
@@ -410,7 +409,7 @@ void APlayerChara::UpdateGuard()
 		GuardEnergy -= Guard_UIDownSpeed;
 	}
 	else
-	{
+	{ 
 		if (GuardEnergy <= GuardEnergyMax)
 		{
 			GuardEnergy += Guard_UIUpSpeed;
@@ -440,16 +439,9 @@ void APlayerChara::UpdateAccelerate()
 	{
 		DashEnergy -= Dash_UIDownSpeed;
 	}
-	else
+	else if (DashEnergy >= DashEnergyMax)
 	{
-		if (DashEnergy <= DashEnergyMax)
-		{
-			DashEnergy += Dash_UIUpSpeed;
-		}
-		else
-		{
-			haveDashEnergy = true;
-		}
+		haveDashEnergy = true;
 	}
 }
 
@@ -590,6 +582,8 @@ void APlayerChara::GetCoin()
 	PlayerScore += CoinScore;
 
 	CoinCount += 1;
+
+	DashEnergy += AddDashEnergy;
 }
 
 void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
