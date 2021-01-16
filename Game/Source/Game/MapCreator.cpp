@@ -6,15 +6,14 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/DataTable.h"
+#include <time.h>
 
 AMapCreator::AMapCreator()
 	: m_VisibleMapWire(false)
 	, m_IsLoadMapData(false)
-	, m_IsContinuous(false)
-	, m_IsFence(false)
 	, m_IsGeneratePlayer(false)
-	, m_ColumnStart(0)
-	, m_FenceStart(0)
+	, m_MapRowNumber(0)
+	, m_StrMapLength(0)
 	, m_NotGroundGenerateStr("NL")
 	, m_XAxis_Offset(2500.0f)
 	, m_YAxis_Offset(500.0f)
@@ -31,23 +30,19 @@ AMapCreator::AMapCreator()
 	m_SampleGround->SetupAttachment(RootComponent);
 
 	// 文字列配列の初期化
-	strArrayTemp.Reset();
+	m_StrMapArray.Reset();
 
-	// 連続配置用の配列の初期化
-	m_ColumnStartVertArray.Reset();
-	m_RowStartArray.Reset();
-	m_ColumnStartVertFenceArray.Reset();
-	m_RowStartFenceArray.Reset();
+	// 生成するActorの情報を保存
+	m_MapActorCreateData.Reset();
+
+	// 縦方向に生成するものの情報リストを初期化
+	m_VerticalFenceData.Reset();
+	m_VerticalContinuousData.Reset();
 
 	m_MapActorGround.geterateType = MapPlacementPattern::SettingLock;
 
 	// プレイヤーActorの設定
 	m_PlayerActor.geterateType = MapPlacementPattern::SettingLock;
-
-	// マップActor一時保存変数を初期化
-	m_ContinuousActorTemp = MapActorStructCppReset();
-	m_ContinuousVertActorTempArray.Reset();
-	m_FenceActorTempArray.Reset();
 }
 
 void AMapCreator::OnConstruction(const FTransform& Transform)
@@ -66,9 +61,6 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 			m_MapActorArray[i].enemyMoveType = EEnemyMoveType::None;
 		}
 	}
-
-	// 行番号
-	int rowIndex = 0;
 
 	// Actorのトランスフォームを固定
 	// 固定するLocation
@@ -110,302 +102,7 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 	// メッシュ生成を行うかどうか
 	if (m_VisibleMapWire)
 	{
-		// インスタンスメッシュがある
-		if (m_SampleGround != nullptr)
-		{
-			// 床のActorが設定されていれば
-			if (m_MapActorGround.actor != nullptr)
-			{
-				// C++で作成されたDefaultSubObjectにStaticMeshComponentがついていれば
-				m_MapActorGround.actorStaticMesh = Cast<UStaticMeshComponent>(m_MapActorGround.actor.GetDefaultObject()->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-
-				// スタティックメッシュを取得できていれば
-				if (m_MapActorGround.actorStaticMesh != nullptr)
-				{
-					// インスタンスメッシュにスタティックメッシュとマテリアルを設定
-					m_SampleGround->SetStaticMesh(m_MapActorGround.actorStaticMesh->GetStaticMesh());
-					m_SampleGround->SetMaterial(0, m_MapActorGround.actorStaticMesh->GetMaterial(0));
-				}
-			}
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("MapCreator::m_SampleGround is null."));
-		}
-
-		// 他のActorのメッシュをインスタンスメッシュに設定する
-		for (int i = 0; i < m_MapActorArray.Num(); ++i)
-		{
-			// インスタンスメッシュコンポーネントの設定
-			m_SampleMapObject.Add(NewObject<UInstancedStaticMeshComponent>(this));
-			m_SampleMapObject[m_SampleMapObject.Num() - 1]->RegisterComponent();
-			m_SampleMapObject[m_SampleMapObject.Num() - 1]->AttachToComponent(RootComponent, { EAttachmentRule::SnapToTarget, true });
-
-			// インスタンスメッシュコンポーネントが設定できていれば
-			if (m_SampleMapObject[i] != nullptr)
-			{
-				// Actorが設定されていれば
-				if (m_MapActorArray[i].actor != nullptr)
-				{
-					// C++で作成されたDefaultSubObjectにStaticMeshComponentがついていれば
-					m_MapActorArray[i].actorStaticMesh = Cast<UStaticMeshComponent>(m_MapActorArray[i].actor.GetDefaultObject()->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-
-					// スタティックメッシュを取得できていれば
-					if (m_MapActorArray[i].actorStaticMesh != nullptr)
-					{
-						// インスタンスメッシュにスタティックメッシュとマテリアルを設定
-						m_SampleMapObject[i]->SetStaticMesh(m_MapActorArray[i].actorStaticMesh->GetStaticMesh());
-						m_SampleMapObject[i]->SetMaterial(0, m_MapActorArray[i].actorStaticMesh->GetMaterial(0));
-					}
-				}
-			}
-		}
-
-		// m_IsLoadMapDataがfalseになるまでデータの読み込み
-		do
-		{
-			SetStrArrayMapData(strArrayTemp, rowIndex, m_IsLoadMapData);
-
-			//	マップに配置する床が設定されていない
-			if (m_MapActorGround.actor == nullptr)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("MapCreator::Need set m_MapActorGround."));
-			}
-			else
-			{
-				// 床の位置を算出
-				FVector groundPos(rowIndex * m_XAxis_Offset, (float)strArrayTemp.Num() / 2.0f, m_MapActorGround.location_Z);
-				FTransform groundTransform(m_MapActorGround.rotation, groundPos, m_MapActorGround.scale);
-
-				// インスタンスメッシュが存在している
-				if (m_SampleGround != nullptr)
-				{
-					m_SampleGround->AddInstance(groundTransform);
-				}
-				else
-				{
-					UE_LOG(LogTemp, Warning, TEXT("MapCreator::Need set m_SampleGround."));
-				}
-			}
-
-			// 文字配列を一列ずつ見ていく
-			for (int columnIndex = 0; columnIndex < strArrayTemp.Num(); ++columnIndex)
-			{
-				// 他のActorの生成
-				for (int mapActorIndex = 0; mapActorIndex < m_MapActorArray.Num(); ++mapActorIndex)
-				{
-					// 文字配列の要素とm_MapActorArrayに設定した文字が一致していたら
-					if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateChar)
-					{
-						/*
-						// 横方向に連続配置中で、連続配置が終わったかチェック
-						if (m_IsContinuous == true && m_ContinuousActorTemp.actor != m_MapActorArray[mapActorIndex].actor)
-						{
-							m_IsContinuous = false;
-
-							//SpawnContinuousActor(rowIndex, m_ColumnStart, columnIndex);
-						}
-
-						// 縦方向の連続配置チェック
-						if (m_ColumnStartVertArray.Num() > 0)
-						{
-							// 縦方向に連続配置中のActor分チェックする
-							for (int j = 0; j < m_ColumnStartVertArray.Num(); ++j)
-							{
-								// 縦方向に連続配置中で、連続配置が終わったかチェック
-								if (m_ColumnStartVertArray[j] == columnIndex && m_ContinuousVertActorTempArray[j].actor != m_MapActorArray[mapActorIndex].actor)
-								{
-									m_ContinuousVertActorTempArray[j].scale.Y = ContinuousScale(m_ColumnStartVertArray[j], columnIndex, m_ContinuousVertActorTempArray[j].scale.Y);
-									//SpawnMapActor(m_ContinuousVertActorTempArray[j], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
-
-									// 要素の消去
-									// 保存していたActorの削除
-									m_ContinuousVertActorTempArray.RemoveAt(j);
-									// 列の削除
-									m_ColumnStartVertArray.RemoveAt(j);
-									// 行の削除
-									m_RowStartArray.RemoveAt(j);
-								}
-							}
-						}
-						*/
-
-						// 生成ルールによって分岐
-						switch (m_MapActorArray[mapActorIndex].geterateType)
-						{
-							// 単体で配置する
-						case MapPlacementPattern::Single:
-
-							// 一つだけ生成する
-							m_SampleMapObject[mapActorIndex]->AddInstance(
-								FTransform(m_MapActorArray[mapActorIndex].rotation,
-									FVector(LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()), m_MapActorArray[mapActorIndex].location_Z),
-									m_MapActorArray[mapActorIndex].scale));
-							break;
-
-							/*
-							// 横方向に連続配置で一つのActorになる
-						case MapPlacementPattern::Continuous:
-
-							// 横の連続配置の開始
-							if (m_IsContinuous == false)
-							{
-								m_IsContinuous = true;
-
-								// 連続配置を開始したActorの保存
-								m_ContinuousActorTemp = m_MapActorArray[mapActorIndex];
-
-								// 位置の保存
-								m_ColumnStart = columnIndex;
-							}
-							break;
-
-							// 縦方向に連続配置で一つのActorになる
-						case MapPlacementPattern::V_Continuous:
-
-							// 連続配置を開始したActorの保存
-							m_ContinuousVertActorTempArray.Add(m_MapActorArray[mapActorIndex]);
-
-							// 位置の保存
-							// 列
-							m_ColumnStartVertArray.Add(columnIndex);
-
-							// 行
-							m_RowStartArray.Add(rowIndex);
-
-							// 要素が2つ以上ある場合
-							if (m_ColumnStartVertArray.Num() >= 2)
-							{
-								// 一番新しく追加した要素が同じ列の場合
-								if (m_ColumnStartVertArray[m_ColumnStartVertArray.Num() - 1] == columnIndex)
-								{
-									for (int i = 0; i < m_ContinuousVertActorTempArray.Num() - 2; ++i)
-									{
-										// 追加したActorが同じActorであれば破棄
-										if (m_ContinuousVertActorTempArray[m_ContinuousVertActorTempArray.Num() - 1].actor == m_ContinuousVertActorTempArray[i].actor)
-										{
-											// 連続配置を開始したActorの保存
-											m_ContinuousVertActorTempArray.RemoveAt(m_ContinuousVertActorTempArray.Num() - 1);
-
-											// 位置の保存
-											// 列
-											m_ColumnStartVertArray.RemoveAt(m_ColumnStartVertArray.Num() - 1);
-
-											// 行
-											m_RowStartArray.RemoveAt(m_RowStartArray.Num() - 1);
-
-											break;
-										}
-									}
-								}
-							}
-							break;
-
-						default:
-							break;
-						}
-					}
-					// 文字配列の要素と連続配置するm_MapActorArrayに設定したStartの文字が一致していたら
-					else if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateCharStart)
-					{
-						// 生成ルールによって分岐
-						switch (m_MapActorArray[mapActorIndex].geterateType)
-						{
-							// 始点と終点を指定して一つのActorを生成する（横方向）
-						case MapPlacementPattern::Fence:
-
-							// フェンス配置の開始
-							if (m_IsFence == false)
-							{
-								m_IsFence = true;
-
-								// フェンス生成開始の列を保存
-								m_FenceStart = columnIndex;
-							}
-							break;
-
-							// 始点と終点を指定して一つのActorを生成する（縦方向）
-						case MapPlacementPattern::V_Fence:
-
-							// フェンス配置の開始地点の情報を保存
-
-							// 生成Actorの保存
-							m_FenceActorTempArray.Add(m_MapActorArray[mapActorIndex]);
-
-							// 行の保存
-							m_RowStartFenceArray.Add(rowIndex);
-							// 列の保存
-							m_ColumnStartVertFenceArray.Add(columnIndex);
-
-							break;
-
-						default:
-							break;
-						}
-					}
-					// 文字配列の要素と連続配置するm_MapActorArrayに設定したEndの文字が一致していたら
-					else if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateCharEnd)
-					{
-						// 生成ルールによって分岐
-						switch (m_MapActorArray[mapActorIndex].geterateType)
-						{
-							// 始点と終点を指定して一つのActorを生成する（横方向）
-						case MapPlacementPattern::Fence:
-
-							// フェンス生成
-							// フェンス生成が開始されていれば
-							if (m_IsFence == true)
-							{
-								m_IsFence = false;
-
-								SpawnFenceActor(m_MapActorArray[mapActorIndex], rowIndex, m_FenceStart, columnIndex);
-							}
-							break;
-
-							// 始点と終点を指定して一つのActorを生成する（縦方向）
-						case MapPlacementPattern::V_Fence:
-
-							// フェンス生成
-							// 生成を開始したフェンスがあれば
-							if (m_FenceActorTempArray.Num() > 0)
-							{
-								// 列要素分検索
-								for (int columnCheck = 0; columnCheck < m_ColumnStartVertFenceArray.Num(); ++columnCheck)
-								{
-									// 列が一致したら
-									if (m_ColumnStartVertFenceArray[columnCheck] == columnIndex)
-									{
-										// Actorも一致していれば
-										if (m_FenceActorTempArray[columnCheck].actor == m_MapActorArray[mapActorIndex].actor)
-										{
-											// Yスケールを設定
-											m_FenceActorTempArray[columnCheck].scale.Y = (rowIndex - m_RowStartFenceArray[columnCheck]) * m_FenceActorTempArray[columnCheck].scale.Y;
-
-											// 生成
-											SpawnMapActor(m_FenceActorTempArray[columnCheck], LocationX((rowIndex + m_RowStartFenceArray[columnCheck]) / 2.0f), LocationY(m_ColumnStartVertFenceArray[columnCheck], strArrayTemp.Num()));
-
-											// 要素の削除
-											m_FenceActorTempArray.RemoveAt(columnCheck);
-											m_ColumnStartVertFenceArray.RemoveAt(columnCheck);
-											m_RowStartFenceArray.RemoveAt(columnCheck);
-										}
-									}
-								}
-							}
-							break;
-							*/
-						default:
-							break;
-						}
-					}
-				}
-			}
-
-			// 次の行を読み込む
-			strArrayTemp.Reset();
-			++rowIndex;
-
-		} while (m_IsLoadMapData);
+		SettingMap();
 	}
 }
 
@@ -419,449 +116,14 @@ void AMapCreator::BeginPlay()
 		m_SampleGround->ClearInstances();
 	}
 
-	// 変数宣言
-	bool isFenceMake = false;
-	int rowIndex = 0;
+	SettingMap();
 
-	// 文字配列初期化
-	strArrayTemp.Reset();
-
-	// CSVファイル読み込み
-	do
-	{
-		// Loading
-		UE_LOG(LogTemp, Verbose, TEXT("Map Loading Now..."));
-
-		// マップデータを読み込む
-		SetStrArrayMapData(strArrayTemp, rowIndex, m_IsLoadMapData);
-
-		// マップデータがなければおわり
-		if (m_IsLoadMapData == false)
-		{
-			UE_LOG(LogTemp, Verbose, TEXT("Map Loading Finished."));
-			// 縦方向の連続配置チェック
-			if (m_ColumnStartVertArray.Num() > 0)
-			{
-				// 文字列配列を一つずつ読みこむ
-				FMapStructCpp mapStructTemp;
-				for (int columnIndex = 0; columnIndex < mapStructTemp.indexNum; ++columnIndex)
-				{
-					// 設定したm_MapActorArrayの要素数分、検索を行う
-					for (int i = 0; i < m_MapActorArray.Num(); ++i)
-					{
-						// 縦方向に連続配置中のActor分チェックする
-						for (int j = 0; j < m_ColumnStartVertArray.Num(); ++j)
-						{
-							// 列が一致するか
-							if (m_ColumnStartVertArray[j] == columnIndex)
-							{
-								m_ContinuousVertActorTempArray[j].scale.X = (rowIndex - m_RowStartArray[j]) * m_ContinuousVertActorTempArray[j].scale.X;
-
-								SpawnMapActor(m_ContinuousVertActorTempArray[j], LocationX((rowIndex + m_RowStartArray[j]) / 2.0f), LocationY(m_ColumnStartVertArray[j], mapStructTemp.indexNum));
-
-								// 要素の消去
-								// 保存していたActorの削除
-								m_ContinuousVertActorTempArray.RemoveAt(j);
-								// 列の削除
-								m_ColumnStartVertArray.RemoveAt(j);
-								// 行の削除
-								m_RowStartArray.RemoveAt(j);
-							}
-						}
-					}
-				}
-			}
-
-			this->Destroy();
-			return;
-		}
-
-
-		// 文字列配列を一つずつ読みこむ
-		for (int columnIndex = 0; columnIndex < strArrayTemp.Num(); ++columnIndex)
-		{
-			// 行の最初の列であれば
-			if (columnIndex == 0)
-			{
-				// 一番最初の文字がNL（地面を生成しない場合）でなければ
-				if (strArrayTemp[0] != m_NotGroundGenerateStr)
-				{
-					// 地面生成
-					if (m_MapActorGround.actor != nullptr)
-					{
-						SpawnMapActor(m_MapActorGround, LocationX(rowIndex), 0.0f);
-					}
-					else
-					{
-						UE_LOG(LogTemp, Error, TEXT("m_MapActorGround.actor is nullptr!"))
-					}
-				}
-				else
-				{
-					break;
-				}
-			}
-
-			// 文字なしの場合
-			if (strArrayTemp[columnIndex] == "")
-			{
-				// 横に連続配置中だったかチェック
-				if (m_IsContinuous == true)
-				{
-					m_IsContinuous = false;
-
-					SpawnContinuousActor(rowIndex, m_ColumnStart, columnIndex);
-				}
-			}
-			// プレイヤー生成の場合
-			else if (strArrayTemp[columnIndex] == m_PlayerGenerateStr)
-			{
-				// プレイヤーを生成していなければ
-				if (m_IsGeneratePlayer == false)
-				{
-					// プレイヤーを生成した
-					m_IsGeneratePlayer = true;
-
-					// プレイヤーの生成
-					if (m_PlayerActor.actor != nullptr)
-					{
-						SpawnMapActor(m_PlayerActor, LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
-					}
-					else
-					{
-						UE_LOG(LogTemp, Error, TEXT("PlayerChara is nullptr!"));
-					}
-				}
-				else
-				{
-					UE_LOG(LogTemp, Warning, TEXT("PlayerChara was generated!"));
-				}
-			}
-			// 上記以外の文字の場合
-			else
-			{
-				// マップにActorを生成する
-				// 設定したm_MapActorArrayの要素数分、検索を行う
-				for (int mapActorIndex = 0; mapActorIndex < m_MapActorArray.Num(); ++mapActorIndex)
-				{
-					// 文字配列の要素とm_MapActorArrayに設定した文字が一致していたら
-					if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateChar)
-					{
-						// 横方向に連続配置中で、連続配置が終わったかチェック
-						if (m_IsContinuous == true && m_ContinuousActorTemp.actor != m_MapActorArray[mapActorIndex].actor)
-						{
-							m_IsContinuous = false;
-
-							SpawnContinuousActor(rowIndex, m_ColumnStart, columnIndex);
-						}
-
-						// 縦方向の連続配置チェック
-						if (m_ColumnStartVertArray.Num() > 0)
-						{
-							// 縦方向に連続配置中のActor分チェックする
-							for (int j = 0; j < m_ColumnStartVertArray.Num(); ++j)
-							{
-								// 縦方向に連続配置中で、連続配置が終わったかチェック
-								if (m_ColumnStartVertArray[j] == columnIndex && m_ContinuousVertActorTempArray[j].actor != m_MapActorArray[mapActorIndex].actor)
-								{
-									m_ContinuousVertActorTempArray[j].scale.Y = ContinuousScale(m_ColumnStartVertArray[j], columnIndex, m_ContinuousVertActorTempArray[j].scale.Y);
-									SpawnMapActor(m_ContinuousVertActorTempArray[j], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
-
-									// 要素の消去
-									// 保存していたActorの削除
-									m_ContinuousVertActorTempArray.RemoveAt(j);
-									// 列の削除
-									m_ColumnStartVertArray.RemoveAt(j);
-									// 行の削除
-									m_RowStartArray.RemoveAt(j);
-								}
-							}
-						}
-
-						// 生成ルールによって分岐
-						switch (m_MapActorArray[mapActorIndex].geterateType)
-						{
-							// 単体で配置する
-						case MapPlacementPattern::Single:
-
-							// 敵かどうか
-							if (m_MapActorArray[mapActorIndex].isEnemy == true)
-							{
-								// 敵を生成する
-								AEnemyChara* enemy = Cast<AEnemyChara>(SpawnMapActor(m_MapActorArray[mapActorIndex], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num())));
-
-								if (enemy != nullptr)
-								{
-									enemy->SetEnemyMoveType(m_MapActorArray[mapActorIndex].enemyMoveType);
-								}
-								else
-								{
-									UE_LOG(LogTemp, Warning, TEXT("Failed to cast to AEnemyChara. m_MapActorArray[%d] May not be in the enemy class."), mapActorIndex);
-								}
-							}
-							else
-							{
-								// Actorを一つだけ生成する
-								SpawnMapActor(m_MapActorArray[mapActorIndex], LocationX(rowIndex), LocationY(columnIndex, strArrayTemp.Num()));
-							}
-
-							break;
-
-							// 横方向に連続配置で一つのActorになる
-						case MapPlacementPattern::Continuous:
-
-							// 横の連続配置の開始
-							if (m_IsContinuous == false)
-							{
-								m_IsContinuous = true;
-
-								// 連続配置を開始したActorの保存
-								m_ContinuousActorTemp = m_MapActorArray[mapActorIndex];
-
-								// 位置の保存
-								m_ColumnStart = columnIndex;
-							}
-							break;
-
-							// 縦方向に連続配置で一つのActorになる
-						case MapPlacementPattern::V_Continuous:
-
-							// 連続配置を開始したActorの保存
-							m_ContinuousVertActorTempArray.Add(m_MapActorArray[mapActorIndex]);
-
-							// 位置の保存
-							// 列
-							m_ColumnStartVertArray.Add(columnIndex);
-
-							// 行
-							m_RowStartArray.Add(rowIndex);
-
-							// 要素が2つ以上ある場合
-							if (m_ColumnStartVertArray.Num() >= 2)
-							{
-								// 一番新しく追加した要素が同じ列の場合
-								if (m_ColumnStartVertArray[m_ColumnStartVertArray.Num() - 1] == columnIndex)
-								{
-									for (int i = 0; i < m_ContinuousVertActorTempArray.Num() - 2; ++i)
-									{
-										// 追加したActorが同じActorであれば破棄
-										if (m_ContinuousVertActorTempArray[m_ContinuousVertActorTempArray.Num() - 1].actor == m_ContinuousVertActorTempArray[i].actor)
-										{
-											// 連続配置を開始したActorの保存
-											m_ContinuousVertActorTempArray.RemoveAt(m_ContinuousVertActorTempArray.Num() - 1);
-
-											// 位置の保存
-											// 列
-											m_ColumnStartVertArray.RemoveAt(m_ColumnStartVertArray.Num() - 1);
-
-											// 行
-											m_RowStartArray.RemoveAt(m_RowStartArray.Num() - 1);
-
-											break;
-										}
-									}
-								}
-							}
-							break;
-
-						default:
-							break;
-						}
-					}
-					// 文字配列の要素と連続配置するm_MapActorArrayに設定したStartの文字が一致していたら
-					else if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateCharStart)
-					{
-						// 生成ルールによって分岐
-						switch (m_MapActorArray[mapActorIndex].geterateType)
-						{
-							// 始点と終点を指定して一つのActorを生成する（横方向）
-						case MapPlacementPattern::Fence:
-
-							// フェンス配置の開始
-							if (m_IsFence == false)
-							{
-								m_IsFence = true;
-
-								// フェンス生成開始の列を保存
-								m_FenceStart = columnIndex;
-							}
-							break;
-
-							// 始点と終点を指定して一つのActorを生成する（縦方向）
-						case MapPlacementPattern::V_Fence:
-
-							// フェンス配置の開始地点の情報を保存
-
-							// 生成Actorの保存
-							m_FenceActorTempArray.Add(m_MapActorArray[mapActorIndex]);
-
-							// 行の保存
-							m_RowStartFenceArray.Add(rowIndex);
-							// 列の保存
-							m_ColumnStartVertFenceArray.Add(columnIndex);
-
-							break;
-
-						default:
-							break;
-						}
-					}
-					// 文字配列の要素と連続配置するm_MapActorArrayに設定したEndの文字が一致していたら
-					else if (strArrayTemp[columnIndex] == m_MapActorArray[mapActorIndex].generateCharEnd)
-					{
-						// 生成ルールによって分岐
-						switch (m_MapActorArray[mapActorIndex].geterateType)
-						{
-							// 始点と終点を指定して一つのActorを生成する（横方向）
-						case MapPlacementPattern::Fence:
-
-							// フェンス生成
-							// フェンス生成が開始されていれば
-							if (m_IsFence == true)
-							{
-								m_IsFence = false;
-
-								SpawnFenceActor(m_MapActorArray[mapActorIndex], rowIndex, m_FenceStart, columnIndex);
-							}
-							break;
-
-							// 始点と終点を指定して一つのActorを生成する（縦方向）
-						case MapPlacementPattern::V_Fence:
-
-							// フェンス生成
-							// 生成を開始したフェンスがあれば
-							if (m_FenceActorTempArray.Num() > 0)
-							{
-								// 列要素分検索
-								for (int columnCheck = 0; columnCheck < m_ColumnStartVertFenceArray.Num(); ++columnCheck)
-								{
-									// 列が一致したら
-									if (m_ColumnStartVertFenceArray[columnCheck] == columnIndex)
-									{
-										// Actorも一致していれば
-										if (m_FenceActorTempArray[columnCheck].actor == m_MapActorArray[mapActorIndex].actor)
-										{
-											// Yスケールを設定
-											m_FenceActorTempArray[columnCheck].scale.Y = (rowIndex - m_RowStartFenceArray[columnCheck]) * m_FenceActorTempArray[columnCheck].scale.Y;
-
-											// 生成
-											SpawnMapActor(m_FenceActorTempArray[columnCheck], LocationX((rowIndex + m_RowStartFenceArray[columnCheck]) / 2.0f), LocationY(m_ColumnStartVertFenceArray[columnCheck], strArrayTemp.Num()));
-
-											// 要素の削除
-											m_FenceActorTempArray.RemoveAt(columnCheck);
-											m_ColumnStartVertFenceArray.RemoveAt(columnCheck);
-											m_RowStartFenceArray.RemoveAt(columnCheck);
-										}
-									}
-								}
-							}
-							break;
-
-						default:
-							break;
-						}
-					}
-				}
-			}
-		}
-
-		// 次の行を読み込む
-		strArrayTemp.Reset();
-		++rowIndex;
-
-	} while (m_IsLoadMapData);
+	MapCreate();
 }
 
 void AMapCreator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-}
-
-// 文字列配列に一行分のマップデータを保存
-void AMapCreator::SetStrArrayMapData(TArray<FString>& _strArray, const int _rowIndex, bool& _isLoad)
-{
-	_isLoad = true;
-
-	// マップデータがある
-	if (m_MapData != nullptr)
-	{
-		// intの行番号をFNameに変換するために、FStringに変換する（FNameへの変換はFStringからしかできないため）
-		FString fStrIndex = FString::FromInt(_rowIndex + 1);
-
-		// FStringからFNameに変換する
-		FName fNameIndex = FName(*fStrIndex);
-
-		// 行ごとのデータの取得
-		FMapStructCpp* rowData = m_MapData->FindRow<FMapStructCpp>(fNameIndex, FString());
-
-		// データ行の終わり
-		if (rowData == nullptr)
-		{
-			// データ読み込み終了
-			_isLoad = false;
-		}
-		// データがあった
-		else
-		{
-			// FMapStructCpp構造体の要素数分の長さの配列を作成
-			for (int i = 0; i < rowData->indexNum; ++i)
-			{
-				// FMapStructCppの最初の領域（Line_1）から最後の領域（Line_15）までの間を追加
-				if ((&rowData->Line_1 + i) != NULL)
-				{
-					_strArray.Add(*(&rowData->Line_1 + i));
-				}
-				else
-				{
-					UE_LOG(LogTemp, Error, TEXT("Could Not Get rowData!"));
-				}
-			}
-		}
-	}
-	// マップデータがない
-	else
-	{
-		_isLoad = false;
-	}
-}
-
-void AMapCreator::SpawnContinuousActor(const int _rowIndex, const int _startColumn, const int _endColumn)
-{
-	// 連続生成の終了
-	m_IsContinuous = false;
-
-	// Actorの生成
-	// スケールの算出
-	FVector newScale(m_ContinuousActorTemp.scale.X,
-		ContinuousScale(_startColumn, _endColumn, m_ContinuousActorTemp.scale.Y),
-		m_ContinuousActorTemp.scale.Z);
-
-	// スケールの適用
-	m_ContinuousActorTemp.scale = newScale;
-
-	// 座標を指定してActorを生成
-	SpawnMapActor(m_ContinuousActorTemp, LocationX(_rowIndex), ContinuousLocationY(_startColumn, _endColumn, strArrayTemp.Num()));
-
-	// Actorの一時保存していたものをリセット
-	m_ContinuousActorTemp = MapActorStructCppReset();
-}
-
-void AMapCreator::SpawnFenceActor(FMapActorStructCpp _actor, const int _rowIndex, const int _startColumn, const int _endColumn)
-{
-	// Actorの生成
-	// スケールの算出
-	FVector newScale(_actor.scale.X,
-		ContinuousScale(_startColumn, _endColumn, _actor.scale.Y),
-		_actor.scale.Z);
-
-	// スケールの適用
-	_actor.scale = newScale;
-
-	// 座標を指定してActorを生成
-	SpawnMapActor(_actor, LocationX(_rowIndex), ContinuousLocationY(_startColumn, _endColumn, strArrayTemp.Num()));
-
-	// Actorの一時保存していたものをリセット
-	m_ContinuousActorTemp = MapActorStructCppReset();
 }
 
 // X座標算出
@@ -883,15 +145,6 @@ float AMapCreator::ContinuousScale(const int _startColumn, const int _endColumn,
 {
 	int diff = _endColumn - _startColumn;
 	return _actorScaleY * diff;
-}
-
-// 連続生成ActorのY位置算出
-float AMapCreator::ContinuousLocationY(const int _startColumn, const int _endColumn, const int _strArrayLength)
-{
-	float add = (_startColumn + _endColumn) / 2.0f;
-	float halfLength = (float)(_strArrayLength - 1) / 2.0f;
-
-	return (add - halfLength) * m_YAxis_Offset;
 }
 
 // マップにActorを生成
@@ -940,4 +193,515 @@ FMapActorStructCpp AMapCreator::MapActorStructCppReset()
 	params.enemyMoveType = EEnemyMoveType::None;
 
 	return params;
+}
+
+// 文字列配列にCSVファイルを格納する
+bool AMapCreator::SetCSVToFString(const UDataTable* _mapData, TArray<FString>& _stringArray, const int _rowIndex)
+{
+	bool isLoad = true;
+
+	// 文字配列リセット
+	_stringArray.Reset();
+
+	// マップデータがある
+	if (_mapData != nullptr)
+	{
+		// intの行番号をFNameに変換するために、FStringに変換する（FNameへの変換はFStringからしかできないため）
+		FString fStrIndex = FString::FromInt(_rowIndex + 1);
+
+		// FStringからFNameに変換する
+		FName fNameIndex = FName(*fStrIndex);
+
+		// 行ごとのデータの取得
+		FMapStructCpp* rowData = _mapData->FindRow<FMapStructCpp>(fNameIndex, FString());
+
+		// データ行の終わり
+		if (rowData == nullptr)
+		{
+			// データ読み込み終了
+			UE_LOG(LogTemp, Warning, TEXT("rowData is nullptr. (rowIndex = %s)"), *fStrIndex);
+			isLoad = false;
+		}
+		// データがあった
+		else
+		{
+			// FMapStructCpp構造体の要素数分の長さの配列を作成
+			for (int i = 0; i < rowData->indexNum; ++i)
+			{
+				// FMapStructCppの最初の領域（Line_1）から最後の領域（Line_15）までの間を追加
+				if ((&rowData->Line_1 + i) != NULL)
+				{
+					_stringArray.Add(*(&rowData->Line_1 + i));
+					UE_LOG(LogTemp, Verbose, TEXT("Set Data. (%s)"), *(*(&rowData->Line_1 + i)));
+				}
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("Could Not Get rowData!"));
+				}
+			}
+
+			// 文字列配列の長さを代入
+			m_StrMapLength = _stringArray.Num();
+		}
+	}
+	// マップデータがない
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("MapData is nullptr."));
+		isLoad = false;
+	}
+
+	return isLoad;
+}
+
+// 文字列の比較を行い、一致した時の情報を格納する
+void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TArray<FString>& _stringArray, const int _rowIndex, TArray<CreateData>& _generateInfoArray)
+{
+	// 文字列配列の要素数分検索を行う
+	for (int columnIndex = 0; columnIndex < _stringArray.Num(); ++columnIndex)
+	{
+		// 文字列の最初
+		if (columnIndex == 0)
+		{
+			// 床を生成しない文字ではない
+			if (_stringArray[0] != m_NotGroundGenerateStr)
+			{
+				// 床の生成を追加
+				CreateData groundData(m_MapActorGround, _rowIndex, m_StrMapLength / 2, "Ground", MapPlacementPattern::Single);
+				_generateInfoArray.Add(groundData);
+			}
+		}
+
+		// 検索する文字列が空白なら飛ばす
+		if (_stringArray[columnIndex] == "")
+		{
+			continue;
+		}
+
+		// プレイヤー生成文字と一致
+		if (m_IsGeneratePlayer == false && _stringArray[columnIndex] == m_PlayerGenerateStr)
+		{
+			// プレイヤーを生成リストに追加してループやり直し
+			CreateData playerData(m_PlayerActor, _rowIndex, columnIndex, "Player", MapPlacementPattern::Single);
+			_generateInfoArray.Add(playerData);
+			continue;
+		}
+
+		// 文字列と一致するActorを検索する
+
+		// 文字と一致フラグ
+		bool isFound = false;
+
+		// 設定した生成するActorの数だけ検索を行う
+		for (int actorIndex = 0; actorIndex < _generateActor.Num(); ++actorIndex)
+		{
+			// 縦生成かどうか
+			bool isVert = false;
+
+			// 生成タイプによって比較する文字列を変更する
+			// 単体タイプ もしくは 連続生成タイプ
+			if (_generateActor[actorIndex].geterateType == MapPlacementPattern::Single ||
+				_generateActor[actorIndex].geterateType == MapPlacementPattern::Continuous ||
+				_generateActor[actorIndex].geterateType == MapPlacementPattern::V_Continuous)
+			{
+				if (_stringArray[columnIndex] == _generateActor[actorIndex].generateChar)
+				{
+					// 発見状態にする
+					isFound = true;
+
+					// 文字が一致した生成Actorを生成リストに追加して検索ループ終了
+					CreateData playerData(_generateActor[actorIndex], _rowIndex, columnIndex, _generateActor[actorIndex].generateChar, _generateActor[actorIndex].geterateType, false);
+					_generateInfoArray.Add(playerData);
+					break;
+				}
+			}
+			// フェンス生成タイプ
+			else if (_generateActor[actorIndex].geterateType == MapPlacementPattern::Fence ||
+				_generateActor[actorIndex].geterateType == MapPlacementPattern::V_Fence)
+			{
+				if (_stringArray[columnIndex] == _generateActor[actorIndex].generateCharStart)
+				{
+					// 文字が一致した生成Actorを生成リストに追加して検索ループ終了
+					CreateData playerData(_generateActor[actorIndex], _rowIndex, columnIndex, _generateActor[actorIndex].generateCharStart, _generateActor[actorIndex].geterateType, true, true);
+					_generateInfoArray.Add(playerData);
+					break;
+				}
+				else if (_stringArray[columnIndex] == _generateActor[actorIndex].generateCharEnd)
+				{
+					// 文字が一致した生成Actorを生成リストに追加して検索ループ終了
+					CreateData playerData(_generateActor[actorIndex], _rowIndex, columnIndex, _generateActor[actorIndex].generateCharEnd, _generateActor[actorIndex].geterateType, true, false);
+					_generateInfoArray.Add(playerData);
+					break;
+				}
+			}
+			// その他の場合
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("The \"Generate Type\" set in MapActorArray[%d] is invalid."), actorIndex);
+			}
+		}
+
+		// CSVファイルの文字列と一致する文字列がマップに生成するActorに設定されていない
+		if (isFound == false)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("The string \"%s\" is set in the CSV file, but not in the MapActorArray. Check both the CSV file and the MapActorArray."), *_stringArray[columnIndex])
+		}
+	}
+}
+
+// 縦に並んだフェンスの紐付けを行う
+void AMapCreator::LinkingVerticalFence(TArray<CreateData>& _generateInfoArray)
+{
+	// 生成リストにデータがない
+	if (_generateInfoArray.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("There is no data in _generateInfoArray."));
+		return;
+	}
+	// データがある
+	else
+	{
+		// 紐付けに使用する値
+		int linkIndex = 0;
+
+		// フェンス開始を保持
+		bool isStart = false;
+
+		// 列ごとに検索
+		for (int column = 0; column < m_StrMapLength; ++column)
+		{
+			// 生成リストの検索
+			for (int actorIndex = 0; actorIndex < _generateInfoArray.Num(); ++actorIndex)
+			{
+				// 列が一致する縦のフェンスの場合
+				if (_generateInfoArray[actorIndex].generatePattern == MapPlacementPattern::V_Fence &&
+					_generateInfoArray[actorIndex].columnIndex == column)
+				{
+					// フェンス生成開始の場合
+					if (_generateInfoArray[actorIndex].fenceStart == true)
+					{
+						// 未生成であれば
+						if (isStart == false)
+						{
+							// 生成状態に
+							isStart = true;
+
+							// 番号で紐付ける
+							_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+
+							// 開始位置の設定
+							AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_VerticalFenceData, _generateInfoArray[actorIndex].rowIndex, true);
+						}
+						// 生成中であればログ
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("A fence generation character was found during vertical fence generation."))
+						}
+					}
+					// フェンス生成終了の場合
+					else if (_generateInfoArray[actorIndex].fenceStart == false)
+					{
+						// 生成中であれば
+						if (isStart == true)
+						{
+							// 生成状態の終了
+							isStart = false;
+
+							// 番号で紐付ける
+							_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+
+							// 終了位置の設定
+							AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_VerticalFenceData, _generateInfoArray[actorIndex].rowIndex, false);
+
+							// スケールの変更
+							//紐付けられた番号から要素番号を取得
+							int fenceDataIndex = GetLinkIndex(linkIndex, m_VerticalFenceData);
+
+							// Y方向のスケールを変更
+							m_VerticalFenceData[fenceDataIndex].scale.X =
+								ContinuousScale(m_VerticalFenceData[fenceDataIndex].startIndex, m_VerticalFenceData[fenceDataIndex].endIndex, _generateInfoArray[actorIndex].generateActorStruct.scale.Y);
+
+							// 紐付け番号のインクリメント
+							++linkIndex;
+						}
+						// 生成中でなければログ
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("A closing character was found before the vertical fence generation character."))
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// 縦への連続生成の設定を行う
+void AMapCreator::LinkingVerticalContinuous(TArray<CreateData>& _generateInfoArray)
+{
+	// 生成リストにデータがない
+	if (_generateInfoArray.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("There is no data in _generateInfoArray."));
+		return;
+	}
+	// データがある
+	else
+	{
+		// 紐付けに使用する値
+		int linkIndex = 0;
+		// 連続生成開始を保持
+		bool isStart = false;
+		// 文字を保持
+		FString stringTemp = "";
+		// 行を保持
+		int rowTemp = 0;
+		// 前のActorの配列番号を保持
+		int prevIndex = 0;
+
+		// 列ごとに検索
+		for (int column = 0; column < m_StrMapLength; ++column)
+		{
+			// 生成リストの検索
+			for (int actorIndex = 0; actorIndex < _generateInfoArray.Num(); ++actorIndex)
+			{
+				// 列が一致する縦の連続生成の場合
+				if (_generateInfoArray[actorIndex].generatePattern == MapPlacementPattern::V_Continuous &&
+					_generateInfoArray[actorIndex].columnIndex == column)
+				{
+					// 保持している文字が空白
+					if (stringTemp == "")
+					{
+						// 連続生成の開始
+						isStart = true;
+						// 文字の保存
+						stringTemp = _generateInfoArray[actorIndex].generateString;
+						// 行の保存
+						rowTemp = _generateInfoArray[actorIndex].rowIndex;
+						// 配列番号の保存
+						prevIndex = actorIndex;
+						// 開始位置の設定
+						AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_VerticalContinuousData, rowTemp, true);
+
+						// 紐付ける
+						_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+
+						// ループをやり直す
+						continue;
+					}
+
+					// 行番号が連番になっていない もしくは 文字が以前と違う（連続生成が途切れた）
+					if ((rowTemp + 1) != _generateInfoArray[actorIndex].rowIndex ||
+						stringTemp != _generateInfoArray[actorIndex].generateString)
+					{
+						// 連続生成の終了
+						isStart = false;
+						// 前のActorの終了位置の設定
+						AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_VerticalContinuousData, rowTemp + 1, false);
+						// 前のActorを紐付ける
+						_generateInfoArray[prevIndex].vertLinkNum = linkIndex;
+
+						// スケールの変更
+						//紐付けられた番号から要素番号を取得
+						int continuousDataIndex = GetLinkIndex(linkIndex, m_VerticalContinuousData);
+
+						// Y方向のスケールを変更
+						m_VerticalContinuousData[continuousDataIndex].scale.X =
+							ContinuousScale(m_VerticalContinuousData[continuousDataIndex].startIndex, m_VerticalContinuousData[continuousDataIndex].endIndex, _generateInfoArray[actorIndex].generateActorStruct.scale.Y);
+
+						// 異なるActorで再設定する
+						// 紐付け番号のインクリメント
+						++linkIndex;
+
+						// 文字の保存
+						stringTemp = _generateInfoArray[actorIndex].generateString;
+						// 行の保存
+						rowTemp = _generateInfoArray[actorIndex].rowIndex;
+						// 配列番号の保存
+						prevIndex = actorIndex;
+						// 開始位置の設定
+						AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_VerticalContinuousData, rowTemp, true);
+						// 紐付ける
+						_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+					}
+					// 前と同じ文字列
+					else
+					{
+						// 連続生成状態
+						isStart = true;
+						// 行の保存
+						rowTemp = _generateInfoArray[actorIndex].rowIndex;
+						// 配列番号の保存
+						prevIndex = actorIndex;
+						// 紐付ける
+						_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+					}
+
+				}
+			}
+			// ループが終わっても生成が終わっていない場合
+			if (isStart == true)
+			{
+				// 連続生成の終了
+				isStart = false;
+				// 前のActorの終了位置の設定
+				AddLinkIndex(_generateInfoArray[prevIndex].generateActorStruct, linkIndex, m_VerticalContinuousData, rowTemp + 1, false);
+				// 前のActorを紐付ける
+				_generateInfoArray[prevIndex].vertLinkNum = linkIndex;
+			}
+		}
+	}
+}
+
+// ContinuousData型のTArrayに要素が含まれてるか確認する
+int AMapCreator::GetLinkIndex(int _linkIndex, const TArray<ContinuousData> _array)
+{
+	int result = -1;
+
+	for (int i = 0; result == -1 && i < _array.Num(); ++i)
+	{
+		if (_array[i].linkIndex == _linkIndex)
+		{
+			result = i;
+		}
+	}
+
+	return result;
+}
+
+// ContinuousData型のTArrayにLinkIndexの要素を代入する
+void AMapCreator::AddLinkIndex(FMapActorStructCpp _actorStruct, int _linkIndex, TArray<ContinuousData>& _array, int _value, bool isStart/* = true*/)
+{
+	ContinuousData vertTemp = { _linkIndex , 0, 0, _actorStruct.scale};
+
+	int loopCnt = 0;
+	int index = GetLinkIndex(_linkIndex, _array);
+
+	while (index == -1 && loopCnt < 100)
+	{
+		_array.Add(vertTemp);
+		index = GetLinkIndex(_linkIndex, _array);
+		++loopCnt;
+	}
+
+	if (index == -1)
+	{
+		UE_LOG(LogTemp, Error, TEXT("THE END"));
+	}
+
+	if (isStart)
+	{
+		_array[index].startIndex = _value;
+	}
+	else
+	{
+		_array[index].endIndex = _value;
+	}
+
+	UE_LOG(LogTemp, Verbose, TEXT("Array[%d] element  link : %d, start : %d, end : %d"),
+		index, _array[index].linkIndex, _array[index].startIndex, _array[index].endIndex);
+}
+
+// マップ生成情報を設定
+void AMapCreator::SettingMap()
+{
+	// 生成リスト初期化
+	m_MapActorCreateData.Reset();
+
+	// 文字列配列初期化
+	m_StrMapArray.Reset();
+
+	// 行番号
+	for (int rowIndex = 0;; ++rowIndex)
+	{
+		// CSVファイルを一行文字列配列に代入することができれば
+		if (SetCSVToFString(m_MapData, m_StrMapArray, rowIndex))
+		{
+			// 代入された文字列から生成するActorを生成リストに追加
+			ComparisonChar(m_MapActorArray, m_StrMapArray, rowIndex, m_MapActorCreateData);
+		}
+		// できなければループ終了
+		else
+		{
+			m_MapRowNumber = rowIndex;
+			UE_LOG(LogTemp, Verbose, TEXT("The number of rows in the map is %d."), m_MapRowNumber);
+			break;
+		}
+	}
+	LinkingVerticalFence(m_MapActorCreateData);
+	LinkingVerticalContinuous(m_MapActorCreateData);
+}
+
+// 生成を行う
+void AMapCreator::MapCreate()
+{
+	// 連続生成の際に重複しないようにする
+	int continuousLinkIndex = 0;
+	int fenceLinkIndex = 0;
+
+	// 生成リストを検索
+	for (int index = 0; index < m_MapActorCreateData.Num(); ++index)
+	{
+		// 連続生成に使用する生成データの要素番号を格納する
+		int continuousDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalContinuousData);
+		// フェンス生成に使用する生成データの要素番号を格納する
+		int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalFenceData);
+
+		switch (m_MapActorCreateData[index].generatePattern)
+		{
+		case MapPlacementPattern::Single:
+			// Actorを一つだけ生成する
+			SpawnMapActor
+			(
+				m_MapActorCreateData[index].generateActorStruct,
+				LocationX(m_MapActorCreateData[index].rowIndex),
+				LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
+			);
+			break;
+
+		case MapPlacementPattern::V_Continuous:
+
+			if (continuousLinkIndex == continuousDataIndex)
+			{
+				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
+				actorTemp.scale = m_VerticalContinuousData[continuousDataIndex].scale;
+
+				// Actorを一つだけ生成する
+				SpawnMapActor
+				(
+					actorTemp,
+					LocationX((m_VerticalContinuousData[continuousDataIndex].startIndex + m_VerticalContinuousData[continuousDataIndex].endIndex) / 2.0f),
+					LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
+				);
+
+				// 次の連続生成Actorの生成へ
+				++continuousLinkIndex;
+			}
+			break;
+			
+		case MapPlacementPattern::V_Fence:
+
+			if (fenceLinkIndex == fenceDataIndex)
+			{
+				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
+				actorTemp.scale = m_VerticalFenceData[fenceDataIndex].scale;
+
+				// Actorを一つだけ生成する
+				SpawnMapActor
+				(
+					actorTemp,
+					LocationX((m_VerticalFenceData[fenceDataIndex].startIndex + m_VerticalFenceData[fenceDataIndex].endIndex) / 2.0f),
+					LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
+				);
+
+				// 次の連続生成Actorの生成へ
+				++fenceLinkIndex;
+			}
+			break;
+
+		default:
+			UE_LOG(LogTemp, Warning, TEXT("MapPlacementPattern is invalid! enum index number : %d"), (int)m_MapActorCreateData[index].generatePattern);
+			break;
+		}
+	}
 }
