@@ -36,9 +36,12 @@ AMapCreator::AMapCreator()
 	m_MapActorCreateData.Reset();
 
 	// 縦方向に生成するものの情報リストを初期化
+	m_FenceData.Reset();
+	//m_ContinuousData.Reset();
 	m_VerticalFenceData.Reset();
-	m_VerticalContinuousData.Reset();
+	//m_VerticalContinuousData.Reset();
 
+	// 床Actorの初期化
 	m_MapActorGround.geterateType = MapPlacementPattern::SettingLock;
 
 	// プレイヤーActorの設定
@@ -117,7 +120,7 @@ void AMapCreator::BeginPlay()
 	}
 
 	SettingMap();
-
+	
 	MapCreate();
 }
 
@@ -300,9 +303,9 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 
 			// 生成タイプによって比較する文字列を変更する
 			// 単体タイプ もしくは 連続生成タイプ
-			if (_generateActor[actorIndex].geterateType == MapPlacementPattern::Single ||
+			if (_generateActor[actorIndex].geterateType == MapPlacementPattern::Single/* ||
 				_generateActor[actorIndex].geterateType == MapPlacementPattern::Continuous ||
-				_generateActor[actorIndex].geterateType == MapPlacementPattern::V_Continuous)
+				_generateActor[actorIndex].geterateType == MapPlacementPattern::V_Continuous*/)
 			{
 				if (_stringArray[columnIndex] == _generateActor[actorIndex].generateChar)
 				{
@@ -321,6 +324,9 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 			{
 				if (_stringArray[columnIndex] == _generateActor[actorIndex].generateCharStart)
 				{
+					// 発見状態にする
+					isFound = true;
+
 					// 文字が一致した生成Actorを生成リストに追加して検索ループ終了
 					CreateData playerData(_generateActor[actorIndex], _rowIndex, columnIndex, _generateActor[actorIndex].generateCharStart, _generateActor[actorIndex].geterateType, true, true);
 					_generateInfoArray.Add(playerData);
@@ -328,6 +334,9 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 				}
 				else if (_stringArray[columnIndex] == _generateActor[actorIndex].generateCharEnd)
 				{
+					// 発見状態にする
+					isFound = true;
+
 					// 文字が一致した生成Actorを生成リストに追加して検索ループ終了
 					CreateData playerData(_generateActor[actorIndex], _rowIndex, columnIndex, _generateActor[actorIndex].generateCharEnd, _generateActor[actorIndex].geterateType, true, false);
 					_generateInfoArray.Add(playerData);
@@ -348,6 +357,240 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 		}
 	}
 }
+
+// 横に並んだフェンスの紐付けを行う
+void AMapCreator::LinkingFence(TArray<CreateData>& _generateInfoArray)
+{
+	// 生成リストにデータがない
+	if (_generateInfoArray.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("There is no data in _generateInfoArray."));
+		return;
+	}
+	// データがある
+	else
+	{
+		// 紐付けに使用する値
+		int linkIndex = 0;
+
+		// フェンス開始を保持
+		bool isStart = false;
+
+		// 行ごとに検索
+		for (int row = 0; row < m_MapRowNumber; ++row)
+		{
+			// 生成リストの検索
+			for (int actorIndex = _generateInfoArray.Num() - 1; actorIndex >= 0; --actorIndex)
+			{
+				// 縦のフェンスの場合
+				if (_generateInfoArray[actorIndex].generatePattern == MapPlacementPattern::Fence &&
+					_generateInfoArray[actorIndex].rowIndex == row)
+				{
+					// フェンス生成開始の場合
+					if (_generateInfoArray[actorIndex].fenceStart == true)
+					{
+						// 未生成であれば
+						if (isStart == false)
+						{
+							// 生成状態に
+							isStart = true;
+
+							// 番号で紐付ける
+							_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+
+							// 開始位置の設定
+							AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_FenceData, _generateInfoArray[actorIndex].columnIndex, true);
+						}
+						// 生成中であればログ
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("A fence generation character was found during vertical fence generation."))
+						}
+					}
+					// フェンス生成終了の場合
+					else if (_generateInfoArray[actorIndex].fenceStart == false)
+					{
+						// 生成中であれば
+						if (isStart == true)
+						{
+							// 生成状態の終了
+							isStart = false;
+
+							// 番号で紐付ける
+							_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+
+							// 終了位置の設定
+							AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_FenceData, _generateInfoArray[actorIndex].columnIndex, false);
+
+							// スケールの変更
+							//紐付けられた番号から要素番号を取得
+							int fenceDataIndex = GetLinkIndex(linkIndex, m_FenceData);
+
+							// Y方向のスケールを変更
+							if (fenceDataIndex >= 0 && fenceDataIndex < m_FenceData.Num())
+							{
+								if (_generateInfoArray[actorIndex].generateActorStruct.isScaleXAxis)
+								{
+									m_FenceData[fenceDataIndex].scale.X =
+										ContinuousScale(m_FenceData[fenceDataIndex].startIndex, m_FenceData[fenceDataIndex].endIndex, _generateInfoArray[actorIndex].generateActorStruct.scale.X);
+								}
+								else
+								{
+									m_FenceData[fenceDataIndex].scale.Y =
+										ContinuousScale(m_FenceData[fenceDataIndex].startIndex, m_FenceData[fenceDataIndex].endIndex, _generateInfoArray[actorIndex].generateActorStruct.scale.Y);
+								}
+
+								// 紐付け番号のインクリメント
+								++linkIndex;
+							}
+							else
+							{
+								UE_LOG(LogTemp, Error, TEXT("fenceDataIndex is invaild."))
+							}
+						}
+						// 生成中でなければログ
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("A closing character was found before the fence generation character."))
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// 横への連続生成の設定を行う
+/*void AMapCreator::LinkingContinuous(TArray<CreateData>& _generateInfoArray)
+{
+	// 生成リストにデータがない
+	if (_generateInfoArray.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("There is no data in _generateInfoArray."));
+		return;
+	}
+	// データがある
+	else
+	{
+		// 紐付けに使用する値
+		int linkIndex = 0;
+		// 連続生成開始を保持
+		bool isStart = false;
+		// 文字を保持
+		FString stringTemp = "";
+		// 行を保持
+		int columnIndex = 0;
+		// 前のActorの配列番号を保持
+		int prevIndex = 0;
+
+		// 行ごとに検索
+		for (int row = m_MapRowNumber; row >= 0; --row)
+		{
+			// 生成リストの検索
+			for (int actorIndex = _generateInfoArray.Num() - 1; actorIndex >= 0; --actorIndex)
+			{
+				// 行が一致する横の連続生成の場合
+				if (_generateInfoArray[actorIndex].generatePattern == MapPlacementPattern::Continuous &&
+					_generateInfoArray[actorIndex].rowIndex == row)
+				{
+					// 保持している文字が空白
+					if (stringTemp == "")
+					{
+						// 連続生成の開始
+						isStart = true;
+						// 文字の保存
+						stringTemp = _generateInfoArray[actorIndex].generateString;
+						// 列の保存
+						columnIndex = _generateInfoArray[actorIndex].columnIndex;
+						// 配列番号の保存
+						prevIndex = actorIndex;
+						// 開始位置の設定
+						AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_ContinuousData, columnIndex, true);
+
+						UE_LOG(LogTemp, Error, TEXT("start value = %d"), columnIndex);
+
+						// 紐付ける
+						_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+
+						// ループをやり直す
+						continue;
+					}
+
+					// 列番号が連番になっていない もしくは 文字が以前と違う（連続生成が途切れた）
+					if ((columnIndex + 1) != _generateInfoArray[actorIndex].rowIndex ||
+						stringTemp != _generateInfoArray[actorIndex].generateString)
+					{
+						// 連続生成の終了
+						isStart = false;
+						// 前のActorの終了位置の設定
+						AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_ContinuousData, columnIndex + 1, false);
+
+						UE_LOG(LogTemp, Error, TEXT("end value = %d"), columnIndex);
+
+						_generateInfoArray[prevIndex].vertLinkNum = linkIndex;
+
+						// スケールの変更
+						//紐付けられた番号から要素番号を取得
+						int continuousDataIndex = GetLinkIndex(linkIndex, m_ContinuousData);
+
+						// Y方向のスケールを変更
+						m_ContinuousData[continuousDataIndex].scale.Y =
+							ContinuousScale(m_ContinuousData[continuousDataIndex].startIndex, m_ContinuousData[continuousDataIndex].endIndex, _generateInfoArray[actorIndex].generateActorStruct.scale.Y);
+
+						// 異なるActorで再設定する
+						// 紐付け番号のインクリメント
+						++linkIndex;
+
+						// 文字の保存
+						stringTemp = _generateInfoArray[actorIndex].generateString;
+						// 行の保存
+						columnIndex = _generateInfoArray[actorIndex].rowIndex;
+						// 配列番号の保存
+						prevIndex = actorIndex;
+						// 開始位置の設定
+						AddLinkIndex(_generateInfoArray[actorIndex].generateActorStruct, linkIndex, m_ContinuousData, columnIndex, true);
+						// 紐付ける
+						_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+					}
+					// 前と同じ文字列
+					else
+					{
+						// 連続生成状態
+						isStart = true;
+						// 行の保存
+						columnIndex = _generateInfoArray[actorIndex].rowIndex;
+						// 配列番号の保存
+						prevIndex = actorIndex;
+						// 紐付ける
+						_generateInfoArray[actorIndex].vertLinkNum = linkIndex;
+					}
+
+				}
+			}
+			// ループが終わっても生成が終わっていない場合
+			if (isStart == true)
+			{
+				// 連続生成の終了
+				isStart = false;
+				// 前のActorの終了位置の設定
+				AddLinkIndex(_generateInfoArray[prevIndex].generateActorStruct, linkIndex, m_ContinuousData, columnIndex + 1, false);
+				// 前のActorを紐付ける
+				_generateInfoArray[prevIndex].vertLinkNum = linkIndex;
+
+				// スケールの変更
+				//紐付けられた番号から要素番号を取得
+				int continuousDataIndex = GetLinkIndex(linkIndex, m_ContinuousData);
+
+				// Y方向のスケールを変更
+				m_ContinuousData[continuousDataIndex].scale.Y =
+					ContinuousScale(m_ContinuousData[continuousDataIndex].startIndex, m_ContinuousData[continuousDataIndex].endIndex, _generateInfoArray[prevIndex].generateActorStruct.scale.Y);
+
+
+				++linkIndex;
+			}
+		}
+	}
+}*/
 
 // 縦に並んだフェンスの紐付けを行う
 void AMapCreator::LinkingVerticalFence(TArray<CreateData>& _generateInfoArray)
@@ -418,11 +661,26 @@ void AMapCreator::LinkingVerticalFence(TArray<CreateData>& _generateInfoArray)
 							int fenceDataIndex = GetLinkIndex(linkIndex, m_VerticalFenceData);
 
 							// Y方向のスケールを変更
-							m_VerticalFenceData[fenceDataIndex].scale.X =
-								ContinuousScale(m_VerticalFenceData[fenceDataIndex].startIndex, m_VerticalFenceData[fenceDataIndex].endIndex, _generateInfoArray[actorIndex].generateActorStruct.scale.Y);
+							if (fenceDataIndex >= 0 && fenceDataIndex < m_FenceData.Num())
+							{
+								if (_generateInfoArray[actorIndex].generateActorStruct.isScaleXAxis)
+								{
+									m_VerticalFenceData[fenceDataIndex].scale.X =
+										ContinuousScale(m_VerticalFenceData[fenceDataIndex].startIndex, m_VerticalFenceData[fenceDataIndex].endIndex, _generateInfoArray[actorIndex].generateActorStruct.scale.X);
+								}
+								else
+								{
+									m_VerticalFenceData[fenceDataIndex].scale.Y =
+										ContinuousScale(m_VerticalFenceData[fenceDataIndex].startIndex, m_VerticalFenceData[fenceDataIndex].endIndex, _generateInfoArray[actorIndex].generateActorStruct.scale.Y);
+								}
 
-							// 紐付け番号のインクリメント
-							++linkIndex;
+								// 紐付け番号のインクリメント
+								++linkIndex;
+							}
+							else
+							{
+								UE_LOG(LogTemp, Error, TEXT("fenceDataIndex is invaild."))
+							}
 						}
 						// 生成中でなければログ
 						else
@@ -437,7 +695,7 @@ void AMapCreator::LinkingVerticalFence(TArray<CreateData>& _generateInfoArray)
 }
 
 // 縦への連続生成の設定を行う
-void AMapCreator::LinkingVerticalContinuous(TArray<CreateData>& _generateInfoArray)
+/*void AMapCreator::LinkingVerticalContinuous(TArray<CreateData>& _generateInfoArray)
 {
 	// 生成リストにデータがない
 	if (_generateInfoArray.Num() == 0)
@@ -551,7 +809,7 @@ void AMapCreator::LinkingVerticalContinuous(TArray<CreateData>& _generateInfoArr
 			}
 		}
 	}
-}
+}*/
 
 // ContinuousData型のTArrayに要素が含まれてるか確認する
 int AMapCreator::GetLinkIndex(int _linkIndex, const TArray<ContinuousData> _array)
@@ -572,7 +830,7 @@ int AMapCreator::GetLinkIndex(int _linkIndex, const TArray<ContinuousData> _arra
 // ContinuousData型のTArrayにLinkIndexの要素を代入する
 void AMapCreator::AddLinkIndex(FMapActorStructCpp _actorStruct, int _linkIndex, TArray<ContinuousData>& _array, int _value, bool isStart/* = true*/)
 {
-	ContinuousData vertTemp = { _linkIndex , 0, 0, _actorStruct.scale};
+	ContinuousData vertTemp = { _linkIndex , 0, 0, _actorStruct.scale };
 
 	int loopCnt = 0;
 	int index = GetLinkIndex(_linkIndex, _array);
@@ -628,28 +886,28 @@ void AMapCreator::SettingMap()
 			break;
 		}
 	}
+	LinkingFence(m_MapActorCreateData);
+	//LinkingContinuous(m_MapActorCreateData);
 	LinkingVerticalFence(m_MapActorCreateData);
-	LinkingVerticalContinuous(m_MapActorCreateData);
+	//LinkingVerticalContinuous(m_MapActorCreateData);
 }
 
 // 生成を行う
 void AMapCreator::MapCreate()
 {
 	// 連続生成の際に重複しないようにする
-	int continuousLinkIndex = 0;
-	int fenceLinkIndex = 0;
+	int continuousLinkIndex = 0;		// 横連続
+	int fenceLinkIndex = 0;		// 横フェンス
+	int vertContinuousLinkIndex = 0;		// 縦連続
+	int vertFenceLinkIndex = 0;		// 縦フェンス
 
 	// 生成リストを検索
 	for (int index = 0; index < m_MapActorCreateData.Num(); ++index)
 	{
-		// 連続生成に使用する生成データの要素番号を格納する
-		int continuousDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalContinuousData);
-		// フェンス生成に使用する生成データの要素番号を格納する
-		int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalFenceData);
-
 		switch (m_MapActorCreateData[index].generatePattern)
 		{
 		case MapPlacementPattern::Single:
+		{
 			// Actorを一つだけ生成する
 			SpawnMapActor
 			(
@@ -658,10 +916,41 @@ void AMapCreator::MapCreate()
 				LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
 			);
 			break;
+		}
 
-		case MapPlacementPattern::V_Continuous:
+		/*
+		case MapPlacementPattern::Continuous:
+		{
+			// 横の連続生成に使用する生成データの要素番号を格納する
+			int continuousDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_ContinuousData);
 
 			if (continuousLinkIndex == continuousDataIndex)
+			{
+				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
+				actorTemp.scale = m_ContinuousData[continuousDataIndex].scale;
+
+				// Actorを一つだけ生成する
+				SpawnMapActor
+				(
+					actorTemp,
+					LocationX(m_MapActorCreateData[index].rowIndex),
+					LocationY((m_ContinuousData[continuousDataIndex].startIndex + m_ContinuousData[continuousDataIndex].endIndex) / 2.0f, m_StrMapLength)
+				);
+
+				UE_LOG(LogTemp, Error, TEXT("start = %d, end = %d"), m_ContinuousData[continuousDataIndex].startIndex, m_ContinuousData[continuousDataIndex].endIndex);
+
+				// 次の連続生成Actorの生成へ
+				++continuousLinkIndex;
+			}
+			break;
+		}
+
+		case MapPlacementPattern::V_Continuous:
+		{
+			// 縦の連続生成に使用する生成データの要素番号を格納する
+			int continuousDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalContinuousData);
+
+			if (vertContinuousLinkIndex == continuousDataIndex)
 			{
 				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
 				actorTemp.scale = m_VerticalContinuousData[continuousDataIndex].scale;
@@ -675,13 +964,41 @@ void AMapCreator::MapCreate()
 				);
 
 				// 次の連続生成Actorの生成へ
-				++continuousLinkIndex;
+				++vertContinuousLinkIndex;
 			}
 			break;
-			
-		case MapPlacementPattern::V_Fence:
+		}*/
+
+		case MapPlacementPattern::Fence:
+		{
+			// 縦のフェンス生成に使用する生成データの要素番号を格納する
+			int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_FenceData);
 
 			if (fenceLinkIndex == fenceDataIndex)
+			{
+				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
+				actorTemp.scale = m_FenceData[fenceDataIndex].scale;
+
+				// Actorを一つだけ生成する
+				SpawnMapActor
+				(
+					actorTemp,
+					LocationX((m_FenceData[fenceDataIndex].startIndex + m_FenceData[fenceDataIndex].endIndex) / 2.0f),
+					LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
+				);
+
+				// 次の連続生成Actorの生成へ
+				++fenceLinkIndex;
+			}
+			break;
+		}
+
+		case MapPlacementPattern::V_Fence:
+		{
+			// 縦のフェンス生成に使用する生成データの要素番号を格納する
+			int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalFenceData);
+
+			if (vertFenceLinkIndex == fenceDataIndex)
 			{
 				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
 				actorTemp.scale = m_VerticalFenceData[fenceDataIndex].scale;
@@ -695,9 +1012,10 @@ void AMapCreator::MapCreate()
 				);
 
 				// 次の連続生成Actorの生成へ
-				++fenceLinkIndex;
+				++vertFenceLinkIndex;
 			}
 			break;
+		}
 
 		default:
 			UE_LOG(LogTemp, Warning, TEXT("MapPlacementPattern is invalid! enum index number : %d"), (int)m_MapActorCreateData[index].generatePattern);

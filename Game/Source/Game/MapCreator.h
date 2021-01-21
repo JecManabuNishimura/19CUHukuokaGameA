@@ -20,8 +20,10 @@ enum class MapPlacementPattern : uint8
 {
 	SettingLock		UMETA(Hidden),									// 設定不可、何も生成しない
 	Single			UMETA(DisplayName = "Single"),					// 単体で配置する
+	/*
 	Continuous		UMETA(DisplayName = "Continuous (Horizontal)"),	// 連続配置で一つのActorになる（横方向）
 	V_Continuous	UMETA(DisplayName = "Continuous (Vertical)"),	// 連続配置で一つのActorになる（縦方向）
+	*/
 	Fence			UMETA(DisplayName = "Fence (Horizontal)"),		// 始点と終点を指定して一つのActorを生成する（横方向）
 	V_Fence			UMETA(DisplayName = "Fence (Vertical)"),		// 始点と終点を指定して一つのActorを生成する（縦方向）
 
@@ -50,6 +52,9 @@ struct FMapActorStructCpp
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		FVector scale = FVector::OneVector;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		bool isScaleXAxis = true;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly,
 		Meta = (EditCondition = "geterateType != MapPlacementPattern::Fence && geterateType != MapPlacementPattern::V_Fence && geterateType != MapPlacementPattern::SettingLock"))
@@ -266,10 +271,16 @@ private:
 	TArray<CreateData> m_MapActorCreateData;
 
 	// 生成リストに使用する縦にフェンス生成をする時の情報
+	TArray<ContinuousData> m_FenceData;
+
+	// 生成リストに使用する縦に連続生成をする時の情報
+	//TArray<ContinuousData> m_ContinuousData;
+
+	// 生成リストに使用する縦にフェンス生成をする時の情報
 	TArray<ContinuousData> m_VerticalFenceData;
 
 	// 生成リストに使用する縦に連続生成をする時の情報
-	TArray<ContinuousData> m_VerticalContinuousData;
+	//TArray<ContinuousData> m_VerticalContinuousData;
 
 	// サンプルになるStaticMesh
 	TArray<UInstancedStaticMeshComponent*> m_SampleMapObject;
@@ -316,20 +327,22 @@ private:
 
 	void ComparisonChar(TArray<FMapActorStructCpp>& _generateActor,TArray<FString>& _stringArray, const int _rowIndex, TArray<CreateData>& _generateInfoArray);
 
-	// 縦に並んだフェンスの紐付けを行う
+	// 横に並んだフェンスの紐付けを行う
+	void LinkingFence(TArray<CreateData>& _generateInfoArray);
 
+	// 縦に並んだフェンスの紐付けを行う
 	void LinkingVerticalFence(TArray<CreateData>& _generateInfoArray);
 
-	// 縦への連続生成の設定を行う
+	// 横への連続生成の設定を行う
+	//void LinkingContinuous(TArray<CreateData>& _generateInfoArray);
 
-	void LinkingVerticalContinuous(TArray<CreateData>& _generateInfoArray);
+	// 縦への連続生成の設定を行う
+	//void LinkingVerticalContinuous(TArray<CreateData>& _generateInfoArray);
 
 	// ContinuousData型のTArrayのLinkIndexの要素が何番目か確認する
-
 	int GetLinkIndex(int _linkIndex, const TArray<ContinuousData> _array);
 
 	// ContinuousData型のTArrayにLinkIndexの要素を代入する
-
 	void AddLinkIndex(FMapActorStructCpp _actorStruct, int _linkIndex, TArray<ContinuousData>& _array, int _value, bool isStart = true);
 
 	// マップ生成情報を設定
