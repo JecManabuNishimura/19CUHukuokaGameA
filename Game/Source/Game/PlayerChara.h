@@ -79,8 +79,10 @@ private:
 	//	死亡カウント
 	void DeadCount();
 
+	//	プレイヤーのZ軸獲得
 	void GetPlayerPosZ(float DeltaTime);
 
+	//	プレイヤーのエフェクト
 	void PlayEffects();
 
 	//	====================================
@@ -108,17 +110,14 @@ private:
 	TArray<FRotator> prevRotator;
 	FRotator prevDiffRot;
 
-	// 2020/11/11 渡邊 UPROPERTYの削除 -------------------------------------------------
-	// For Arduino Com Port
-		int serialPort;
+	int serialPort;
 	//----------------------------------------------------------------------------------
-
-		bool isButtonRelerse;
+	bool isButtonRelerse;
 
 	//	UPROPERTYにすることで、ブループリント上で変数の確認、編集などができる
 	//	「BlueprintReadOnly」に指定しているため、ブループリントで見ることだけ可能で、編集はできない
 	UPROPERTY(EditAnywhere, Category = "Jump")
-		float gravity;							//	重力
+		float gravity;								//	重力
 
 	UPROPERTY(EditAnywhere, Category = "Jump")		//	ジャンプ力
 		float jumpPower;
@@ -128,49 +127,40 @@ private:
 
 	float tempJumpPower;
 
-	float jumpTime;								//	ジャンプ時間
+	float jumpTime;									//	ジャンプ時間
 	float nowJumpHeight;							//	現在フレームのジャンプ量
 	float prevJumpHeight;							//	前フレームのジャンプ量
 
 	bool canJump;
-	FVector posBeforeJump;						//	ジャンル開始前のキャラクター座標
+	FVector posBeforeJump;							//	ジャンル開始前のキャラクター座標
 
-	float startPosZ;
-	float nowPosZ;
-	float countPosZTime;
-	bool overStartHight;
+	float startPosZ;								//	開始時のZ座標
+	float nowPosZ;									//	今の座標
+	bool overStartHight;							//	始点の高度を比べるflag
 
 	bool hadDoOnce;
 
 	float tempRotate;								//　元状態に戻すの回転角度
 
-	bool haveGuardEnergy;
+	bool haveGuardEnergy;							//	ガードゲージがまだあるか
 
-	// 発射間隔カウントダウン
-	float bulletTimeCount;
+	float bulletTimeCount;							// 発射間隔カウントダウン
 
-	float tempSpeed;
-	bool isDamageOver;
+	float tempSpeed;								//	最大速度を保存
+	bool isDamageOver;								//	ダメージを受けられるかどうか
 
-	bool haveDashEnergy;
+	bool haveDashEnergy;							//	ダッシュのエネルギー
 
-	float tempGoalTime;
-	float tempPlayerScore;
+	float tempDamageFrame;							//	ダメージを受けた後の無敵時間
 
-	float restartLocationX;
-
-	float tempDamageFrame;
-
-	float tempPitch;
+	//	センサーをPC側でテストするためのX,Y,Z角度プロパティ
+	float tempPitch;								
 	float tempYaw;
 	float tempRoll;
 
-	float tempDataOfShot;
-	float tempDataOfDash;
-	float tempDataOfGuard;
+	float fps;										//	ゲームのFPS
 
 public:
-	// 2020/11/11 渡邊 自動検出により変更-------------------
 	//	センサーが持っていますか
 	UPROPERTY(EditAnywhere, Category = "Sensor")
 		bool withSensor;
@@ -207,34 +197,34 @@ public:
 		TSubclassOf<UUserWidget> Player_Goal_Widget_Class;
 	UUserWidget* Player_Goal_Widget;
 
-	UPROPERTY(EditAnywhere, Category = "Effects")
+	UPROPERTY(EditAnywhere, Category = "Effects")	//	ダッシュエフェクト
 		UNiagaraSystem* DashEffect;
 
-	UPROPERTY(EditAnywhere, Category = "Effects")
+	//	ダッシュエフェクト生成する時の位置補正
+	UPROPERTY(EditAnywhere, Category = "Effects")	
 		FVector DashEffectLocationOffset;
-
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		FRotator DashEffectRotationOffset;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	プレイヤー死んだ後の選択肢
 		int32 selectPlay;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガード成功したらゲージの下がる量
 		float guardBulletUIDownSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	シュートゲージの下がるスピード
 		float Shot_UIDownSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	シュートゲージの回復スピード
 		float Shot_UIUpSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガード状態のゲージ下がるスピード
 		float Guard_UIDownSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガードゲージの回復スピード
 		float Guard_UIUpSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		
 		float Dash_UIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

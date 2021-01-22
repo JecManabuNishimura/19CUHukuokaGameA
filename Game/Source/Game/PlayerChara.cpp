@@ -35,7 +35,6 @@ APlayerChara::APlayerChara()
 	, isOpen(false)
 	, startPosZ(0.f)
 	, nowPosZ(0.f)
-	, countPosZTime(0.f)
 	, overStartHight(false)
 	, hadDoOnce(false)
 	, tempSpeed(0.f)
@@ -66,7 +65,6 @@ APlayerChara::APlayerChara()
 	, haveGuardEnergy(true)
 	, haveDashEnergy(true)
 	, haveShotEnergy(true)
-	, restartLocationX(0.f)
 	, isStart(false)
 	, isDead(false)
 	, isGoal(false)
@@ -74,7 +72,6 @@ APlayerChara::APlayerChara()
 	, isFirstShoting(true)
 	, isDamageOver(false)
 	, GoalTime(0.f)
-	, tempGoalTime(0.f)
 	, deadCount(0)
 	, HP(100.f)
 	, CoinCount(0)
@@ -99,15 +96,12 @@ APlayerChara::APlayerChara()
 	, CoinScore(1000.f)
 	, EnemyScore(2000.f)
 	, PlayerScore(0.f)
-	, tempPlayerScore(0.f)
 	, Damage(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
 	, tempPitch(0.f)
 	, tempYaw(0.f)
-	, tempDataOfShot(0.f)
-	, tempDataOfDash(0.f)
-	, tempDataOfGuard(0.f)
+	, fps(0.f)
 {
 	// 毎フレーム、このクラスのTick()を呼ぶかどうかを決めるフラグ。必要に応じて、パフォーマンス向上のために切ることもできる。
 	PrimaryActorTick.bCanEverTick = true;
@@ -127,14 +121,8 @@ void APlayerChara::BeginPlay()
 	tempDamageFrame = DamageFrame;
 	tempSpeed = playerMaxSpeed;
 
-	tempDataOfShot = ShotEnergy;
-	tempDataOfDash = DashEnergy;
-	tempDataOfGuard = GuardEnergy;
-
 	tempJumpPower = jumpPower;
-
-	restartLocationX = GetActorLocation().X;
-
+	
 	playerSpeed = 0.f;
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &APlayerChara::OnBeginOverlap);
@@ -172,52 +160,6 @@ void APlayerChara::BeginPlay()
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Can't find VR Origin(HMD)"));
 		} // end else
-
-		//// 2020/11/11 渡邊 自動検出に変更-----------------------------------------begin--
-		//for (int i = 0; i < 20 && isOpen == false; ++i)
-		//{
-		//	// シリアルポートを開ける
-		//	//m_pArduinoSerial = USerial::OpenComPort(isOpen, serialPort, 115200);
-		//	m_pArduinoSerial = USerial::OpenComPort(isOpen, i, 115200);
-
-		//	if (isOpen == false)
-		//	{
-		//		UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): COM Port:%d is failed open. Please check the connection and COM Port number."), i);
-		//	}
-		//	else
-		//	{
-		//		UE_LOG(LogTemp, Display, TEXT("ASensorTest::BeginPlay(): COM Port:%d is Successfully Open."), i);
-		//		withSensor = true;
-		//		serialPort = i;
-		//	}
-		//}
-		////---------------------------------------------------------------------------end---
-
-		//// 10回分のデータを入れる
-		//int errorCount = 0;
-		//for (int i = 0; i < ROTATOR_ARRAY_SIZE; ++i)
-		//{
-		//	FRotator rotTemp;
-		//	rotTemp = SensorToRotator();
-
-		//	// センサーの値が読み取れていなければやり直し
-		//	if (rotTemp == FRotator::ZeroRotator)
-		//	{
-		//		UE_LOG(LogTemp, Warning, TEXT("ASensorTest::BeginPlay(): Failed Read."));
-		//		++errorCount;
-		//		if (errorCount >= 10)
-		//		{
-		//			UE_LOG(LogTemp, Error, TEXT("ASensorTest::BeginPlay(): Failed to read the sensor more than 10 times. Please check the connection."));
-		//			break;
-		//		}
-		//	}
-		//	else
-		//	{
-		//		UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::BeginPlay(): SuccessFully Read."));
-		//	}
-
-		//	prevRotator.Add(rotTemp);
-		//}
 	}
 }
 
@@ -226,8 +168,7 @@ void APlayerChara::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DeltaTime * 60.f));
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isGuarding ? TEXT("true") : TEXT("false"));
+	fps = 1 / DeltaTime;
 
 	if (withSensor)
 	{
@@ -285,12 +226,7 @@ void APlayerChara::Tick(float DeltaTime)
 		}
 	}
 
-	if (selectPlay == 1)
-	{
-		RestartGame();
-	}
-
-	DeadCount();
+	//DeadCount();
 
 	PlayEffects();
 }
@@ -301,34 +237,43 @@ void APlayerChara::UpdateMove(float _deltaTime)
 	FVector NewLocation = GetActorLocation();
 	FVector YRotation = GetActorForwardVector();
 
+	if (fps < 59.5f || fps > 60.5f)
+	{
+		fps = 1.f / (fps / 60.f);
+	}
+	else
+	{
+		fps = 60.f / fps;
+	}
+
 	if (playerSpeed < playerMaxSpeed)
 	{
-		playerSpeed += 0.016f * playerMaxSpeed;
+		playerSpeed += 0.016f * playerMaxSpeed * fps;
 	}
 
 	//	前に向くずっと移動する
 	if ((isDashing || isDashLine) && haveShotEnergy)
 	{
-		NewLocation.X += playerSpeed * 1.5f;
+		NewLocation.X += playerSpeed * 1.5f * fps;
 	}
 	else if (!isGuarding && !isDashing && haveShotEnergy)
 	{
-		NewLocation.X += playerSpeed;
+		NewLocation.X += playerSpeed * fps;
 	}
 	else if (isGuarding && haveShotEnergy)
 	{
-		NewLocation.X += playerSpeed * 0.8f;
+		NewLocation.X += playerSpeed * 0.8f * fps;
 	}
 	else if(!haveShotEnergy)
 	{
-		NewLocation.X += playerSpeed * 0.5f;
+		NewLocation.X += playerSpeed * 0.5f * fps;
 	}
 
 
 	//	キャラクターのY軸移動
 	{
 		YRotation.Y = 0.f;
-		NewLocation.Y += 0.4f * -tempRoll;
+		NewLocation.Y += 0.4f * -tempRoll * fps;
 		SetActorLocation(NewLocation);
 	}
 
@@ -341,7 +286,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 		}
 		else
 		{
-			playerSpeed += playerMaxSpeed * 0.02f;
+			playerSpeed += playerMaxSpeed * 0.02f * fps;
 		}
 	}
 }
@@ -379,8 +324,6 @@ void APlayerChara::UpdateJump(float _deltaTime)
 		{
 			SetActorLocation(FVector(nowPos.X, nowPos.Y, posBeforeJump.Z + nowJumpHeight), true);
 		}
-
-		//prevJumpHeight = nowJumpHeight;
 	}
 }
 
@@ -406,13 +349,13 @@ void APlayerChara::UpdateGuard()
 
 	if (isGuarding && haveGuardEnergy)
 	{
-		GuardEnergy -= Guard_UIDownSpeed;
+		GuardEnergy -= Guard_UIDownSpeed * fps;
 	}
 	else
 	{ 
 		if (GuardEnergy <= GuardEnergyMax)
 		{
-			GuardEnergy += Guard_UIUpSpeed;
+			GuardEnergy += Guard_UIUpSpeed * fps;
 		}
 		else
 		{
@@ -437,40 +380,12 @@ void APlayerChara::UpdateAccelerate()
 
 	if (isDashing && haveDashEnergy)
 	{
-		DashEnergy -= Dash_UIDownSpeed;
+		DashEnergy -= Dash_UIDownSpeed * fps;
 	}
 	else if (DashEnergy >= DashEnergyMax)
 	{
 		haveDashEnergy = true;
 	}
-}
-
-void APlayerChara::RestartGame()
-{
-	//if (hadDoOnce)
-	//{
-	//	SetActorLocation(FVector(restartLocationX, 0.f, 110.f));
-
-	//	HP = 90.f;
-
-	//	playerSpeed = 0.f;
-
-	//	ShotEnergy = tempDataOfShot;
-
-	//	DashEnergy = tempDataOfDash;
-
-	//	GuardEnergy = tempDataOfGuard;
-
-	//	isDead = false;
-
-	//	Player_Select_Widget->RemoveFromViewport();
-
-	//	selectPlay = 0;
-
-	//	deadCount++;
-
-	//	hadDoOnce = false;
-	//}
 }
 
 //発射開始
@@ -484,13 +399,13 @@ void APlayerChara::Shooting(float DeltaTime)
 
 	if (isShoting && haveShotEnergy)
 	{
-		ShotEnergy -= Shot_UIDownSpeed;
+		ShotEnergy -= Shot_UIDownSpeed * fps;
 	}
 	else
 	{
 		if (ShotEnergy <= ShotMaxEnergy)
 		{
-			ShotEnergy += Shot_UIUpSpeed;
+			ShotEnergy += Shot_UIUpSpeed * fps;
 		}
 		else
 		{
@@ -511,64 +426,30 @@ void APlayerChara::Shooting(float DeltaTime)
 	}
 }
 
-void APlayerChara::DeadCount()
-{
-	if (HP <= 0 || isDead)
-	{		
-			if (Player_Select_Widget_Class != nullptr && !hadDoOnce)
-			{
-				isDead = true;
-
-				isStart = false;
-
-				isDashing = false;
-
-				isGuarding = false;
-
-				Player_Select_Widget = CreateWidget(GetWorld(), Player_Select_Widget_Class);
-				Player_Select_Widget->AddToViewport();
-
-				hadDoOnce = true;
-			}
-
-			//GetMesh()->SetSimulatePhysics(true);
-	}
-}
-
 void APlayerChara::PlayEffects()
 {
 	if (isDashing || isDashLine) {
 		if (DashEffect == nullptr) {
-			UE_LOG(LogTemp, Warning, TEXT("DashEffect is not assetted."));
 			return;
 		}
-		//DashEffectRotationOffset = FRotator(0.0f, 0.0f, DashEffectRotationOffset.Roll - 500.0f);
-		//UNiagaraFunctionLibrary::SpawnSystemAttached(
-		//	DashEffect, RootComponent, NAME_None, DashEffectLocationOffset, DashEffectRotationOffset, EAttachLocation::KeepRelativeOffset, true);
-		
-		//UE_LOG(LogTemp, Warning, TEXT("%s"), );
 	}
-
 }
 
+//	ジャンプ台から落としたらSEを出すための関数
 void APlayerChara::GetPlayerPosZ(float DeltaTime)
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(startPosZ));
 	if (startPosZ == 0.f)
 	{
 		startPosZ = GetActorLocation().Z;
 	}
-	countPosZTime += DeltaTime;
-	nowPosZ = GetActorLocation().Z;
 
+	nowPosZ = GetActorLocation().Z;
 
 	if (nowPosZ - startPosZ > 50.f)
 	{
 		overStartHight = true;
 		isLanding = false;
 	}
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(nowPosZ));
-	//GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, nowPosZ == startPosZ ? TEXT("true") : TEXT("false"));
 
 	if (overStartHight && (nowPosZ - startPosZ < 0.1f))
 	{
@@ -658,24 +539,8 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		canJump = true;
 	}
 
-	//if (OtherActor->ActorHasTag("CheckPoint"))
-	//{
-	//	tempGoalTime = GoalTime;
-
-	//	tempPlayerScore = PlayerScore;
-
-	//	restartLocationX = GetActorLocation().X;
-	//}
-
 	if (OtherActor->ActorHasTag("Goal"))
 	{
-		// VR版には影響を及ぼさないため
-		/*if (Player_Goal_Widget_Class != nullptr)
-		{
-			Player_Goal_Widget = CreateWidget(GetWorld(), Player_Goal_Widget_Class);
-			Player_Goal_Widget->AddToViewport();
-		}*/
-
 		isGoal = true;
 	}
 }
@@ -707,79 +572,6 @@ void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
 }
 
 //	最新版
-//FRotator APlayerChara::SensorToRotator()
-//{
-//	bool isRead = false;		// データを読み取れたか？
-//	FString fStr;				// 読み取りデータ格納用
-//	int tryCnt = 0;				// 読み取ろうとした回数
-//	const int tryCntMax = 500;	// 最大の読み取る回数
-//
-//	// シリアルのオブジェクトがあれば
-//	if (m_pArduinoSerial != NULL)
-//	{
-//		// データの読み取り
-//		// データが読み取れるか、最大読み取り回数になるまで繰り返す
-//		do
-//		{
-//			m_pArduinoSerial->Println(FString(TEXT("s")));
-//
-//			fStr = m_pArduinoSerial->Readln(isRead);
-//			++tryCnt;
-//		} while (isRead == false && tryCnt < tryCntMax);
-//
-//		TArray<FString> splitTextArray;
-//		splitTextArray.Reset();
-//
-//		UE_LOG(LogTemp, VeryVerbose, TEXT("ASensorTest::SensorToRotator(): Try Read Count: %d / %d"), tryCnt, tryCntMax);
-//
-//		// 読み取れなかったらZeroRotatorを返して終了
-//		if (isRead == false)
-//		{
-//			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): No Data From Sensor. return ZeroRotator."));
-//			withSensor = false;
-//			return FRotator::ZeroRotator;
-//		}
-//		else
-//		{
-//			UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): Get Data From Sensor."));
-//		}
-//
-//		// センサーデータをカンマ区切りでsplitTextArrayに入れる
-//		fStr.ParseIntoArray(splitTextArray, TEXT(","));
-//
-//		// それぞれをint型に変換する
-//		TArray<float> rotatorAxis;
-//		rotatorAxis.Reset();
-//
-//		for (int i = 0; i < splitTextArray.Num(); ++i)
-//		{
-//			rotatorAxis.Add(FCString::Atof(*splitTextArray[i]));
-//		}
-//
-//		// Roll(X), Pitch(Y), Yaw(Z)の要素（3個分）読み取れていなければZeroRotatorを返す
-//		if (rotatorAxis.IsValidIndex(2) == false)
-//		{
-//			UE_LOG(LogTemp, Warning, TEXT("ASensorTest::SensorToRotator(): Failed Add TArray<float> elements. return ZeroRotator."));
-//			withSensor = false;
-//			return FRotator::ZeroRotator;
-//		}
-//
-//		UE_LOG(LogTemp, Verbose, TEXT("ASensorTest::SensorToRotator(): Rotator Roll:%f Pitch:%f Yaw:%f"), rotatorAxis[0], rotatorAxis[1], rotatorAxis[2]);
-//
-//		// FRotator型の変数をfloat型を使用して初期化
-//		FRotator rot(rotatorAxis[1], rotatorAxis[2], -rotatorAxis[0]);
-//
-//		return rot;
-//	}
-//	else
-//	{
-//		UE_LOG(LogTemp, Error, TEXT("ASensorTest::SensorToRotator(): ASensorTest::m_pArduinoSerial is NULL."));
-//		withSensor = false;
-//		return FRotator::ZeroRotator;
-//	}
-//}
-
-//	最新版
 void APlayerChara::UpdateSensor(float _deltaTime)
 {
 	FRotator tempRot = SensorManager::GetSensorDataRotator();
@@ -792,19 +584,6 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 	tempPitch = tempRot.Pitch;
 	tempYaw = tempRot.Yaw;
 
-	////// 加算
-	//for (int i = 0; i < prevRotator.Num(); ++i)
-	//{
-	//	tempRoll += prevRotator[i].Roll;
-	//	tempPitch += prevRotator[i].Pitch;
-	//	tempYaw += prevRotator[i].Yaw;
-	//}
-
-	//// 平均値を算出
-	//tempRoll /= prevRotator.Num();
-	//tempPitch /= prevRotator.Num();
-	//tempYaw /= prevRotator.Num();
-
 	//	guardEnergyが0になったら、横回転の角度を強制に0に戻る
 	if (!haveGuardEnergy)
 	{
@@ -814,12 +593,12 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 		}
 		else if (tempRotate < 85.f && tempYaw < 0.f)
 		{
-			tempRotate += 2.f;
+			tempRotate += 2.f * fps;
 			tempYaw += tempRotate;
 		}
 		else if (tempRotate > -85.f && tempYaw > 0.f)
 		{
-			tempRotate -= 2.f;
+			tempRotate -= 2.f * fps;
 			tempYaw += tempRotate;
 		}
 	}
@@ -837,41 +616,9 @@ void APlayerChara::UpdateSensor(float _deltaTime)
 
 	FRotator rot(tempPitch, tempYaw, tempRoll);
 
-	//float angle = 5.f;
-	//if (FMath::Abs((rot - prevDiffRot).Roll) < angle && FMath::Abs((rot - prevDiffRot).Pitch) < angle && FMath::Abs((rot - prevDiffRot).Yaw) < angle)
-	//{
-	//	rot = prevDiffRot;
-	//}
 
 	SetActorRotation(rot);
-
-	//// リストを更新
-	//if (prevRotator.IsValidIndex(0) == true)
-	//{
-	//	// インデックス番号0の要素を削除
-	//	prevRotator.RemoveAt(0);
-
-	//	FRotator rotTemp = SensorToRotator();
-
-	//	// センサーからの値が完全に0か判別
-	//	if (rotTemp == FRotator::ZeroRotator)
-	//	{
-	//		// 現在の平均値を代入
-	//		prevRotator.Add(rot);
-	//	}
-	//	else
-	//	{
-	//		// センサーからの値を代入
-	//		prevRotator.Add(rotTemp);
-	//	}
-	//}
-
-	//prevDiffRot = rot;
 }
-
-//	====================================
-//	センサーが持ってない関数
-
 
 // 各入力関係メソッドとのバインド処理
 void APlayerChara::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -893,7 +640,6 @@ void APlayerChara::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 //	【入力バインド】キャラ移動:左右
 void APlayerChara::MoveRightWithNoSensor(float _axisValue)
 {
-	// 2020/11/11 渡邊 センサー自動検出により変更--------------------------
 	if (withSensor == false)
 	{
 		tempRoll = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 180.f;
@@ -904,7 +650,6 @@ void APlayerChara::MoveRightWithNoSensor(float _axisValue)
 //	【入力バインド】ガードの制御
 void APlayerChara::GuardStartWithNoSensor(float _axisValue)
 {
-	// 2020/11/11 渡邊 センサー自動検出により変更--------------------------
 	if (withSensor == false)
 	{
 		tempYaw = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
@@ -915,7 +660,6 @@ void APlayerChara::GuardStartWithNoSensor(float _axisValue)
 //	【入力バインド】キャラ移動:前後
 void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
 {
-	// 2020/11/11 渡邊 センサー自動検出により変更--------------------------
 	if (withSensor == false)
 	{
 		tempPitch = FMath::Clamp(_axisValue, -1.0f, 1.0f) * 45.f;
@@ -923,6 +667,7 @@ void APlayerChara::DashOrJumpStartWithNoSensor(float _axisValue)
 	//---------------------------------------------------------------------
 }
 
+//	プレイヤーの弾処理
 void APlayerChara::ShotStart(float _axisValue)
 {
 	if (_axisValue == 1 && haveShotEnergy && isStart && !isGoal && !isDead)

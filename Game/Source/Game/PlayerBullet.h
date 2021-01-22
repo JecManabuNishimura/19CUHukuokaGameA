@@ -32,6 +32,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 private:
+	float fps;										//	ÉQÅ[ÉÄÇÃFPS
+
 	APlayerChara* pPlayer;
 
 public:

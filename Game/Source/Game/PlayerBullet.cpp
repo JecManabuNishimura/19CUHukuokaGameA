@@ -39,13 +39,24 @@ void APlayerBullet::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	fps = 1 / DeltaTime;
+
 	BulletMovement();
 }
 
 void APlayerBullet::BulletMovement()
 {
+	if (fps < 59.5f || fps > 60.5f)
+	{
+		fps = 1.f / (fps / 60.f);
+	}
+	else
+	{
+		fps = 60.f / fps;
+	}
+
 	FVector NewPos = GetActorLocation();
-	NewPos.X += playerBulletSpeed;
+	NewPos.X += playerBulletSpeed * fps;
 	SetActorLocation(NewPos);
 }
 
