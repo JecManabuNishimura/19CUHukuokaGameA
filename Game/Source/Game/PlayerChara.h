@@ -275,14 +275,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float DamageFrame;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)			//	CoinScore
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)			//	コインのScore
 		float CoinScore;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)			//	EnemyScore
-		float EnemyScore;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float PlayerScore;								//	Player獲得のScore
+		float PlayerScore;								//	Player獲得の総Score
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)			//	ScoreUIのアニメーションflag
+		bool ScoreAnimStart;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int deadCount;

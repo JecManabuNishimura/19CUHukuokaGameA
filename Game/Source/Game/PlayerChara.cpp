@@ -94,8 +94,8 @@ APlayerChara::APlayerChara()
 	, Dash_UIUpSpeed(0.5f)
 	, DamageFrame(50.f)
 	, CoinScore(1000.f)
-	, EnemyScore(2000.f)
 	, PlayerScore(0.f)
+	, ScoreAnimStart(false)
 	, Damage(10.f)
 	, selectPlay(0)
 	, tempRoll(0.f)
@@ -460,6 +460,8 @@ void APlayerChara::GetPlayerPosZ(float DeltaTime)
 
 void APlayerChara::GetCoin()
 {
+	ScoreAnimStart = true;
+
 	PlayerScore += CoinScore;
 
 	CoinCount += 1;

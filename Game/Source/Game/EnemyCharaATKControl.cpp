@@ -30,8 +30,7 @@ AEnemyCharaATKControl::AEnemyCharaATKControl():
 	canAttack(false),
 	closeToRightRoad(true),
 	behindToPlayer(false),
-	isMoving(true),
-	energyEnemyScore(200)
+	isMoving(true)
 {
 }
 
@@ -193,7 +192,7 @@ void AEnemyCharaATKControl::OnBeginOverlap(
 	AEnemyBullet* pEnemyBullet = Cast<AEnemyBullet>(OtherActor);
 	if (OtherActor->ActorHasTag("EnemyBullet") && pEnemyBullet->isReflectedByPlayer) {
 		UE_LOG(LogTemp, Warning, TEXT("ReflectHit"));
-		if (this->ActorHasTag("EnergyEnemy")) pPlayer->PlayerScore += energyEnemyScore;
+		if (this->ActorHasTag("EnergyEnemy"))
 		if (health > 0) {
 			health -= 1;
 		}
