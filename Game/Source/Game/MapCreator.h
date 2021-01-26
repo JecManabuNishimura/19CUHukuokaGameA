@@ -83,6 +83,14 @@ struct FMapActorStructCpp
 	// スタティックメッシュコンポーネント
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly)
 		UStaticMeshComponent* actorStaticMesh;
+
+	bool operator== (const FMapActorStructCpp& mapActor) const
+	{
+		return (actor				==	mapActor.actor &&
+				generateChar		==	mapActor.generateChar &&
+				generateCharStart	==	mapActor.generateCharStart &&
+				generateCharEnd		==	mapActor.generateCharEnd);
+	}
 };
 
 // マップCSV用構造体
@@ -158,25 +166,18 @@ public:
 public:
 	// 生成するActor
 	FMapActorStructCpp& generateActorStruct;
-
 	// 行番号
 	int rowIndex;
-
 	// 列番号
 	int columnIndex;
-
 	// 生成する文字列
 	FString generateString;
-
 	// 生成パターン
 	MapPlacementPattern generatePattern;
-
 	// フェンスかどうか？
 	bool isFence;
-
 	// フェンスの開始文字か？
 	bool fenceStart;
-
 	// 縦方向の紐付ける数字
 	int vertLinkNum;
 };
@@ -207,6 +208,11 @@ public:
 
 	// private変数
 private:
+	// メッシュを表示する
+	UPROPERTY(EditAnyWhere
+		, Meta = (DisplayName = "Set Map Data"))
+		bool m_SetMapData;
+
 	// メッシュを表示する
 	UPROPERTY(EditAnyWhere
 		, Meta = (DisplayName = "Visible Map Wire"))
@@ -288,11 +294,6 @@ private:
 	// public変数
 public:
 
-	// 床のサンプルになるStaticMesh
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite
-		, Meta = (DisplayName = "Sample Ground"))
-		UInstancedStaticMeshComponent* m_SampleGround;
-
 	// privateメソッド
 private:
 	// X座標算出
@@ -306,6 +307,9 @@ private:
 
 	// マップにActorを生成
 	AActor* SpawnMapActor(FMapActorStructCpp _spawnActor, const float _locationX, const float _locationY);
+
+	// マップにスタティックメッシュを配置
+	void AddMapInstanceStaticMesh(UInstancedStaticMeshComponent* _instancedMeshComp, FMapActorStructCpp _spawnActor, const float _locationX, const float _locationY);
 
 	// FMapActorStructCppをリセットする関数
 	FMapActorStructCpp MapActorStructCppReset();
@@ -346,8 +350,14 @@ private:
 	void AddLinkIndex(FMapActorStructCpp _actorStruct, int _linkIndex, TArray<ContinuousData>& _array, int _value, bool isStart = true);
 
 	// マップ生成情報を設定
-	void SettingMap();
+	void SettingMap(bool isRegenerate = false);
 
 	// 生成を行う
 	void MapCreate();
+
+	// スタティックメッシュによる生成を行う
+	void MapCreateEditor();
+
+	// FMapActorStructCppの要素が何番目か調べる
+	int GetMapActorArrayIndex(FMapActorStructCpp _mapActorStruct);
 };
