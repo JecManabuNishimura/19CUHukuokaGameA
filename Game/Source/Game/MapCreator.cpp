@@ -9,7 +9,8 @@
 #include <time.h>
 
 AMapCreator::AMapCreator()
-	: m_VisibleMapWire(false)
+	: m_SetMapData(false)
+	, m_VisibleMapWire(false)
 	, m_IsLoadMapData(false)
 	, m_IsGeneratePlayer(false)
 	, m_MapRowNumber(0)
@@ -24,10 +25,6 @@ AMapCreator::AMapCreator()
 
 	// RootConponentの作成
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
-
-	// SubObjectの作成
-	m_SampleGround = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("SampleGround"));
-	m_SampleGround->SetupAttachment(RootComponent);
 
 	// 文字列配列の初期化
 	m_StrMapArray.Reset();
@@ -81,12 +78,6 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 	// Scaleを固定
 	SetActorScale3D(newScale);
 
-	// 床のインスタンスメッシュの削除
-	if (m_SampleGround != nullptr)
-	{
-		m_SampleGround->ClearInstances();
-	}
-
 	// マップオブジェクト用インスタンスメッシュ配列の初期化
 	if (m_SampleMapObject.Num() > 0)
 	{
@@ -99,26 +90,94 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 			}
 		}
 	}
+
 	// マップオブジェクト用インスタンスメッシュ配列リセット
 	m_SampleMapObject.Reset();
 
 	// メッシュ生成を行うかどうか
 	if (m_VisibleMapWire)
 	{
-		SettingMap();
+		// 床以外のActorのメッシュをインスタンスメッシュに設定する
+		for (int i = 0; i < m_MapActorArray.Num() + 1; ++i)
+		{
+			// インスタンスメッシュコンポーネントの設定
+			m_SampleMapObject.Add(NewObject<UInstancedStaticMeshComponent>(this));
+			m_SampleMapObject[i]->RegisterComponent();
+			m_SampleMapObject[i]->AttachToComponent(RootComponent, { EAttachmentRule::SnapToTarget, true });
+
+			// インスタンスメッシュコンポーネントが設定できていれば
+			if (m_SampleMapObject[i] != nullptr)
+			{
+				// 最初であれば床を設定
+				if (i == 0)
+				{
+					// 床Actorが設定されていれば
+					if (m_MapActorGround.actor != nullptr)
+					{
+						// C++で作成されたActorのDefaultSubObjectにStaticMeshComponentがついていれば
+						m_MapActorGround.actorStaticMesh = Cast<UStaticMeshComponent>(m_MapActorGround.actor.GetDefaultObject()->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+
+						// スタティックメッシュを取得できていれば
+
+						if (m_MapActorGround.actorStaticMesh != nullptr)
+						{
+							// インスタンスメッシュにスタティックメッシュとマテリアルを設定
+
+							m_SampleMapObject[i]->SetStaticMesh(m_MapActorGround.actorStaticMesh->GetStaticMesh());
+							m_SampleMapObject[i]->SetMaterial(i, m_MapActorGround.actorStaticMesh->GetMaterial(0));
+						}
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("[MapCreator] Could not get static mesh for actor \"%s\""),*(m_MapActorGround.actor.GetDefaultObject()->GetName()))
+						}
+					}
+				}
+				else
+				{
+					// 生成Actorが設定されていれば
+					if (m_MapActorArray[i - 1].actor != nullptr)
+					{
+						// C++で作成されたActorのDefaultSubObjectにStaticMeshComponentがついていれば
+						m_MapActorArray[i - 1].actorStaticMesh = Cast<UStaticMeshComponent>(m_MapActorArray[i - 1].actor.GetDefaultObject()->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+
+						// スタティックメッシュを取得できていれば
+
+						if (m_MapActorArray[i - 1].actorStaticMesh != nullptr)
+						{
+							// インスタンスメッシュにスタティックメッシュとマテリアルを設定
+
+							m_SampleMapObject[i]->SetStaticMesh(m_MapActorArray[i - 1].actorStaticMesh->GetStaticMesh());
+							m_SampleMapObject[i]->SetMaterial(i, m_MapActorArray[i - 1].actorStaticMesh->GetMaterial(0));
+						}
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("[MapCreator] Could not get static mesh for actor \"%s\""), *(m_MapActorArray[i - 1].actor.GetDefaultObject()->GetName()))
+						}
+					}
+				}
+			}
+		}
+		SettingMap(m_SetMapData);
+
+		MapCreateEditor();
+		UE_LOG(LogTemp, Log, TEXT("HELLO!"));
 	}
+	m_SetMapData = false;
 }
 
 void AMapCreator::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 仮マップのインスタンスを削除
-	if (m_SampleGround != nullptr)
+	for (int i = 0; i < m_SampleMapObject.Num(); ++i)
 	{
-		m_SampleGround->ClearInstances();
+		if (m_SampleMapObject[i] != nullptr)
+		{
+			// インスタンス削除
+			m_SampleMapObject[i]->ClearInstances();
+		}
 	}
-
+	
 	SettingMap();
 	
 	MapCreate();
@@ -180,6 +239,15 @@ AActor* AMapCreator::SpawnMapActor(FMapActorStructCpp _spawnActor, const float _
 	else return nullptr;
 }
 
+// マップにスタティックメッシュを配置
+void AMapCreator::AddMapInstanceStaticMesh(UInstancedStaticMeshComponent* _instancedMeshComp, FMapActorStructCpp _spawnActor, const float _locationX, const float _locationY)
+{
+	_instancedMeshComp->AddInstance(
+		FTransform(_spawnActor.rotation,
+			FVector(_locationX, _locationY, _spawnActor.location_Z),
+			_spawnActor.scale));
+}
+
 // FMapActorStructCppをリセットする関数
 FMapActorStructCpp AMapCreator::MapActorStructCppReset()
 {
@@ -222,7 +290,7 @@ bool AMapCreator::SetCSVToFString(const UDataTable* _mapData, TArray<FString>& _
 		if (rowData == nullptr)
 		{
 			// データ読み込み終了
-			UE_LOG(LogTemp, Warning, TEXT("rowData is nullptr. (rowIndex = %s)"), *fStrIndex);
+			UE_LOG(LogTemp, Warning, TEXT("[MapCreator] rowData is nullptr. (rowIndex = %s)"), *fStrIndex);
 			isLoad = false;
 		}
 		// データがあった
@@ -235,11 +303,11 @@ bool AMapCreator::SetCSVToFString(const UDataTable* _mapData, TArray<FString>& _
 				if ((&rowData->Line_1 + i) != NULL)
 				{
 					_stringArray.Add(*(&rowData->Line_1 + i));
-					UE_LOG(LogTemp, Verbose, TEXT("Set Data. (%s)"), *(*(&rowData->Line_1 + i)));
+					UE_LOG(LogTemp, Verbose, TEXT("[MapCreator] Set Data. (%s)"), *(*(&rowData->Line_1 + i)));
 				}
 				else
 				{
-					UE_LOG(LogTemp, Error, TEXT("Could Not Get rowData!"));
+					UE_LOG(LogTemp, Error, TEXT("[MapCreator] Could Not Get rowData!"));
 				}
 			}
 
@@ -250,7 +318,7 @@ bool AMapCreator::SetCSVToFString(const UDataTable* _mapData, TArray<FString>& _
 	// マップデータがない
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("MapData is nullptr."));
+		UE_LOG(LogTemp, Warning, TEXT("[MapCreator] MapData is nullptr."));
 		isLoad = false;
 	}
 
@@ -346,14 +414,14 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 			// その他の場合
 			else
 			{
-				UE_LOG(LogTemp, Warning, TEXT("The \"Generate Type\" set in MapActorArray[%d] is invalid."), actorIndex);
+				UE_LOG(LogTemp, Warning, TEXT("[MapCreator] The \"Generate Type\" set in MapActorArray[%d] is invalid."), actorIndex);
 			}
 		}
 
 		// CSVファイルの文字列と一致する文字列がマップに生成するActorに設定されていない
 		if (isFound == false)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("The string \"%s\" is set in the CSV file, but not in the MapActorArray. Check both the CSV file and the MapActorArray."), *_stringArray[columnIndex])
+			UE_LOG(LogTemp, Warning, TEXT("[MapCreator] The string \"%s\" is set in the CSV file, but not in the MapActorArray. Check both the CSV file and the MapActorArray."), *_stringArray[columnIndex])
 		}
 	}
 }
@@ -364,7 +432,7 @@ void AMapCreator::LinkingFence(TArray<CreateData>& _generateInfoArray)
 	// 生成リストにデータがない
 	if (_generateInfoArray.Num() == 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("There is no data in _generateInfoArray."));
+		UE_LOG(LogTemp, Warning, TEXT("[MapCreator] There is no data in _generateInfoArray."));
 		return;
 	}
 	// データがある
@@ -404,7 +472,7 @@ void AMapCreator::LinkingFence(TArray<CreateData>& _generateInfoArray)
 						// 生成中であればログ
 						else
 						{
-							UE_LOG(LogTemp, Warning, TEXT("A fence generation character was found during vertical fence generation."))
+							UE_LOG(LogTemp, Warning, TEXT("[MapCreator] A fence generation character was found during vertical fence generation."))
 						}
 					}
 					// フェンス生成終了の場合
@@ -445,13 +513,13 @@ void AMapCreator::LinkingFence(TArray<CreateData>& _generateInfoArray)
 							}
 							else
 							{
-								UE_LOG(LogTemp, Error, TEXT("fenceDataIndex is invaild."))
+								UE_LOG(LogTemp, Error, TEXT("[MapCreator] fenceDataIndex is invaild."))
 							}
 						}
 						// 生成中でなければログ
 						else
 						{
-							UE_LOG(LogTemp, Warning, TEXT("A closing character was found before the fence generation character."))
+							UE_LOG(LogTemp, Warning, TEXT("[MapCreator] A closing character was found before the fence generation character."))
 						}
 					}
 				}
@@ -598,7 +666,7 @@ void AMapCreator::LinkingVerticalFence(TArray<CreateData>& _generateInfoArray)
 	// 生成リストにデータがない
 	if (_generateInfoArray.Num() == 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("There is no data in _generateInfoArray."));
+		UE_LOG(LogTemp, Warning, TEXT("[MapCreator] There is no data in _generateInfoArray."));
 		return;
 	}
 	// データがある
@@ -638,7 +706,7 @@ void AMapCreator::LinkingVerticalFence(TArray<CreateData>& _generateInfoArray)
 						// 生成中であればログ
 						else
 						{
-							UE_LOG(LogTemp, Warning, TEXT("A fence generation character was found during vertical fence generation."))
+							UE_LOG(LogTemp, Warning, TEXT("[MapCreator] A fence generation character was found during vertical fence generation."))
 						}
 					}
 					// フェンス生成終了の場合
@@ -679,13 +747,13 @@ void AMapCreator::LinkingVerticalFence(TArray<CreateData>& _generateInfoArray)
 							}
 							else
 							{
-								UE_LOG(LogTemp, Error, TEXT("fenceDataIndex is invaild."))
+								UE_LOG(LogTemp, Error, TEXT("[MapCreator] fenceDataIndex is invaild."))
 							}
 						}
 						// 生成中でなければログ
 						else
 						{
-							UE_LOG(LogTemp, Warning, TEXT("A closing character was found before the vertical fence generation character."))
+							UE_LOG(LogTemp, Warning, TEXT("[MapCreator] A closing character was found before the vertical fence generation character."))
 						}
 					}
 				}
@@ -844,7 +912,7 @@ void AMapCreator::AddLinkIndex(FMapActorStructCpp _actorStruct, int _linkIndex, 
 
 	if (index == -1)
 	{
-		UE_LOG(LogTemp, Error, TEXT("THE END"));
+		UE_LOG(LogTemp, Error, TEXT("[MapCreator] THE END"));
 	}
 
 	if (isStart)
@@ -856,40 +924,47 @@ void AMapCreator::AddLinkIndex(FMapActorStructCpp _actorStruct, int _linkIndex, 
 		_array[index].endIndex = _value;
 	}
 
-	UE_LOG(LogTemp, Verbose, TEXT("Array[%d] element  link : %d, start : %d, end : %d"),
+	UE_LOG(LogTemp, Verbose, TEXT("[MapCreator] Array[%d] element  link : %d, start : %d, end : %d"),
 		index, _array[index].linkIndex, _array[index].startIndex, _array[index].endIndex);
 }
 
 // マップ生成情報を設定
-void AMapCreator::SettingMap()
+void AMapCreator::SettingMap(bool isRegenerate/* = false*/)
 {
-	// 生成リスト初期化
-	m_MapActorCreateData.Reset();
-
-	// 文字列配列初期化
-	m_StrMapArray.Reset();
-
-	// 行番号
-	for (int rowIndex = 0;; ++rowIndex)
+	if (m_MapActorCreateData.Num() == 0 || isRegenerate == true)
 	{
-		// CSVファイルを一行文字列配列に代入することができれば
-		if (SetCSVToFString(m_MapData, m_StrMapArray, rowIndex))
+		// 生成リスト初期化
+		m_MapActorCreateData.Reset();
+
+		// 文字列配列初期化
+		m_StrMapArray.Reset();
+
+		// 行番号
+		for (int rowIndex = 0;; ++rowIndex)
 		{
-			// 代入された文字列から生成するActorを生成リストに追加
-			ComparisonChar(m_MapActorArray, m_StrMapArray, rowIndex, m_MapActorCreateData);
+			// CSVファイルを一行文字列配列に代入することができれば
+			if (SetCSVToFString(m_MapData, m_StrMapArray, rowIndex))
+			{
+				// 代入された文字列から生成するActorを生成リストに追加
+				ComparisonChar(m_MapActorArray, m_StrMapArray, rowIndex, m_MapActorCreateData);
+			}
+			// できなければループ終了
+			else
+			{
+				m_MapRowNumber = rowIndex;
+				UE_LOG(LogTemp, Verbose, TEXT("[MapCreator] The number of rows in the map is %d."), m_MapRowNumber);
+				break;
+			}
 		}
-		// できなければループ終了
-		else
-		{
-			m_MapRowNumber = rowIndex;
-			UE_LOG(LogTemp, Verbose, TEXT("The number of rows in the map is %d."), m_MapRowNumber);
-			break;
-		}
+		LinkingFence(m_MapActorCreateData);
+		//LinkingContinuous(m_MapActorCreateData);
+		LinkingVerticalFence(m_MapActorCreateData);
+		//LinkingVerticalContinuous(m_MapActorCreateData);
 	}
-	LinkingFence(m_MapActorCreateData);
-	//LinkingContinuous(m_MapActorCreateData);
-	LinkingVerticalFence(m_MapActorCreateData);
-	//LinkingVerticalContinuous(m_MapActorCreateData);
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("[MapCreator] Skipped adding to generating list because the list is already set."));
+	}
 }
 
 // 生成を行う
@@ -1018,8 +1093,121 @@ void AMapCreator::MapCreate()
 		}
 
 		default:
-			UE_LOG(LogTemp, Warning, TEXT("MapPlacementPattern is invalid! enum index number : %d"), (int)m_MapActorCreateData[index].generatePattern);
+			UE_LOG(LogTemp, Warning, TEXT("[MapCreator] MapPlacementPattern is invalid! enum index number : %d"), (int)m_MapActorCreateData[index].generatePattern);
 			break;
 		}
 	}
+}
+
+// スタティックメッシュによる生成を行う
+void AMapCreator::MapCreateEditor()
+{
+	// 連続生成の際に重複しないようにする
+	int continuousLinkIndex = 0;		// 横連続
+	int fenceLinkIndex = 0;		// 横フェンス
+	int vertContinuousLinkIndex = 0;		// 縦連続
+	int vertFenceLinkIndex = 0;		// 縦フェンス
+	
+	// 生成リストを検索
+	for (int index = 0; index < m_MapActorCreateData.Num(); ++index)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[MapCreator] index = %d."), index)
+		// 何番目のActorなのかを検索
+		int actorArrayIndex = GetMapActorArrayIndex(m_MapActorCreateData[index].generateActorStruct);
+		if (actorArrayIndex == -1)
+		{
+			// 床かどうか判別
+			if (m_MapActorCreateData[index].generateString != "Ground")
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[MapCreator] Could not get the index of the Actor."));
+					continue;
+			}
+		}
+		actorArrayIndex++;
+		UE_LOG(LogTemp, Error, TEXT("[MapCreator] actorArrayIndex = %d."), actorArrayIndex)
+
+		switch (m_MapActorCreateData[index].generatePattern)
+		{
+		case MapPlacementPattern::Single:
+		{
+			// Actorを一つだけ生成する
+			AddMapInstanceStaticMesh
+			(
+				m_SampleMapObject[actorArrayIndex],
+				m_MapActorCreateData[index].generateActorStruct,
+				LocationX(m_MapActorCreateData[index].rowIndex),
+				LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
+			);
+			break;
+		}
+
+		case MapPlacementPattern::Fence:
+		{
+			// 縦のフェンス生成に使用する生成データの要素番号を格納する
+			int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_FenceData);
+
+			if (fenceLinkIndex == fenceDataIndex)
+			{
+				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
+				actorTemp.scale = m_FenceData[fenceDataIndex].scale;
+
+				// Actorを一つだけ生成する
+				AddMapInstanceStaticMesh
+				(
+					m_SampleMapObject[actorArrayIndex],
+					actorTemp,
+					LocationX((m_FenceData[fenceDataIndex].startIndex + m_FenceData[fenceDataIndex].endIndex) / 2.0f),
+					LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
+				);
+
+				// 次の連続生成Actorの生成へ
+				++fenceLinkIndex;
+			}
+			break;
+		}
+
+		case MapPlacementPattern::V_Fence:
+		{
+			// 縦のフェンス生成に使用する生成データの要素番号を格納する
+			int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalFenceData);
+
+			if (vertFenceLinkIndex == fenceDataIndex)
+			{
+				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
+				actorTemp.scale = m_VerticalFenceData[fenceDataIndex].scale;
+
+				// Actorを一つだけ生成する
+				AddMapInstanceStaticMesh
+				(
+					m_SampleMapObject[actorArrayIndex],
+					actorTemp,
+					LocationX((m_VerticalFenceData[fenceDataIndex].startIndex + m_VerticalFenceData[fenceDataIndex].endIndex) / 2.0f),
+					LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
+				);
+
+				// 次の連続生成Actorの生成へ
+				++vertFenceLinkIndex;
+			}
+			break;
+		}
+
+		default:
+			UE_LOG(LogTemp, Warning, TEXT("[MapCreator] MapPlacementPattern is invalid! enum index number : %d"), (int)m_MapActorCreateData[index].generatePattern);
+			break;
+		}
+	}
+}
+
+// FMapActorStructCppの要素が何番目か調べる
+int AMapCreator::GetMapActorArrayIndex(FMapActorStructCpp _mapActorStruct)
+{
+	for (int i = 0; i < m_MapActorArray.Num(); ++i)
+	{
+		if (_mapActorStruct == m_MapActorArray[i])
+		{
+			return i;
+		}
+	}
+
+	return -1;
 }
