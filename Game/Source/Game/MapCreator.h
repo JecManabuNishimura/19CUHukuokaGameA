@@ -20,19 +20,8 @@ enum class MapPlacementPattern : uint8
 {
 	SettingLock		UMETA(Hidden),									// 設定不可、何も生成しない
 	Single			UMETA(DisplayName = "Single"),					// 単体で配置する
-	/*
-	Continuous		UMETA(DisplayName = "Continuous (Horizontal)"),	// 連続配置で一つのActorになる（横方向）
-	V_Continuous	UMETA(DisplayName = "Continuous (Vertical)"),	// 連続配置で一つのActorになる（縦方向）
-	*/
 	Fence			UMETA(DisplayName = "Fence (Horizontal)"),		// 始点と終点を指定して一つのActorを生成する（横方向）
 	V_Fence			UMETA(DisplayName = "Fence (Vertical)"),		// 始点と終点を指定して一つのActorを生成する（縦方向）
-
-	/*
-	ContinuousEnd	UMETA(Hidden),									// 連続配置終了（横方向）
-	V_ContinuousEnd	UMETA(Hidden),									// 連続配置終了（縦方向）
-	FenceEnd		UMETA(Hidden),									// フェンス配置終了（横方向）
-	V_FenceEnd		UMETA(Hidden),									// フェンス配置終了（縦方向）
-	*/
 };
 
 // マップに配置するActorの構造体
@@ -79,17 +68,13 @@ struct FMapActorStructCpp
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly,
 		Meta = (EditCondition = "geterateType != MapPlacementPattern::SettingLock && isEnemy == true"))
 		EEnemyMoveType enemyMoveType = EEnemyMoveType::None;
-
-	// スタティックメッシュコンポーネント
-	UPROPERTY(EditAnyWhere, BlueprintReadOnly)
-		UStaticMeshComponent* actorStaticMesh;
-
+	
 	bool operator== (const FMapActorStructCpp& mapActor) const
 	{
-		return (actor				==	mapActor.actor &&
-				generateChar		==	mapActor.generateChar &&
-				generateCharStart	==	mapActor.generateCharStart &&
-				generateCharEnd		==	mapActor.generateCharEnd);
+		return (actor == mapActor.actor &&
+			generateChar == mapActor.generateChar &&
+			generateCharStart == mapActor.generateCharStart &&
+			generateCharEnd == mapActor.generateCharEnd);
 	}
 };
 
@@ -148,11 +133,15 @@ struct FMapStructCpp : public FTableRowBase
 		int indexNum = 15;
 };
 
-class CreateData
+USTRUCT(BlueprintType)
+struct FCreateData
 {
-public:
-	CreateData(FMapActorStructCpp& act, int row = 0, int column = 0, FString str = "",
-		MapPlacementPattern pat = MapPlacementPattern::SettingLock, bool fence = false , bool start = false, int lnk = -1)
+	GENERATED_USTRUCT_BODY();
+
+	FCreateData() {}
+	
+	FCreateData(FMapActorStructCpp& act, int row = 0, int column = 0, FString str = "",
+		MapPlacementPattern pat = MapPlacementPattern::SettingLock, bool fence = false, bool start = false, int lnk = -1)
 		: generateActorStruct(act)
 		, rowIndex(row)
 		, columnIndex(column)
@@ -163,23 +152,38 @@ public:
 		, vertLinkNum(lnk)
 	{}
 
-public:
+
 	// 生成するActor
-	FMapActorStructCpp& generateActorStruct;
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
+	FMapActorStructCpp generateActorStruct;
+
 	// 行番号
-	int rowIndex;
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
+		int rowIndex;
+
 	// 列番号
-	int columnIndex;
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
+		int columnIndex;
+
 	// 生成する文字列
-	FString generateString;
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
+		FString generateString;
+
 	// 生成パターン
-	MapPlacementPattern generatePattern;
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
+		MapPlacementPattern generatePattern;
+
 	// フェンスかどうか？
-	bool isFence;
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
+		bool isFence;
+
 	// フェンスの開始文字か？
-	bool fenceStart;
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
+		bool fenceStart;
+
 	// 縦方向の紐付ける数字
-	int vertLinkNum;
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
+		int vertLinkNum;
 };
 
 struct ContinuousData
@@ -273,26 +277,19 @@ private:
 	// 文字列の数を代入
 	int m_StrMapLength;
 
-	// 生成するActorの情報を保存（生成リスト）
-	TArray<CreateData> m_MapActorCreateData;
 
 	// 生成リストに使用する縦にフェンス生成をする時の情報
 	TArray<ContinuousData> m_FenceData;
 
-	// 生成リストに使用する縦に連続生成をする時の情報
-	//TArray<ContinuousData> m_ContinuousData;
-
 	// 生成リストに使用する縦にフェンス生成をする時の情報
 	TArray<ContinuousData> m_VerticalFenceData;
 
-	// 生成リストに使用する縦に連続生成をする時の情報
-	//TArray<ContinuousData> m_VerticalContinuousData;
-
-	// サンプルになるStaticMesh
-	TArray<UInstancedStaticMeshComponent*> m_SampleMapObject;
-
 	// public変数
 public:
+	// 生成するActorの情報を保存（生成リスト）
+	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite,
+		Meta = (DisplayName = "Generate Actor List (Read Only)"))
+		TArray<FCreateData> m_MapActorCreateData;
 
 	// privateメソッド
 private:
@@ -306,10 +303,10 @@ private:
 	float ContinuousScale(const int _startColumn, const int _endColumn, const float _actorScaleY);
 
 	// マップにActorを生成
-	AActor* SpawnMapActor(FMapActorStructCpp _spawnActor, const float _locationX, const float _locationY);
+	AActor* SpawnMapActor(FMapActorStructCpp& _spawnActor, const float _locationX, const float _locationY);
 
 	// マップにスタティックメッシュを配置
-	void AddMapInstanceStaticMesh(UInstancedStaticMeshComponent* _instancedMeshComp, FMapActorStructCpp _spawnActor, const float _locationX, const float _locationY);
+	void AddMapInstanceStaticMesh(UInstancedStaticMeshComponent* _instancedMeshComp, FMapActorStructCpp& _spawnActor, const float _locationX, const float _locationY);
 
 	// FMapActorStructCppをリセットする関数
 	FMapActorStructCpp MapActorStructCppReset();
@@ -329,25 +326,25 @@ private:
 	// 第三引数		行番号
 	// 第四引数		生成情報の保存先になる配列
 
-	void ComparisonChar(TArray<FMapActorStructCpp>& _generateActor,TArray<FString>& _stringArray, const int _rowIndex, TArray<CreateData>& _generateInfoArray);
+	void ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TArray<FString>& _stringArray, const int _rowIndex, TArray<FCreateData>& _generateInfoArray);
 
 	// 横に並んだフェンスの紐付けを行う
-	void LinkingFence(TArray<CreateData>& _generateInfoArray);
+	void LinkingFence(TArray<FCreateData>& _generateInfoArray);
 
 	// 縦に並んだフェンスの紐付けを行う
-	void LinkingVerticalFence(TArray<CreateData>& _generateInfoArray);
+	void LinkingVerticalFence(TArray<FCreateData>& _generateInfoArray);
 
 	// 横への連続生成の設定を行う
-	//void LinkingContinuous(TArray<CreateData>& _generateInfoArray);
+	//void LinkingContinuous(TArray<FCreateData>& _generateInfoArray);
 
 	// 縦への連続生成の設定を行う
-	//void LinkingVerticalContinuous(TArray<CreateData>& _generateInfoArray);
+	//void LinkingVerticalContinuous(TArray<FCreateData>& _generateInfoArray);
 
 	// ContinuousData型のTArrayのLinkIndexの要素が何番目か確認する
 	int GetLinkIndex(int _linkIndex, const TArray<ContinuousData> _array);
 
 	// ContinuousData型のTArrayにLinkIndexの要素を代入する
-	void AddLinkIndex(FMapActorStructCpp _actorStruct, int _linkIndex, TArray<ContinuousData>& _array, int _value, bool isStart = true);
+	void AddLinkIndex(FMapActorStructCpp& _actorStruct, int _linkIndex, TArray<ContinuousData>& _array, int _value, bool isStart = true);
 
 	// マップ生成情報を設定
 	void SettingMap(bool isRegenerate = false);
@@ -359,5 +356,5 @@ private:
 	void MapCreateEditor();
 
 	// FMapActorStructCppの要素が何番目か調べる
-	int GetMapActorArrayIndex(FMapActorStructCpp _mapActorStruct);
+	int GetMapActorArrayIndex(FMapActorStructCpp& _mapActorStruct);
 };
