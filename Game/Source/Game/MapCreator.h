@@ -357,4 +357,7 @@ private:
 
 	// FMapActorStructCppの要素が何番目か調べる
 	int GetMapActorArrayIndex(FMapActorStructCpp& _mapActorStruct);
+
+	// CSVファイルを書き出す
+	bool ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapActorArray);
 };

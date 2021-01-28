@@ -1,11 +1,14 @@
 // マップの自動配置を行うクラス
 
 // 2020/12/02 渡邊 龍音 作成
+// 2020/01/28 渡邊 龍音 生成まで完了
 
 #include "MapCreator.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/DataTable.h"
+#include "Engine/World.h"
+#include "Misc/FileHelper.h"
 #include <time.h>
 
 AMapCreator::AMapCreator()
@@ -92,6 +95,7 @@ void AMapCreator::BeginPlay()
 
 	SettingMap(true);
 	MapCreate();
+	ExportCSVFromActorArray(m_MapActorArray);
 }
 
 void AMapCreator::Tick(float DeltaTime)
@@ -621,9 +625,7 @@ void AMapCreator::SettingMap(bool isRegenerate/* = false*/)
 			}
 		}
 		LinkingFence(m_MapActorCreateData);
-		//LinkingContinuous(m_MapActorCreateData);
 		LinkingVerticalFence(m_MapActorCreateData);
-		//LinkingVerticalContinuous(m_MapActorCreateData);
 	}
 	else
 	{
@@ -656,58 +658,6 @@ void AMapCreator::MapCreate()
 			);
 			break;
 		}
-
-		/*
-		case MapPlacementPattern::Continuous:
-		{
-			// 横の連続生成に使用する生成データの要素番号を格納する
-			int continuousDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_ContinuousData);
-
-			if (continuousLinkIndex == continuousDataIndex)
-			{
-				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
-				actorTemp.scale = m_ContinuousData[continuousDataIndex].scale;
-
-				// Actorを一つだけ生成する
-				SpawnMapActor
-				(
-					actorTemp,
-					LocationX(m_MapActorCreateData[index].rowIndex),
-					LocationY((m_ContinuousData[continuousDataIndex].startIndex + m_ContinuousData[continuousDataIndex].endIndex) / 2.0f, m_StrMapLength)
-				);
-
-				UE_LOG(LogTemp, Error, TEXT("start = %d, end = %d"), m_ContinuousData[continuousDataIndex].startIndex, m_ContinuousData[continuousDataIndex].endIndex);
-
-				// 次の連続生成Actorの生成へ
-				++continuousLinkIndex;
-			}
-			break;
-		}
-
-		case MapPlacementPattern::V_Continuous:
-		{
-			// 縦の連続生成に使用する生成データの要素番号を格納する
-			int continuousDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalContinuousData);
-
-			if (vertContinuousLinkIndex == continuousDataIndex)
-			{
-				FMapActorStructCpp actorTemp = m_MapActorCreateData[index].generateActorStruct;
-				actorTemp.scale = m_VerticalContinuousData[continuousDataIndex].scale;
-
-				// Actorを一つだけ生成する
-				SpawnMapActor
-				(
-					actorTemp,
-					LocationX((m_VerticalContinuousData[continuousDataIndex].startIndex + m_VerticalContinuousData[continuousDataIndex].endIndex) / 2.0f),
-					LocationY(m_MapActorCreateData[index].columnIndex, m_StrMapLength)
-				);
-
-				// 次の連続生成Actorの生成へ
-				++vertContinuousLinkIndex;
-			}
-			break;
-		}*/
-
 		case MapPlacementPattern::Fence:
 		{
 			// 縦のフェンス生成に使用する生成データの要素番号を格納する
@@ -872,4 +822,52 @@ int AMapCreator::GetMapActorArrayIndex(FMapActorStructCpp& _mapActorStruct)
 	}
 
 	return -1;
+}
+
+// CSVファイルを書き出す
+bool AMapCreator::ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapActorArray)
+{	
+	FString inStr = TEXT("IndexNum,ActorName,GenerateString\n");
+
+	for (int i = 0; i < _mapActorArray.Num(); ++i)
+	{
+		inStr += FString::FromInt(i);
+		inStr += TEXT(",");
+
+		FString actorName;
+		FString tmpLeft;
+		FString tmpRight;
+
+		_mapActorArray[i].actor.GetDefaultObject()->GetName().Split("_", &tmpLeft, &tmpRight, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+		tmpLeft.Split("_", &tmpRight, &actorName, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+
+		inStr += actorName;
+		inStr += TEXT(",");
+
+		if (_mapActorArray[i].geterateType == MapPlacementPattern::Single)
+		{
+			inStr += _mapActorArray[i].generateChar;
+			inStr += TEXT("\n");
+		}
+		else
+		{
+			inStr += _mapActorArray[i].generateCharStart;
+			inStr += TEXT(" ");
+			inStr += _mapActorArray[i].generateCharEnd;
+			inStr += TEXT("\n");			
+		}	
+	}
+
+	FString mapName = GetWorld()->GetMapName();
+	mapName = GetWorld()->RemovePIEPrefix(mapName);
+
+	FString path = FPaths::GameDir() + (TEXT("Content/_MapCreator_MapActorCSV/"));
+
+	FString name = TEXT("MapActorList_");
+	name += mapName;
+	name += TEXT(".csv");
+		
+	UE_LOG(LogTemp, Warning, TEXT("Path = %s"), *path);
+	UE_LOG(LogTemp, Warning, TEXT("Name = %s"), *name);
+	return FFileHelper::SaveStringToFile(inStr, *(path + name));
 }
