@@ -218,55 +218,55 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	シュートゲージの回復スピード
 		float Shot_UIUpSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガード状態のゲージ下がるスピード
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガード状態のゲージを下がるスピード
 		float Guard_UIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガードゲージの回復スピード
 		float Guard_UIUpSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ダッシュゲージを下がるスピード
 		float Dash_UIDownSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ダッシュゲージの回復スピード
 		float Dash_UIUpSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	プレイヤーのスピード
 		float playerSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	プレイヤーの最大スピード
 		float playerMaxSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ダッシュする時の速度（値はプレイヤーの通常スピードと掛けたい数字）
 		float DashSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ゴール到着までの時間
 		float GoalTime;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	プレイヤーのHP
 		float HP;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	獲得したコインの数
 		int32 CoinCount;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	敵を消滅した数
 		int32 CountShootEnemy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	現状態弾のエネルギー
 		float ShotEnergy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	弾の最大エネルギー
 		float ShotMaxEnergy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	現状態ガードのエネルギー
 		float GuardEnergy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガードの最大エネルギー
 		float GuardEnergyMax;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	現状態ダッシュのエネルギー
 		float DashEnergy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)		//	
 		float DashEnergyMax;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -285,7 +285,7 @@ public:
 		bool ScoreAnimStart;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		int deadCount;
+		bool IsAddScoreOver;
 
 	//	=============================================================
 	//	プレイヤーの状態

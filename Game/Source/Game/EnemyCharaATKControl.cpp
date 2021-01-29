@@ -180,14 +180,14 @@ void AEnemyCharaATKControl::OnBeginOverlap(
 	UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
 	bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->ActorHasTag("PlayerBullet")) {
-		if (health > 0) {
-			health -= 1;
-		}
-		else if (health <= 0) {
-			health = 0;
-		}
-	}
+	//if (OtherActor->ActorHasTag("PlayerBullet")) {
+	//	if (health > 0) {
+	//		health -= 1;
+	//	}
+	//	else if (health <= 0) {
+	//		health = 0;
+	//	}
+	//}
 
 	AEnemyBullet* pEnemyBullet = Cast<AEnemyBullet>(OtherActor);
 	if (OtherActor->ActorHasTag("EnemyBullet") && pEnemyBullet->isReflectedByPlayer) {

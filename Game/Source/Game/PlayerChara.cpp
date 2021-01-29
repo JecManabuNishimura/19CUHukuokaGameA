@@ -72,7 +72,7 @@ APlayerChara::APlayerChara()
 	, isFirstShoting(true)
 	, isDamageOver(false)
 	, GoalTime(0.f)
-	, deadCount(0)
+	, IsAddScoreOver(true)
 	, HP(100.f)
 	, CoinCount(0)
 	, CountShootEnemy(0)
@@ -228,7 +228,7 @@ void APlayerChara::Tick(float DeltaTime)
 
 	//DeadCount();
 
-	PlayEffects();
+	//PlayEffects();
 }
 
 //	à⁄ìÆèàóù
@@ -372,7 +372,7 @@ void APlayerChara::UpdateAccelerate()
 		isDashing = true;
 	}
 
-	if (DashEnergy <= 0.f)
+	if (DashEnergy <= 0.5f)
 	{
 		isDashing = false;
 		haveDashEnergy = false;
@@ -426,14 +426,14 @@ void APlayerChara::Shooting(float DeltaTime)
 	}
 }
 
-void APlayerChara::PlayEffects()
-{
-	if (isDashing || isDashLine) {
-		if (DashEffect == nullptr) {
-			return;
-		}
-	}
-}
+//void APlayerChara::PlayEffects()
+//{
+//	if (isDashing || isDashLine) {
+//		if (DashEffect == nullptr) {
+//			return;
+//		}
+//	}
+//}
 
 //	ÉWÉÉÉìÉvë‰Ç©ÇÁóéÇ∆ÇµÇΩÇÁSEÇèoÇ∑ÇΩÇﬂÇÃä÷êî
 void APlayerChara::GetPlayerPosZ(float DeltaTime)
@@ -466,8 +466,27 @@ void APlayerChara::GetCoin()
 
 	CoinCount += 1;
 
-	DashEnergy += AddDashEnergy;
+	if (DashEnergy < DashEnergyMax)
+	{
+		DashEnergy += AddDashEnergy;
+	}	
 }
+
+//void APlayerChara::DeadCount()
+//{
+//	if (HP <= 0 || isDead)
+//	{
+//		if (Player_Select_Widget_Class != nullptr && !hadDoOnce)
+//		{
+//			isDead = true;
+//
+//			Player_Select_Widget = CreateWidget(GetWorld(), Player_Select_Widget_Class);
+//			Player_Select_Widget->AddToViewport();
+//
+//			hadDoOnce = true;
+//		}
+//	}
+//}
 
 void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
