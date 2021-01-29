@@ -838,8 +838,15 @@ bool AMapCreator::ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapA
 		FString tmpLeft;
 		FString tmpRight;
 
-		_mapActorArray[i].actor.GetDefaultObject()->GetName().Split("_", &tmpLeft, &tmpRight, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-		tmpLeft.Split("_", &tmpRight, &actorName, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+		if (_mapActorArray[i].actor != nullptr)
+		{
+			_mapActorArray[i].actor.GetDefaultObject()->GetName().Split("_", &tmpLeft, &tmpRight, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+			tmpLeft.Split("_", &tmpRight, &actorName, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+		}
+		else
+		{
+			actorName = TEXT("NULL Actor");
+		}
 
 		inStr += actorName;
 		inStr += TEXT(",");
