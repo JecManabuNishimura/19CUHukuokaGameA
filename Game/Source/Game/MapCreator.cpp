@@ -75,7 +75,7 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 	FVector newScale(1.0f, 1.0f, 1.0f);
 
 	// LocationとRotationを固定
-	SetActorLocationAndRotation(newLocation, newRotation);
+	//SetActorLocationAndRotation(newLocation, newRotation);
 
 	// Scaleを固定
 	SetActorScale3D(newScale);
@@ -826,7 +826,7 @@ int AMapCreator::GetMapActorArrayIndex(FMapActorStructCpp& _mapActorStruct)
 // CSVファイルを書き出す
 bool AMapCreator::ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapActorArray)
 {	
-	FString inStr = TEXT("IndexNum,ActorName,GenerateString\n");
+	FString inStr = TEXT("IndexNum,ActorName,GenerateType,GenerateString\n");
 
 	for (int i = 0; i < _mapActorArray.Num(); ++i)
 	{
@@ -840,7 +840,7 @@ bool AMapCreator::ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapA
 		if (_mapActorArray[i].actor != nullptr)
 		{
 			_mapActorArray[i].actor.GetDefaultObject()->GetName().Split("_", &tmpLeft, &tmpRight, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-			tmpLeft.Split("_", &tmpRight, &actorName, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+			tmpLeft.Split("__", &tmpRight, &actorName, ESearchCase::IgnoreCase, ESearchDir::FromStart);
 		}
 		else
 		{
@@ -852,11 +852,13 @@ bool AMapCreator::ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapA
 
 		if (_mapActorArray[i].geterateType == EMapPlacementPattern::Single)
 		{
+			inStr += TEXT("Single,");
 			inStr += _mapActorArray[i].generateChar;
 			inStr += TEXT("\n");
 		}
 		else
 		{
+			inStr += TEXT("Fence,");
 			inStr += _mapActorArray[i].generateCharStart;
 			inStr += TEXT(" ");
 			inStr += _mapActorArray[i].generateCharEnd;
