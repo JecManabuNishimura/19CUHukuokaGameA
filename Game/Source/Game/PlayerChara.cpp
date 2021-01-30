@@ -273,7 +273,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 	//	キャラクターのY軸移動
 	{
 		YRotation.Y = 0.f;
-		NewLocation.Y += 0.4f * -tempRoll * fps;
+		NewLocation.Y += 0.8f * -tempRoll * fps;
 		SetActorLocation(NewLocation);
 	}
 
@@ -318,7 +318,7 @@ void APlayerChara::UpdateJump(float _deltaTime)
 			jumpTime = 0.f;
 			isJumping = false;
 			isLanding = true;
-			SetActorLocation(FVector(nowPos.X, nowPos.Y, posBeforeJump.Z));
+			//SetActorLocation(FVector(nowPos.X, nowPos.Y, posBeforeJump.Z));
 		}
 		else
 		{
@@ -495,7 +495,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		canJump = true;
 	}
 
-	if (OtherActor->ActorHasTag("Fence_Film") && canBeDamaged && !isDashing && !isDashing)
+	if (OtherActor->ActorHasTag("Fence_Film") && canBeDamaged && !isDashing && !isDashLine)
 	{
 		if (!isGuarding)
 		{
@@ -549,8 +549,6 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 	if (OtherActor->ActorHasTag("DashLine"))
 	{
 		isDashLine = true;
-
-		canJump = true;
 	}
 
 	if (OtherActor->ActorHasTag("SuperJump"))
