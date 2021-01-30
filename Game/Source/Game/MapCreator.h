@@ -16,7 +16,7 @@ class UStaticMeshComponent;
 
 // マップに配置する時の生成パターン
 UENUM(BlueprintType)
-enum class MapPlacementPattern : uint8
+enum class EMapPlacementPattern : uint8
 {
 	SettingLock		UMETA(Hidden),									// 設定不可、何も生成しない
 	Single			UMETA(DisplayName = "Single"),					// 単体で配置する
@@ -59,7 +59,7 @@ struct FMapActorStructCpp
 
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly,
 		Meta = (EditCondition = "geterateType != MapPlacementPattern::SettingLock && isEnemy == false"))
-		MapPlacementPattern geterateType = MapPlacementPattern::Single;
+		EMapPlacementPattern geterateType = EMapPlacementPattern::Single;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly,
 		Meta = (EditCondition = "geterateType != MapPlacementPattern::SettingLock"))
@@ -68,7 +68,7 @@ struct FMapActorStructCpp
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly,
 		Meta = (EditCondition = "geterateType != MapPlacementPattern::SettingLock && isEnemy == true"))
 		EEnemyMoveType enemyMoveType = EEnemyMoveType::None;
-	
+
 	bool operator== (const FMapActorStructCpp& mapActor) const
 	{
 		return (actor == mapActor.actor &&
@@ -139,9 +139,9 @@ struct FCreateData
 	GENERATED_USTRUCT_BODY();
 
 	FCreateData() {}
-	
+
 	FCreateData(FMapActorStructCpp& act, int row = 0, int column = 0, FString str = "",
-		MapPlacementPattern pat = MapPlacementPattern::SettingLock, bool fence = false, bool start = false, int lnk = -1)
+		EMapPlacementPattern pat = EMapPlacementPattern::SettingLock, bool fence = false, bool start = false, int lnk = -1)
 		: generateActorStruct(act)
 		, rowIndex(row)
 		, columnIndex(column)
@@ -155,7 +155,7 @@ struct FCreateData
 
 	// 生成するActor
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
-	FMapActorStructCpp generateActorStruct;
+		FMapActorStructCpp generateActorStruct;
 
 	// 行番号
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
@@ -171,7 +171,7 @@ struct FCreateData
 
 	// 生成パターン
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
-		MapPlacementPattern generatePattern;
+		EMapPlacementPattern generatePattern;
 
 	// フェンスかどうか？
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite)
@@ -186,12 +186,19 @@ struct FCreateData
 		int vertLinkNum;
 };
 
-struct ContinuousData
+USTRUCT(BlueprintType)
+struct FContinuousData
 {
-	int linkIndex;
-	int startIndex;
-	int endIndex;
-	FVector scale;
+	GENERATED_USTRUCT_BODY();
+
+	UPROPERTY(BlueprintReadOnly)
+		int linkIndex;
+	UPROPERTY(BlueprintReadOnly)
+		int startIndex;
+	UPROPERTY(BlueprintReadOnly)
+		int endIndex;
+	UPROPERTY(BlueprintReadOnly)
+		FVector scale;
 };
 
 UCLASS()
@@ -212,58 +219,6 @@ public:
 
 	// private変数
 private:
-	// メッシュを表示する
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Set Map Data"))
-		bool m_SetMapData;
-
-	// メッシュを表示する
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Visible Map Wire"))
-		bool m_VisibleMapWire;
-
-	// マップデータ
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Map Data"))
-		UDataTable* m_MapData;
-
-	// マップCSVで床を生成しない時の文字列
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Not Ground Generate Str"))
-		FString m_NotGroundGenerateStr;
-
-	// X軸のオフセット
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "X Axis Offset"))
-		float m_XAxis_Offset;
-
-	// Y軸のオフセット
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Y Axis Offset"))
-		float m_YAxis_Offset;
-
-	// 床のActor
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Map Actor Ground"))
-		FMapActorStructCpp m_MapActorGround;
-
-	// プレイヤーActor生成の文字
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Player Generate Str"))
-		FString m_PlayerGenerateStr;
-
-	// プレイヤーのActor
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Player Actor"))
-		FMapActorStructCpp m_PlayerActor;
-
-	// 床以外のの生成Actor
-	UPROPERTY(EditAnyWhere
-		, Meta = (DisplayName = "Map Actor Array"))
-		TArray<FMapActorStructCpp> m_MapActorArray;
-
-	// マップデータを読み込むか
-	bool m_IsLoadMapData;
 
 	// プレイヤーを生成したか（重複して生成しない）
 	bool m_IsGeneratePlayer;
@@ -274,22 +229,76 @@ private:
 	// マップの文字列をに保存
 	TArray<FString> m_StrMapArray;
 
-	// 文字列の数を代入
-	int m_StrMapLength;
-
-
-	// 生成リストに使用する縦にフェンス生成をする時の情報
-	TArray<ContinuousData> m_FenceData;
-
-	// 生成リストに使用する縦にフェンス生成をする時の情報
-	TArray<ContinuousData> m_VerticalFenceData;
-
 	// public変数
-public:
+public:// メッシュを表示する
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Set Map Data"))
+		bool m_SetMapData;
+
+	// メッシュを表示する
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Visible Map Wire"))
+		bool m_VisibleMapWire;
+
+	// マップデータ
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Map Data"))
+		UDataTable* m_MapData;
+
+	// マップCSVで床を生成しない時の文字列
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Not Ground Generate Str"))
+		FString m_NotGroundGenerateStr;
+
+	// X軸のオフセット
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "X Axis Offset"))
+		float m_XAxis_Offset;
+
+	// Y軸のオフセット
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Y Axis Offset"))
+		float m_YAxis_Offset;
+
+	// 床のActor
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Map Actor Ground"))
+		FMapActorStructCpp m_MapActorGround;
+
+	// プレイヤーActor生成の文字
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Player Generate Str"))
+		FString m_PlayerGenerateStr;
+
+	// プレイヤーのActor
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Player Actor"))
+		FMapActorStructCpp m_PlayerActor;
+
+	// 床以外のの生成Actor
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly
+		, Meta = (DisplayName = "Map Actor Array"))
+		TArray<FMapActorStructCpp> m_MapActorArray;
+
 	// 生成するActorの情報を保存（生成リスト）
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite,
-		Meta = (DisplayName = "Generate Actor List (Read Only)"))
+		Meta = (DisplayName = "Generate Actor List"))
 		TArray<FCreateData> m_MapActorCreateData;
+
+	UPROPERTY(BlueprintReadOnly,
+		Meta = (DisplayName = "StrMapLength"))
+		// 文字列の数を代入
+		int m_StrMapLength;
+
+	UPROPERTY(BlueprintReadWrite,
+		Meta = (DisplayName = "FenceData"))
+		// 生成リストに使用する縦にフェンス生成をする時の情報
+		TArray<FContinuousData> m_FenceData;
+
+	UPROPERTY(BlueprintReadWrite,
+		Meta = (DisplayName = "VerticalFenceData"))
+		// 生成リストに使用する縦にフェンス生成をする時の情報
+		TArray<FContinuousData> m_VerticalFenceData;
 
 	// privateメソッド
 private:
@@ -334,23 +343,8 @@ private:
 	// 縦に並んだフェンスの紐付けを行う
 	void LinkingVerticalFence(TArray<FCreateData>& _generateInfoArray);
 
-	// 横への連続生成の設定を行う
-	//void LinkingContinuous(TArray<FCreateData>& _generateInfoArray);
-
-	// 縦への連続生成の設定を行う
-	//void LinkingVerticalContinuous(TArray<FCreateData>& _generateInfoArray);
-
-	// ContinuousData型のTArrayのLinkIndexの要素が何番目か確認する
-	int GetLinkIndex(int _linkIndex, const TArray<ContinuousData> _array);
-
-	// ContinuousData型のTArrayにLinkIndexの要素を代入する
-	void AddLinkIndex(FMapActorStructCpp& _actorStruct, int _linkIndex, TArray<ContinuousData>& _array, int _value, bool isStart = true);
-
-	// マップ生成情報を設定
-	void SettingMap(bool isRegenerate = false);
-
-	// 生成を行う
-	void MapCreate();
+	// FContinuousData型のTArrayにLinkIndexの要素を代入する
+	void AddLinkIndex(FMapActorStructCpp& _actorStruct, int _linkIndex, TArray<FContinuousData>& _array, int _value, bool isStart = true);
 
 	// スタティックメッシュによる生成を行う
 	void MapCreateEditor();
@@ -360,4 +354,18 @@ private:
 
 	// CSVファイルを書き出す
 	bool ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapActorArray);
+
+	// publicメソッド
+public:
+	UFUNCTION(BlueprintCallable)
+		// 生成を行う
+		void MapCreate();
+
+	UFUNCTION(BlueprintCallable)
+		// マップ生成情報を設定
+		void SettingMap(bool isRegenerate = false);
+
+	UFUNCTION(BlueprintCallable)
+		// FContinuousData型のTArrayのLinkIndexの要素が何番目か確認する
+		int GetLinkIndex(int _linkIndex, const TArray<FContinuousData> _array);
 };

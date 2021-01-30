@@ -14,7 +14,6 @@
 AMapCreator::AMapCreator()
 	: m_SetMapData(false)
 	, m_VisibleMapWire(false)
-	, m_IsLoadMapData(false)
 	, m_IsGeneratePlayer(false)
 	, m_MapRowNumber(0)
 	, m_StrMapLength(0)
@@ -42,10 +41,10 @@ AMapCreator::AMapCreator()
 	//m_VerticalContinuousData.Reset();
 
 	// 床Actorの初期化
-	m_MapActorGround.geterateType = MapPlacementPattern::SettingLock;
+	m_MapActorGround.geterateType = EMapPlacementPattern::SettingLock;
 
 	// プレイヤーActorの設定
-	m_PlayerActor.geterateType = MapPlacementPattern::SettingLock;
+	m_PlayerActor.geterateType = EMapPlacementPattern::SettingLock;
 }
 
 void AMapCreator::OnConstruction(const FTransform& Transform)
@@ -57,7 +56,7 @@ void AMapCreator::OnConstruction(const FTransform& Transform)
 	{
 		if (m_MapActorArray[i].isEnemy == true)
 		{
-			m_MapActorArray[i].geterateType = MapPlacementPattern::Single;
+			m_MapActorArray[i].geterateType = EMapPlacementPattern::Single;
 		}
 		else
 		{
@@ -175,7 +174,7 @@ FMapActorStructCpp AMapCreator::MapActorStructCppReset()
 	params.generateChar = "";
 	params.generateCharStart = "";
 	params.generateCharEnd = "";
-	params.geterateType = MapPlacementPattern::Single;
+	params.geterateType = EMapPlacementPattern::Single;
 	params.enemyMoveType = EEnemyMoveType::None;
 
 	return params;
@@ -253,7 +252,7 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 			if (_stringArray[0] != m_NotGroundGenerateStr)
 			{
 				// 床の生成を追加
-				FCreateData groundData(m_MapActorGround, _rowIndex, m_StrMapLength / 2, "Ground", MapPlacementPattern::Single);
+				FCreateData groundData(m_MapActorGround, _rowIndex, m_StrMapLength / 2, "Ground", EMapPlacementPattern::Single);
 				_generateInfoArray.Add(groundData);
 			}
 		}
@@ -268,7 +267,7 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 		if (m_IsGeneratePlayer == false && _stringArray[columnIndex] == m_PlayerGenerateStr)
 		{
 			// プレイヤーを生成リストに追加してループやり直し
-			FCreateData playerData(m_PlayerActor, _rowIndex, columnIndex, "Player", MapPlacementPattern::Single);
+			FCreateData playerData(m_PlayerActor, _rowIndex, columnIndex, "Player", EMapPlacementPattern::Single);
 			_generateInfoArray.Add(playerData);
 			continue;
 		}
@@ -286,9 +285,9 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 
 			// 生成タイプによって比較する文字列を変更する
 			// 単体タイプ もしくは 連続生成タイプ
-			if (_generateActor[actorIndex].geterateType == MapPlacementPattern::Single/* ||
-				_generateActor[actorIndex].geterateType == MapPlacementPattern::Continuous ||
-				_generateActor[actorIndex].geterateType == MapPlacementPattern::V_Continuous*/)
+			if (_generateActor[actorIndex].geterateType == EMapPlacementPattern::Single/* ||
+				_generateActor[actorIndex].geterateType == EMapPlacementPattern::Continuous ||
+				_generateActor[actorIndex].geterateType == EMapPlacementPattern::V_Continuous*/)
 			{
 				if (_stringArray[columnIndex] == _generateActor[actorIndex].generateChar)
 				{
@@ -302,8 +301,8 @@ void AMapCreator::ComparisonChar(TArray<FMapActorStructCpp>& _generateActor, TAr
 				}
 			}
 			// フェンス生成タイプ
-			else if (_generateActor[actorIndex].geterateType == MapPlacementPattern::Fence ||
-				_generateActor[actorIndex].geterateType == MapPlacementPattern::V_Fence)
+			else if (_generateActor[actorIndex].geterateType == EMapPlacementPattern::Fence ||
+				_generateActor[actorIndex].geterateType == EMapPlacementPattern::V_Fence)
 			{
 				if (_stringArray[columnIndex] == _generateActor[actorIndex].generateCharStart)
 				{
@@ -366,7 +365,7 @@ void AMapCreator::LinkingFence(TArray<FCreateData>& _generateInfoArray)
 			for (int actorIndex = 0; actorIndex < _generateInfoArray.Num(); ++actorIndex)
 			{
 				// 縦のフェンスの場合
-				if (_generateInfoArray[actorIndex].generatePattern == MapPlacementPattern::Fence &&
+				if (_generateInfoArray[actorIndex].generatePattern == EMapPlacementPattern::Fence &&
 					_generateInfoArray[actorIndex].rowIndex == row)
 				{
 					// フェンス生成開始の場合
@@ -470,7 +469,7 @@ void AMapCreator::LinkingVerticalFence(TArray<FCreateData>& _generateInfoArray)
 			for (int actorIndex = 0; actorIndex < _generateInfoArray.Num(); ++actorIndex)
 			{
 				// 列が一致する縦のフェンスの場合
-				if (_generateInfoArray[actorIndex].generatePattern == MapPlacementPattern::V_Fence &&
+				if (_generateInfoArray[actorIndex].generatePattern == EMapPlacementPattern::V_Fence &&
 					_generateInfoArray[actorIndex].columnIndex == column)
 				{
 					// フェンス生成開始の場合
@@ -547,8 +546,8 @@ void AMapCreator::LinkingVerticalFence(TArray<FCreateData>& _generateInfoArray)
 	}
 }
 
-// ContinuousData型のTArrayに要素が含まれてるか確認する
-int AMapCreator::GetLinkIndex(int _linkIndex, const TArray<ContinuousData> _array)
+// FContinuousData型のTArrayに要素が含まれてるか確認する
+int AMapCreator::GetLinkIndex(int _linkIndex, const TArray<FContinuousData> _array)
 {
 	int result = -1;
 
@@ -563,10 +562,10 @@ int AMapCreator::GetLinkIndex(int _linkIndex, const TArray<ContinuousData> _arra
 	return result;
 }
 
-// ContinuousData型のTArrayにLinkIndexの要素を代入する
-void AMapCreator::AddLinkIndex(FMapActorStructCpp& _actorStruct, int _linkIndex, TArray<ContinuousData>& _array, int _value, bool isStart/* = true*/)
+// FContinuousData型のTArrayにLinkIndexの要素を代入する
+void AMapCreator::AddLinkIndex(FMapActorStructCpp& _actorStruct, int _linkIndex, TArray<FContinuousData>& _array, int _value, bool isStart/* = true*/)
 {
-	ContinuousData vertTemp = { _linkIndex , 0, 0, _actorStruct.scale };
+	FContinuousData vertTemp = { _linkIndex , 0, 0, _actorStruct.scale };
 
 	int loopCnt = 0;
 	int index = GetLinkIndex(_linkIndex, _array);
@@ -647,7 +646,7 @@ void AMapCreator::MapCreate()
 	{
 		switch (m_MapActorCreateData[index].generatePattern)
 		{
-		case MapPlacementPattern::Single:
+		case EMapPlacementPattern::Single:
 		{
 			// Actorを一つだけ生成する
 			SpawnMapActor
@@ -658,7 +657,7 @@ void AMapCreator::MapCreate()
 			);
 			break;
 		}
-		case MapPlacementPattern::Fence:
+		case EMapPlacementPattern::Fence:
 		{
 			// 縦のフェンス生成に使用する生成データの要素番号を格納する
 			int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_FenceData);
@@ -682,7 +681,7 @@ void AMapCreator::MapCreate()
 			break;
 		}
 
-		case MapPlacementPattern::V_Fence:
+		case EMapPlacementPattern::V_Fence:
 		{
 			// 縦のフェンス生成に使用する生成データの要素番号を格納する
 			int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalFenceData);
@@ -740,7 +739,7 @@ void AMapCreator::MapCreateEditor()
 
 		switch (m_MapActorCreateData[index].generatePattern)
 		{
-		case MapPlacementPattern::Single:
+		case EMapPlacementPattern::Single:
 		{
 			// Actorを一つだけ生成する
 			/*AddMapInstanceStaticMesh
@@ -753,7 +752,7 @@ void AMapCreator::MapCreateEditor()
 			break;
 		}
 
-		case MapPlacementPattern::Fence:
+		case EMapPlacementPattern::Fence:
 		{
 			// 縦のフェンス生成に使用する生成データの要素番号を格納する
 			int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_FenceData);
@@ -778,7 +777,7 @@ void AMapCreator::MapCreateEditor()
 			break;
 		}
 
-		case MapPlacementPattern::V_Fence:
+		case EMapPlacementPattern::V_Fence:
 		{
 			// 縦のフェンス生成に使用する生成データの要素番号を格納する
 			int fenceDataIndex = GetLinkIndex(m_MapActorCreateData[index].vertLinkNum, m_VerticalFenceData);
@@ -851,7 +850,7 @@ bool AMapCreator::ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapA
 		inStr += actorName;
 		inStr += TEXT(",");
 
-		if (_mapActorArray[i].geterateType == MapPlacementPattern::Single)
+		if (_mapActorArray[i].geterateType == EMapPlacementPattern::Single)
 		{
 			inStr += _mapActorArray[i].generateChar;
 			inStr += TEXT("\n");
