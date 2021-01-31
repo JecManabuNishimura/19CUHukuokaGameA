@@ -353,7 +353,7 @@ void APlayerChara::UpdateGuard()
 	}
 	else
 	{ 
-		if (GuardEnergy <= GuardEnergyMax)
+		if (GuardEnergy < GuardEnergyMax)
 		{
 			GuardEnergy += Guard_UIUpSpeed * fps;
 		}
