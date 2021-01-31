@@ -3,6 +3,7 @@
 // 概要				：StageSelectでプレイヤーの制御
 // 作成者			：19CU0222 鍾家同
 // 更新内容			：2020/11/23 作成　プレイヤーのカメラの動き
+//					：2021/01/31 修正　SpawnActor（StageSelectActor）のコリジョンを削除（L.176）
 //----------------------------------------------------------
 
 
@@ -171,7 +172,9 @@ void AStageSelectCamera::AttachObject()
 	if (canSpawnAttachedActor) {
 		if (StageSelectActor != NULL) {
 			if (!isReturning) {
-				SpawnedMainActor = GetWorld()->SpawnActor<AStageSelect>(StageSelectActor);
+				FActorSpawnParameters ActorSpawnParams;
+				ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				SpawnedMainActor = GetWorld()->SpawnActor<AStageSelect>(StageSelectActor, ActorSpawnParams);
 				SpawnedMainActor->SetActorRelativeLocation(SpawnMainActorLocation);
 				SpawnedMainActor->SetActorRelativeRotation(SSCurrentRotation + FRotator(0.0f, 90.0f, 0.0f));
 				SpawnedMainActor->SetActorRelativeScale3D(FVector(2.0f, 2.0f, 2.0f));
