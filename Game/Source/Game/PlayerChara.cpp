@@ -85,7 +85,7 @@ APlayerChara::APlayerChara()
 	, AddDashEnergy(10.f)
 	, DashEffectLocationOffset(400.f, 0.f, 0.f)
 	, DashEffectRotationOffset(0.f, 0.f, 0.f)
-	, guardBulletUIDownSpeed(10.f)
+	, guardUIDownValue(10.f)
 	, Shot_UIDownSpeed(0.5f)
 	, Shot_UIUpSpeed(0.5f)
 	, Guard_UIDownSpeed(0.5f)
@@ -492,6 +492,8 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 {
 	if (OtherActor->ActorHasTag("JumpPad"))
 	{
+		jumpPower = tempJumpPower;
+
 		canJump = true;
 	}
 
@@ -511,7 +513,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		}
 		else
 		{
-			GuardEnergy -= guardBulletUIDownSpeed;
+			GuardEnergy -= guardUIDownValue;
 		}
 	}
 
@@ -530,7 +532,7 @@ void APlayerChara::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 		}
 		else
 		{
-			GuardEnergy -= guardBulletUIDownSpeed;
+			GuardEnergy -= guardUIDownValue;
 		}
 	}
 

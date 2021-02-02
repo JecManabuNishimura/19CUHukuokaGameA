@@ -92,7 +92,7 @@ void AEnemyBullet::OnBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherAct
 
 		
 		isPlayerBeGuarding = true;
-		pPlayer->GuardEnergy -= pPlayer->guardBulletUIDownSpeed;
+		pPlayer->GuardEnergy -= pPlayer->guardUIDownValue;
 
 		isReflectedByPlayer = true;
 	}

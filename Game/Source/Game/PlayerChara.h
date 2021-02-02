@@ -209,14 +209,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	プレイヤー死んだ後の選択肢
 		int32 selectPlay;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガード成功したらゲージの下がる量
-		float guardBulletUIDownSpeed;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	シュートゲージの下がるスピード
 		float Shot_UIDownSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	シュートゲージの回復スピード
 		float Shot_UIUpSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガード成功したらゲージの下がる量
+		float guardUIDownValue;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ガード状態のゲージを下がるスピード
 		float Guard_UIDownSpeed;
