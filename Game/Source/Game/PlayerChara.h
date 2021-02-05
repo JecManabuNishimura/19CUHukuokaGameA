@@ -266,22 +266,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	現状態ダッシュのエネルギー
 		float DashEnergy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)		//	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)		//	ダッシュエネルギーの最大値
 		float DashEnergyMax;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)		//	敵を消滅或いはコインを獲得したらダッシュエネルギーの増加値
 		float AddDashEnergy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)		//	ダメージを受けたら
 		float DamageFrame;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)			//	コインのScore
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	コインのScore
 		float CoinScore;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float PlayerScore;								//	Player獲得の総Score
+		float PlayerScore;							//	Player獲得の総Score
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)			//	ScoreUIのアニメーションflag
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ScoreUIのアニメーションflag
 		bool ScoreAnimStart;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -310,6 +310,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool haveShotEnergy;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool isDashLine;
+
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isJumping;
 
@@ -318,9 +321,6 @@ public:
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isDashing;
-
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
-		bool isDashLine;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		bool isGuarding;

@@ -577,11 +577,6 @@ void APlayerChara::OverlapEnds(UPrimitiveComponent* OverlappedComponent, AActor*
 	{
 		canJump = false;
 	}
-
-	if (OtherActor->ActorHasTag("DashLine"))
-	{
-		isDashLine = false;
-	}
 }
 
 //	ÅV”Å
