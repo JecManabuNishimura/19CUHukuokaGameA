@@ -30,7 +30,8 @@ AEnemyCharaATKControl::AEnemyCharaATKControl():
 	canAttack(false),
 	closeToRightRoad(true),
 	behindToPlayer(false),
-	isMoving(true)
+	isMoving(true),
+	pPlayer(NULL)
 {
 }
 
@@ -43,7 +44,6 @@ void AEnemyCharaATKControl::BeginPlay()
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AEnemyCharaATKControl::OnBeginOverlap);
 
-	//currentMoveType = enemyMoveType;
 }
 
 void AEnemyCharaATKControl::Tick(float DeltaTime)
@@ -56,7 +56,10 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 		switch (enemyATKType)
 		{
 		case EEnemyAttackType::Straight:
-			if (canAttack) Shooting(DeltaTime);
+			if (canAttack)
+			{
+				Shooting(DeltaTime);
+			}
 			break;
 
 		case EEnemyAttackType::None:
@@ -80,7 +83,7 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 				isMoving = true;
 			}
 			else if (CloseToPlayer() == true && !isDead) {
-				//UE_LOG(LogTemp, Warning, TEXT("closeToPlayer==true!!!!"));
+				UE_LOG(LogTemp, Warning, TEXT("closeToPlayer==true!!!!"));
 				canAttack = true;
 				isMoving = true;
 				Shooting(DeltaTime);
