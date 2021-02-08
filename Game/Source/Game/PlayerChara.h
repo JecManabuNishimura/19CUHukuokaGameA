@@ -299,6 +299,9 @@ public:
 		bool haveShowedRanking;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool haveShowedDeadUI;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool isDead;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
