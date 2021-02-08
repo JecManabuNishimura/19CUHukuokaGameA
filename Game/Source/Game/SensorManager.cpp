@@ -4,15 +4,15 @@
 
 #include "SensorManager.h"
 
-USerial* SensorManager::m_ArduinoSerial = NULL;
-bool	 SensorManager::m_IsOpen = false;
-int		 SensorManager::m_SerialPort = -1;
-FVector	 SensorManager::m_Standard = FVector::ZeroVector;
-FVector  SensorManager::m_MaxIncline = FVector::ZeroVector;
-FVector	 SensorManager::m_Deadzone = FVector::ZeroVector;
+USerial* USensorManager::m_ArduinoSerial = NULL;
+bool	 USensorManager::m_IsOpen = false;
+int		 USensorManager::m_SerialPort = -1;
+FVector	 USensorManager::m_Standard = FVector::ZeroVector;
+FVector  USensorManager::m_MaxIncline = FVector::ZeroVector;
+FVector	 USensorManager::m_Deadzone = FVector::ZeroVector;
 
 // センサーとの接続
-bool SensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSensorNum/* = 500*/, int _tryConnectNum /* = 1*/)
+bool USensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSensorNum/* = 500*/, int _tryConnectNum /* = 1*/)
 {
 	// 繰り返し接続を試みる回数
 	for (int tryCnt = 0; tryCnt < _tryConnectNum; ++tryCnt)
@@ -24,7 +24,7 @@ bool SensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSens
 
 			if (m_IsOpen == false)
 			{
-				UE_LOG(LogTemp, Error, TEXT("COM Port:%d is failed open."), i);
+				UE_LOG(LogTemp, Warning, TEXT("[SensorManager] COM Port:%d is failed open."), i);
 			}
 			else
 			{
@@ -44,15 +44,15 @@ bool SensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSens
 					tryNum++;
 				} while (isRead == false && tryNum < _checkSensorNum);
 
-				UE_LOG(LogTemp, VeryVerbose, TEXT("Try Read Count: %d / %d"), tryNum, _checkSensorNum);
+				UE_LOG(LogTemp, VeryVerbose, TEXT("[SensorManager] Try Read Count: %d / %d"), tryNum, _checkSensorNum);
 
-				UE_LOG(LogTemp, Verbose, TEXT("Data = %s"), *fStr);
+				UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] Data = %s"), *fStr);
 
 				// センサーからデータを読み出せた場合
 				if (isRead == true)
 				{
 					// 成功なので処理終了
-					UE_LOG(LogTemp, Display, TEXT("COM Port:%d is Successfully Open."), i);
+					UE_LOG(LogTemp, Display, TEXT("[SensorManager] COM Port:%d is Successfully Open."), i);
 					m_SerialPort = i;
 					break;
 				}
@@ -61,7 +61,7 @@ bool SensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSens
 					// 正しくないので継続
 					m_IsOpen = false;
 					m_ArduinoSerial = NULL;
-					UE_LOG(LogTemp, Error, TEXT("COM Port:%d is open but not sensor."), i);
+					UE_LOG(LogTemp, Warning, TEXT("[SensorManager] COM Port:%d is open but not sensor."), i);
 				}
 			}
 		}
@@ -71,9 +71,9 @@ bool SensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSens
 }
 
 // センサーとの接続を切る
-void SensorManager::DisconnectToSensor()
+void USensorManager::DisconnectToSensor()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Sensor is close."));
+	UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Sensor is close."));
 
 	if (m_ArduinoSerial != NULL && m_IsOpen == true)
 	{
@@ -89,18 +89,21 @@ void SensorManager::DisconnectToSensor()
 
 	// シリアルポート初期化
 	m_SerialPort = -1;
+
+	// 他の変数初期化
+	ResetSensorProperty();
 }
 
 // 基準値を設定する
-void SensorManager::SetStandard(int _qualityLoop/* = 100*/)
+void USensorManager::SetStandard(int _qualityLoop/* = 100*/)
 {
 	m_Standard = GetSensorAverage(_qualityLoop);
 }
 
 // 最大値を設定する
-void SensorManager::SetMaxIncline(FString _element, int _getMaxLoop/* = 100*/, int _qualityLoop/* = 100*/)
+float USensorManager::SetMaxIncline(FString _element, int _getMaxLoop/* = 100*/, int _qualityLoop/* = 100*/)
 {
-	int elementNum = 0;
+	int elementNum;
 
 	// 要素（_element）の変換
 	// X軸
@@ -121,8 +124,8 @@ void SensorManager::SetMaxIncline(FString _element, int _getMaxLoop/* = 100*/, i
 	// 軸が正しくない
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("The first argument of SensorManager::SetMaxIncline is incorrect. Enter one of \"X\", \"Y\", \"Z\""));
-		return;
+		UE_LOG(LogTemp, Warning, TEXT("[SensorManager] The first argument of SensorManager::SetMaxIncline is incorrect. Enter one of \"X\", \"Y\", \"Z\""));
+		return -1.0f;
 	}
 
 	// センサーデータをfloat型で保持
@@ -133,8 +136,10 @@ void SensorManager::SetMaxIncline(FString _element, int _getMaxLoop/* = 100*/, i
 
 	for (int loop = 0; loop < _getMaxLoop; ++loop)
 	{
+		FString tmp;
+
 		// センサーデータを取得
-		FVector rowData = GetSensorDataRaw(nullptr, _qualityLoop);
+		FVector rowData = GetSensorDataRaw(tmp, _qualityLoop);
 
 		// 配列に格納
 		sensorArray[0] = rowData.X;
@@ -170,15 +175,17 @@ void SensorManager::SetMaxIncline(FString _element, int _getMaxLoop/* = 100*/, i
 		{
 			*maxInclineAdrArray[elementNum] = 0.0f;
 		}
+		return *maxInclineAdrArray[elementNum];
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Could not get m_MaxIncline address."));
+		UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Could not get m_MaxIncline address."));
+		return -1.0f;
 	}
 }
 
 // デッドゾーンを設定する
-void SensorManager::SetDeadZone(int _qualityLoop/* = 100*/)
+void USensorManager::SetDeadZone(int _qualityLoop/* = 100*/)
 {
 	// センサーデータをfloat型で保持
 	float sensorArray[3] = {};
@@ -213,30 +220,30 @@ void SensorManager::SetDeadZone(int _qualityLoop/* = 100*/)
 }
 
 // センサーで使用するプロパティの初期化
-void SensorManager::ResetSensorProperty(bool _isResetStandard/* = true*/, bool _isResetMaxIncline/* = true*/, bool _isResetDeadZone/* = true*/)
+void USensorManager::ResetSensorProperty(bool _isResetStandard/* = true*/, bool _isResetMaxIncline/* = true*/, bool _isResetDeadZone/* = true*/)
 {
 	// 基準値の初期化
 	if (_isResetStandard)
 	{
-		UE_LOG(LogTemp, Verbose, TEXT("SensorManager::m_Standard is Reset."))
+		UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] SensorManager::m_Standard is Reset."))
 			m_Standard = FVector::ZeroVector;
 	}
 	// 最大値の初期化
 	if (_isResetMaxIncline)
 	{
-		UE_LOG(LogTemp, Verbose, TEXT("SensorManager::m_MaxIncline is Reset."))
+		UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] SensorManager::m_MaxIncline is Reset."))
 			m_MaxIncline = FVector::ZeroVector;
 	}
 	// デッドゾーンの初期化
 	if (_isResetDeadZone)
 	{
-		UE_LOG(LogTemp, Verbose, TEXT("SensorManager::m_Deadzone is Reset."))
+		UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] SensorManager::m_Deadzone is Reset."))
 			m_Deadzone = FVector::ZeroVector;
 	}
 }
 
 // センサーの平均値を取得する
-FVector SensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
+FVector USensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 {
 	// センサーの値を複数確保する
 	TArray<FVector> sensorDataArray;
@@ -245,7 +252,8 @@ FVector SensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 	// センサーから複数回データを取得する
 	for (int i = 0; i < _qualityLoop; ++i)
 	{
-		FVector tmp = GetSensorDataRaw();
+		FString tmpStr;
+		FVector tmp = GetSensorDataRaw(tmpStr);
 
 		if (tmp.Equals(SENSOR_ERROR_READ) == false)
 		{
@@ -269,20 +277,22 @@ FVector SensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 
 		FVector result = sumVector / (float)sensorDataArray.Num();
 
-		UE_LOG(LogTemp, Verbose, TEXT("return Average SensorData. X = %f Y = %f, Z = %f"), result.X, result.Y, result.Z);
+		UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] return Average SensorData. X = %f Y = %f, Z = %f"), result.X, result.Y, result.Z);
 		return result;
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Could not get Average SensorData. return SENSOR_ERROR_READ (%f, %f, %f)."), SENSOR_ERROR_READ.X, SENSOR_ERROR_READ.Y, SENSOR_ERROR_READ.Z);
+		UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Could not get Average SensorData. return SENSOR_ERROR_READ (%f, %f, %f)."), SENSOR_ERROR_READ.X, SENSOR_ERROR_READ.Y, SENSOR_ERROR_READ.Z);
 		return SENSOR_ERROR_READ;
 	}
 }
 
 // センサーの最大値に対する傾きの割合を取得する
-FVector SensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*/)
+FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*/)
 {
-	FVector sensorData = GetSensorDataRaw(nullptr, _tryNum);
+	FString tmp;
+
+	FVector sensorData = GetSensorDataRaw(tmp, _tryNum);
 
 	FVector resultData = SENSOR_ERROR_READ;
 
@@ -327,14 +337,14 @@ FVector SensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*/
 	// 設定されていない
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Max incline value is may not set. Must be set by calling a \"SensorManager::SetMaxIncline()\" Function."));
+		UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Max incline value is may not set. Must be set by calling a \"SensorManager::SetMaxIncline()\" Function."));
 	}
 
 	return resultData;
 }
 
 // センサーからの生のデータを取得
-FVector SensorManager::GetSensorDataRaw(FString* _strAdr/* = nullptr*/, int _tryNum/* = 500*/)
+FVector USensorManager::GetSensorDataRaw(FString& _strAdr, int _tryNum/* = 500*/)
 {
 	bool isRead = false;		// データを読み取れたか
 	FString fStr = "";			// 読み取りデータ格納用
@@ -356,21 +366,21 @@ FVector SensorManager::GetSensorDataRaw(FString* _strAdr/* = nullptr*/, int _try
 		TArray<FString> splitTextArray;
 		splitTextArray.Reset();
 
-		UE_LOG(LogTemp, VeryVerbose, TEXT("Try Read Count: %d / %d"), tryCnt, _tryNum);
+		UE_LOG(LogTemp, VeryVerbose, TEXT("[SensorManager] Try Read Count: %d / %d"), tryCnt, _tryNum);
 
 		// 読み取れなかったら SENSOR_ERROR_READ を返し、終了
 		// センサーに物理的な問題がある可能性が高い（接続されていない、センサーが壊れているなど）
 		if (isRead == false)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No Data From Sensor. return SENSOR_ERROR_READ."));
+			UE_LOG(LogTemp, Warning, TEXT("[SensorManager] No Data From Sensor. return SENSOR_ERROR_READ."));
 			return SENSOR_ERROR_READ;
 		}
 		else
 		{
 			m_ArduinoSerial->Flush();
 
-			UE_LOG(LogTemp, Verbose, TEXT("Get Data From Sensor."));
-			UE_LOG(LogTemp, Verbose, TEXT("All Data = %s."), *fStr);
+			UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] Get Data From Sensor."));
+			UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] All Data = %s."), *fStr);
 		}
 
 		// センサーデータをカンマ区切りでsplitTextArrayに入れる
@@ -378,7 +388,7 @@ FVector SensorManager::GetSensorDataRaw(FString* _strAdr/* = nullptr*/, int _try
 
 		for (int i = 0; i < splitTextArray.Num(); ++i)
 		{
-			UE_LOG(LogTemp, Verbose, TEXT("Data[%d] = %s"), i, *splitTextArray[i]);
+			UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] Data[%d] = %s"), i, *splitTextArray[i]);
 		}
 
 		// それぞれをint型に変換する
@@ -393,51 +403,48 @@ FVector SensorManager::GetSensorDataRaw(FString* _strAdr/* = nullptr*/, int _try
 		// センサーとのデータやり取りに問題がある可能性が高い（Arduino側のプログラムが本番用になっていない、バッファにデータが中途半端に残っているなど）
 		if (sensorDataArray.IsValidIndex(2) == false)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed Add TArray<float> elements. return SENSOR_ERROR_READ."));
+			UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Failed Add TArray<float> elements. return SENSOR_ERROR_READ."));
 			return SENSOR_ERROR_READ;
 		}
 
 		// ボタンの状態を読み取りたい
-		if (_strAdr != nullptr)
-		{
 			// splitTextArrayの要素番号 3にアクセスできなければ OFFにする
 			if (splitTextArray.IsValidIndex(3) == false)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Failed Get ButtonCondition. Set to \"OFF\"."));
-				*_strAdr = "OFF";
+				UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Failed Get ButtonCondition. Set to \"OFF\"."));
+				_strAdr = "OFF";
 			}
 			// アクセスできた
 			else
 			{
 				if (splitTextArray[3] == "ON")
 				{
-					*_strAdr = "ON";
+					_strAdr = "ON";
 				}
 				else
 				{
-					*_strAdr = "OFF";
+					_strAdr = "OFF";
 				}
 			}
-		}
 
-		UE_LOG(LogTemp, Verbose, TEXT("SensorData : %f  Y:%f  Z:%f"), sensorDataArray[0], sensorDataArray[1], sensorDataArray[2]);
+		UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] SensorData : %f  Y:%f  Z:%f"), sensorDataArray[0], sensorDataArray[1], sensorDataArray[2]);
 
 		return FVector(sensorDataArray[0], sensorDataArray[1], sensorDataArray[2]);
 	}
 	// ConnectToSensor()を呼び出していない可能性がある
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("SensorManager::m_ArduinoSerial is NULL.　return SENSOR_ERROR_READ."));
+		UE_LOG(LogTemp, Error, TEXT("[SensorManager] SensorManager::m_ArduinoSerial is NULL. return SENSOR_ERROR_READ."));
 
 		return SENSOR_ERROR_READ;
 	}
 }
 
 // センサーのボタンが押されているかを取得
-bool SensorManager::GetSensorButton(int _tryNum/* = 500*/)
+bool USensorManager::GetSensorButton(int _tryNum/* = 500*/)
 {
 	FString result;
-	GetSensorDataRaw(&result, _tryNum);
+	GetSensorDataRaw(result, _tryNum);
 
 	if (result == "ON")
 	{
@@ -450,9 +457,10 @@ bool SensorManager::GetSensorButton(int _tryNum/* = 500*/)
 }
 
 // センサーのデータをFRotatorとして取得
-FRotator SensorManager::GetSensorDataRotator(int _tryNum/* = 500*/)
+FRotator USensorManager::GetSensorDataRotator(int _tryNum/* = 500*/)
 {
-	FVector tempVector = GetSensorDataRaw(nullptr, _tryNum);
+	FString tmp;
+	FVector tempVector = GetSensorDataRaw(tmp, _tryNum);
 
 	return FRotator(tempVector.Y, tempVector.Z, tempVector.X);
 }

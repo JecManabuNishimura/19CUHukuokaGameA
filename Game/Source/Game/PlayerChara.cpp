@@ -137,7 +137,7 @@ void APlayerChara::BeginPlay()
 			pCharMoveComp->AirControl = 0.8f;
 		}
 
-		SensorManager::ConnectToSensor();
+		USensorManager::ConnectToSensor();
 
 		//	PlayerCharaが持っているメッシュコンポーネントの相対位置を変更
 		USkeletalMeshComponent* pMeshComp = GetMesh();
@@ -177,7 +177,7 @@ void APlayerChara::Tick(float DeltaTime)
 		{
 			UpdateSensor(DeltaTime);
 
-			if (SensorManager::GetSensorButton())
+			if (USensorManager::GetSensorButton())
 			{
 				if (isButtonRelerse == true)
 				{
@@ -584,13 +584,13 @@ void APlayerChara::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	SensorManager::DisconnectToSensor();
+	USensorManager::DisconnectToSensor();
 }
 
 //	最新版
 void APlayerChara::UpdateSensor(float _deltaTime)
 {
-	FRotator tempRot = SensorManager::GetSensorDataRotator();
+	FRotator tempRot = USensorManager::GetSensorDataRotator();
 
 	if (tempRot == SENSOR_ERROR_ROTATOR)
 	{
