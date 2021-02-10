@@ -14,6 +14,8 @@ FVector	 USensorManager::m_Deadzone = FVector::ZeroVector;
 // センサーとの接続
 bool USensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSensorNum/* = 500*/, int _tryConnectNum /* = 1*/)
 {
+	DisconnectToSensor();
+
 	// 繰り返し接続を試みる回数
 	for (int tryCnt = 0; tryCnt < _tryConnectNum; ++tryCnt)
 	{
@@ -95,13 +97,13 @@ void USensorManager::DisconnectToSensor()
 }
 
 // 基準値を設定する
-void USensorManager::SetStandard(int _qualityLoop/* = 100*/)
+void USensorManager::SetStandardAuto(int _qualityLoop/* = 100*/)
 {
 	m_Standard = GetSensorAverage(_qualityLoop);
 }
 
 // 最大値を設定する
-float USensorManager::SetMaxIncline(FString _element, int _getMaxLoop/* = 100*/, int _qualityLoop/* = 100*/)
+float USensorManager::SetMaxInclineAuto(FString _element, int _getMaxLoop/* = 100*/, int _qualityLoop/* = 100*/)
 {
 	int elementNum;
 
@@ -185,7 +187,7 @@ float USensorManager::SetMaxIncline(FString _element, int _getMaxLoop/* = 100*/,
 }
 
 // デッドゾーンを設定する
-void USensorManager::SetDeadZone(int _qualityLoop/* = 100*/)
+void USensorManager::SetDeadZoneAuto(int _qualityLoop/* = 100*/)
 {
 	// センサーデータをfloat型で保持
 	float sensorArray[3] = {};
@@ -377,14 +379,12 @@ FVector USensorManager::GetSensorDataRaw(FString& _strAdr, int _tryNum/* = 500*/
 		}
 		else
 		{
-			m_ArduinoSerial->Flush();
-
 			UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] Get Data From Sensor."));
 			UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] All Data = %s."), *fStr);
 		}
 
 		// センサーデータをカンマ区切りでsplitTextArrayに入れる
-		fStr.ParseIntoArray(splitTextArray, TEXT(","));
+		fStr.ParseIntoArray(splitTextArray, TEXT(":"));
 
 		for (int i = 0; i < splitTextArray.Num(); ++i)
 		{

@@ -43,13 +43,21 @@ public:
 	//--各種クラス変数取得用---------------------------------------------------------------------------------------
 
 	// センサーの格納用
+	// 取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static USerial* GetArduinoSerial()
 	{
 		return m_ArduinoSerial;
 	}
+	// 設定
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+	static void SetArduinoSerial(USerial* _serial)
+	{
+		m_ArduinoSerial = _serial;
+	}
 
 	// ポートが開いているか
+	// 取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static bool GetIsOpen()
 	{
@@ -57,6 +65,7 @@ public:
 	}
 
 	// センサーのつながっているシリアルポート
+	// 取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static int GetSerialPort()
 	{
@@ -64,24 +73,68 @@ public:
 	}
 
 	// 基準値
+	// 取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static FVector GetStandard()
 	{
 		return m_Standard;
 	}
+	// 設定
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+	static void SetStandard(FVector _vector)
+	{
+		m_Standard = _vector;
+	}
 
 	// 最大傾き
+	// 取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static FVector GetMaxIncline()
 	{
 		return m_MaxIncline;
 	}
+	// 設定
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+	static void SetMaxIncline(FVector _vector)
+	{
+		m_MaxIncline = _vector;
+	}
 
 	// デッドゾーン
+	// 取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
-	static FVector GetDeadzone()
+	static FVector GetDeadZone()
 	{
 		return m_Deadzone;
+	}
+	// 設定
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+	static void SetDeadzone(FVector _vector)
+	{
+		m_Deadzone = _vector;
+	}
+
+	// エラー値
+	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
+	static FVector GetSensorError()
+	{
+		return SENSOR_ERROR_READ;
+	}
+	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
+	static bool IsSensorError(FVector _data)
+	{
+		return _data == SENSOR_ERROR_READ;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
+		static FRotator GetSensorErrorRotator()
+	{
+		return SENSOR_ERROR_ROTATOR;
+	}
+	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
+		static bool IsSensorErrorRotator(FRotator _data)
+	{
+		return _data == SENSOR_ERROR_ROTATOR;
 	}
 
 	//-------------------------------------------------------------------------------------------------------------
@@ -96,15 +149,15 @@ public:
 	
 	// 基準値を設定する
 	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
-	static void SetStandard(int _qualityLoop = 100);
+	static void SetStandardAuto(int _qualityLoop = 100);
 
 	// 最大値を設定する
 	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
-	static float SetMaxIncline(FString _element, int _getMaxLoop = 100, int _qualityLoop = 100);
-
+	static float SetMaxInclineAuto(FString _element, int _getMaxLoop = 100, int _qualityLoop = 100);
+	
 	// デッドゾーンを設定する
 	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
-	static void SetDeadZone(int _qualityLoop = 100);
+	static void SetDeadZoneAuto(int _qualityLoop = 100);
 
 	// センサーで使用するプロパティの初期化
 	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
