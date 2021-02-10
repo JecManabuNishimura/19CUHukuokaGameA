@@ -25,22 +25,19 @@ class GAME_API AStageSelect : public APawn
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this pawn's properties
+	// コンストラクタ
 	AStageSelect();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// コンポーネントの作成
 private:
+	// オブジェクト中心
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Component", meta = (AllowPrivateAccess = "true"))
 		USceneComponent* m_MainSceneComponent;
 
