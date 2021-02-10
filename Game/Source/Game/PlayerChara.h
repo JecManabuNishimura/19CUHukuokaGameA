@@ -278,60 +278,60 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	コインのScore
 		float CoinScore;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float PlayerScore;							//	Player獲得の総Score
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	Player獲得の総Score
+		float PlayerScore;							
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ScoreUIのアニメーションflag
 		bool ScoreAnimStart;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	一時スコアアニメを開始flag
 		bool IsAddScoreOver;
 
 	//	=============================================================
 	//	プレイヤーの状態
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ゲームスタートflag
 		bool isStart;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ゴールが辿り着くflag
 		bool isGoal;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ランキングUIが出るflag
 		bool haveShowedRanking;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	Dead UIが出るflag
 		bool haveShowedDeadUI;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	プレイヤーの死亡flag
 		bool isDead;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	初めて射撃ボタンを押すflag
 		bool isFirstShoting;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	射撃中かどうかのflag
 		bool isShoting;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	弾エネルギーがあるかflag
 		bool haveShotEnergy;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	加速タイルに踏んでいるかflag
 		bool isDashLine;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)	//	ジャンプ中かflag
 		bool isJumping;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)	//	ジャンプから着地したかflag
 		bool isLanding;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)	//	プレイヤーがダッシュ中ですかflag
 		bool isDashing;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)	//	プレイヤーがガード中ですかflag
 		bool isGuarding;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)	//	ダメージを受けるかflag
 		bool canBeDamaged;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere)								//	プレイヤーが受けたダメージ量
 		float Damage;
 
 	// Is Open Com Port
@@ -340,6 +340,7 @@ public:
 
 	void GetCoin();
 
+	//	Collision detect
 	UFUNCTION()
 		void OnBeginOverlap(class UPrimitiveComponent* HitComp,
 			class AActor* OtherActor, class UPrimitiveComponent* OtherComp,

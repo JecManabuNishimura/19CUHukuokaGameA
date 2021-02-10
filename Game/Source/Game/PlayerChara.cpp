@@ -119,6 +119,7 @@ void APlayerChara::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//	データ保存
 	tempDamageFrame = DamageFrame;
 	tempSpeed = playerMaxSpeed;
 
@@ -169,6 +170,7 @@ void APlayerChara::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	//	fpsを獲得
 	fps = 1 / DeltaTime;
 
 	if (withSensor)
@@ -206,19 +208,22 @@ void APlayerChara::Tick(float DeltaTime)
 		//	ガード処理
 		UpdateGuard();
 
+		//	ダッシュ処理
 		UpdateAccelerate();
 
+		//	射撃処理
 		Shooting(DeltaTime);
 
+		//	ジャンプから着地のSE処理
 		GetPlayerPosZ(DeltaTime);
 
+		//	ダメージが受けるかどうかの処理
 		if (!canBeDamaged)
 		{
 			DamageFrame -= (DeltaTime * 60);
 
 			if (DamageFrame <= 0.f)
 			{
-				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(DamageFrame));
 				canBeDamaged = true;
 				Player_Damage_Widget->RemoveFromViewport();
 				DamageFrame = tempDamageFrame;
@@ -238,6 +243,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 	FVector NewLocation = GetActorLocation();
 	FVector YRotation = GetActorForwardVector();
 
+	//	fpsによって移動量倍数の計算
 	if (fps < 59.5f || fps > 60.5f)
 	{
 		fps = 1.f / (fps / 60.f);
@@ -247,6 +253,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 		fps = 60.f / fps;
 	}
 
+	//	スタートからだんだん最大速度に辿る
 	if (playerSpeed < playerMaxSpeed)
 	{
 		playerSpeed += 0.016f * playerMaxSpeed * fps;
@@ -278,6 +285,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 		SetActorLocation(NewLocation);
 	}
 
+	//	ダメージが受けたら速度が落ち処理
 	if (isDamageOver)
 	{
 		if (playerSpeed >= tempSpeed)
@@ -295,6 +303,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 //	ジャンプ処理
 void APlayerChara::UpdateJump(float _deltaTime)
 {
+	//	ジャンプできるかの判断
 	if (tempPitch > 30.f && canJump && !isGuarding)
 	{
 		canJump = false;
@@ -313,6 +322,7 @@ void APlayerChara::UpdateJump(float _deltaTime)
 
 		isLanding = false;
 
+		//	地面に落ちたらジャンプ停止
 		if (nowJumpHeight < 0.0f)
 		{
 			jumpPower = tempJumpPower;
@@ -331,6 +341,7 @@ void APlayerChara::UpdateJump(float _deltaTime)
 //	ガード処理
 void APlayerChara::UpdateGuard()
 {
+	//	ガードできるかの判断
 	if (GuardEnergy <= 0.f)
 	{
 		isGuarding = false;
