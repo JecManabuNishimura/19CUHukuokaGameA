@@ -140,7 +140,7 @@ void AStageSelectCamera::SelectObject()
 	FVector Start = GetActorLocation();
 	FVector End = GetActorLocation() + GetActorForwardVector() * length;
 	FHitResult OutHit;
-	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f);
+	//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.0f);
 	//bool isHit;
 	//FCollisionQueryParams CollisionParams;
 	//CollisionParams.AddIgnoredActor(this);
