@@ -10,6 +10,7 @@
 //					：2020/11/15 増加　EEnemyType列挙型を追加
 //					：2020/11/16 増加　EnergyEnemyの生成
 //					：2020/11/16 増加　曹飛　ShotEnemyの生成
+//					：2021/02/10 増加　足りないコメントを補足
 //----------------------------------------------------------
 
 #include "EnemyCharaATKControl.h"
@@ -18,12 +19,12 @@
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"		// Playerの情報取得するため
 #include "Engine.h"
 
-AEnemyCharaATKControl::AEnemyCharaATKControl():
+AEnemyCharaATKControl::AEnemyCharaATKControl() :
 	shootableDistance(3000.0f),
 	bulletTimeCount(0.0f),
 	bulletDuration(1.0f),
 	bulletXOffset(400.0f),
-	DeadEffectLocation(0.0f,0.0f,10.0f),
+	DeadEffectLocation(0.0f, 0.0f, 10.0f),
 	isDead(false),
 	health(5),
 	canPlayEffect(true),
@@ -43,16 +44,17 @@ void AEnemyCharaATKControl::BeginPlay()
 	pPlayer = Cast<APlayerChara>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AEnemyCharaATKControl::OnBeginOverlap);
-
 }
 
 void AEnemyCharaATKControl::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Typeを選択
 	switch (enemyType)
 	{
 	case EEnemyType::ShootEnemy:
+		// 攻撃Typeを選択
 		switch (enemyATKType)
 		{
 		case EEnemyAttackType::Straight:
@@ -72,18 +74,22 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 		}
 		break;
 	case EEnemyType::EnergyEnemy:
+		// コースから離れる仕組み
 		if (behindToPlayer && !isDead) {
 			LeaveFromRoad(DeltaTime);
 		}
+		// 攻撃Typeを選択
 		switch (enemyATKType)
 		{
 		case EEnemyAttackType::Straight:
+			// 射程圏外
 			if (CloseToPlayer() == false && !isDead) {
 				canAttack = false;
 				isMoving = true;
 			}
+			// 射程圏内
 			else if (CloseToPlayer() == true && !isDead) {
-				UE_LOG(LogTemp, Warning, TEXT("closeToPlayer==true!!!!"));
+				//UE_LOG(LogTemp, Warning, TEXT("closeToPlayer!!!!"));
 				canAttack = true;
 				isMoving = true;
 				Shooting(DeltaTime);
@@ -125,7 +131,7 @@ bool AEnemyCharaATKControl::CloseToPlayer()
 	// プレイヤーと一定距離に入れば発射開始
 	if (currentDistance <= shootableDistance && vectortoPlayer.X < 0.0f) {
 		//UE_LOG(LogTemp, Warning, TEXT("Enemy( %s ) can attack."), *(this->GetName()));
-		
+
 		return true;
 	}
 	else if (vectortoPlayer.X > 0.0f) {
@@ -196,11 +202,11 @@ void AEnemyCharaATKControl::OnBeginOverlap(
 	if (OtherActor->ActorHasTag("EnemyBullet") && pEnemyBullet->isReflectedByPlayer) {
 		UE_LOG(LogTemp, Warning, TEXT("ReflectHit"));
 		if (this->ActorHasTag("EnergyEnemy"))
-		if (health > 0) {
-			health -= 1;
-		}
-		else if (health <= 0) {
-			health = 0;
-		}
+			if (health > 0) {
+				health -= 1;
+			}
+			else if (health <= 0) {
+				health = 0;
+			}
 	}
 }
