@@ -149,8 +149,6 @@ private:
 	float tempSpeed;								//	最大速度を保存
 	bool isDamageOver;								//	ダメージを受けられるかどうか
 
-	bool haveDashEnergy;							//	ダッシュのエネルギー
-
 	float tempDamageFrame;							//	ダメージを受けた後の無敵時間
 
 	//	センサーをPC側でテストするためのX,Y,Z角度プロパティ
@@ -312,6 +310,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	弾エネルギーがあるかflag
 		bool haveShotEnergy;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	ダッシュのエネルギー
+		bool haveDashEnergy;							
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)		//	加速タイルに踏んでいるかflag
 		bool isDashLine;
