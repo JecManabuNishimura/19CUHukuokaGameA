@@ -99,6 +99,21 @@ public:
 	{
 		m_MaxIncline = _vector;
 	}
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+		static void SetMaxInclineX(float _value)
+	{
+		m_MaxIncline.X = _value;
+	}
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+		static void SetMaxInclineY(float _value)
+	{
+		m_MaxIncline.Y = _value;
+	}
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+		static void SetMaxInclineZ(float _value)
+	{
+		m_MaxIncline.Z = _value;
+	}
 
 	// デッドゾーン
 	// 取得
@@ -141,11 +156,11 @@ public:
 	
 	// センサーとの接続
 	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
-	static bool ConnectToSensor(int _maxSerialPort = 20, int _checkSensorNum = 500, int _tryConnectNum = 1);
+	static bool ConnectToSensor(int _maxSerialPort = 20, int _checkSensorNum = 500, int _tryConnectNum = 1, bool _isResetStandard = true, bool _isResetMaxIncline = true, bool _isResetDeadZone = true);
 
 	// センサーとの接続を切る
 	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
-	static void DisconnectToSensor();
+	static void DisconnectToSensor(bool _isResetStandard = true, bool _isResetMaxIncline = true, bool _isResetDeadZone = true);
 	
 	// 基準値を設定する
 	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
@@ -175,6 +190,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static FVector GetSensorDataRaw(FString& _strAdr, int _tryNum = 500);
 
+	// センサーのデータを取得（基準値、最大値、デッドゾーンを考慮する）
+	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
+	static FVector GetSensorData(FString& _strAdr, int _tryNum = 500);
+
 	// センサーのボタンが押されているかを取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static bool GetSensorButton(int _tryNum = 500);
@@ -182,4 +201,5 @@ public:
 	// センサーのデータをFRotatorとして取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static FRotator GetSensorDataRotator(int _tryNum = 500);
+
 };

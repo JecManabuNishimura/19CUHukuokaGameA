@@ -3,6 +3,7 @@
 // 2020/12/08 渡邊 龍音 作成
 
 #include "SensorManager.h"
+#include "BlueprintUtility.h"
 
 USerial* USensorManager::m_ArduinoSerial = NULL;
 bool	 USensorManager::m_IsOpen = false;
@@ -12,9 +13,9 @@ FVector  USensorManager::m_MaxIncline = FVector::ZeroVector;
 FVector	 USensorManager::m_Deadzone = FVector::ZeroVector;
 
 // センサーとの接続
-bool USensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSensorNum/* = 500*/, int _tryConnectNum /* = 1*/)
+bool USensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSensorNum/* = 500*/, int _tryConnectNum /* = 1*/, bool _isResetStandard/* = true*/, bool _isResetMaxIncline/* = true*/, bool _isResetDeadZone/* = true*/)
 {
-	DisconnectToSensor();
+	DisconnectToSensor(_isResetStandard, _isResetMaxIncline, _isResetDeadZone);
 
 	// 繰り返し接続を試みる回数
 	for (int tryCnt = 0; tryCnt < _tryConnectNum; ++tryCnt)
@@ -73,7 +74,7 @@ bool USensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSen
 }
 
 // センサーとの接続を切る
-void USensorManager::DisconnectToSensor()
+void USensorManager::DisconnectToSensor(bool _isResetStandard/* = true*/, bool _isResetMaxIncline/* = true*/, bool _isResetDeadZone/* = true*/)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Sensor is close."));
 
@@ -93,7 +94,7 @@ void USensorManager::DisconnectToSensor()
 	m_SerialPort = -1;
 
 	// 他の変数初期化
-	ResetSensorProperty();
+	ResetSensorProperty(_isResetStandard, _isResetMaxIncline, _isResetDeadZone);
 }
 
 // 基準値を設定する
@@ -294,7 +295,7 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 {
 	FString tmp;
 
-	FVector sensorData = GetSensorDataRaw(tmp, _tryNum);
+	FVector sensorData = GetSensorData(tmp, _tryNum);
 
 	FVector resultData = SENSOR_ERROR_READ;
 
@@ -310,30 +311,111 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 		// 値の代入回数
 		int substitutionNum = 0;
 
-		for (int i = 1; (substitutionNum < 3) && (i < _divNum); ++i)
+		for (int i = 1; (substitutionNum < 3) && (i <= _divNum); ++i)
 		{
 			// X軸の比較
-			if (sensorData.X <= comparison.X && resultData.X == SENSOR_ERROR_READ.X)
+			// 代入していない場合
+			if (resultData.X == SENSOR_ERROR_READ.X)
 			{
-				resultData.X = (float)i / (float)_divNum;
-				substitutionNum++;
+				// Xがプラス
+				if (sensorData.X > 0.0f)
+				{
+					if (sensorData.X <= comparison.X)
+					{
+						resultData.X = comparison.X;
+						substitutionNum++;
+					}
+				}
+				// Xがマイナス
+				else if (sensorData.X < 0.0f)
+				{
+					if (sensorData.X >= -comparison.X)
+					{
+						resultData.X = -comparison.X;
+						substitutionNum++;
+					}
+				}
+				// ゼロ
+				else
+				{
+					resultData.X = 0.0f;
+					substitutionNum++;
+				}
 			}
 
 			// Y軸の比較
-			if (sensorData.Y <= comparison.Y && resultData.Y == SENSOR_ERROR_READ.Y)
+			// 代入していない場合
+			if (resultData.Y == SENSOR_ERROR_READ.Y)
 			{
-				resultData.Y = (float)i / (float)_divNum;
-				substitutionNum++;
+				// Yがプラス
+				if (sensorData.Y > 0.0f)
+				{
+					if (sensorData.Y <= comparison.Y)
+					{
+						resultData.Y = comparison.Y;
+						substitutionNum++;
+					}
+				}
+				// Yがマイナス
+				else if (sensorData.Y < 0.0f)
+				{
+					if (sensorData.Y >= -comparison.Y)
+					{
+						resultData.Y = -comparison.Y;
+						substitutionNum++;
+					}
+				}
+				// ゼロ
+				else
+				{
+					resultData.Y = 0.0f;
+					substitutionNum++;
+				}
 			}
 
 			// Z軸の比較
-			if (sensorData.Z <= comparison.Z && resultData.Z == SENSOR_ERROR_READ.Z)
+			// 代入していない場合
+			if (resultData.Z == SENSOR_ERROR_READ.Z)
 			{
-				resultData.Z = (float)i / (float)_divNum;
-				substitutionNum++;
+				// Zがプラス
+				if (sensorData.Z > 0.0f)
+				{
+					if (sensorData.Z <= comparison.Z)
+					{
+						resultData.Z = comparison.Z;
+						substitutionNum++;
+					}
+				}
+				// Zがマイナス
+				else if (sensorData.Z < 0.0f)
+				{
+					if (sensorData.Z >= -comparison.Z)
+					{
+						resultData.Z = -comparison.Z;
+						substitutionNum++;
+					}
+				}
+				// ゼロ
+				else
+				{
+					resultData.Z = 0.0f;
+					substitutionNum++;
+				}
 			}
-
 			comparison += maxInclineRatio;
+		}
+
+		if (resultData.X == SENSOR_ERROR_READ.X)
+		{
+			resultData.X = sensorData.X > 0.0f ? GetMaxIncline().X : -GetMaxIncline().X;
+		}
+		if (resultData.Y == SENSOR_ERROR_READ.Y)
+		{
+			resultData.Y = sensorData.Y > 0.0f ? GetMaxIncline().Y : -GetMaxIncline().Y;
+		}
+		if (resultData.Z == SENSOR_ERROR_READ.Z)
+		{
+			resultData.Z = sensorData.Z > 0.0f ? GetMaxIncline().Z : -GetMaxIncline().Z;
 		}
 	}
 	// 設定されていない
@@ -438,6 +520,34 @@ FVector USensorManager::GetSensorDataRaw(FString& _strAdr, int _tryNum/* = 500*/
 
 		return SENSOR_ERROR_READ;
 	}
+}
+
+// センサーのデータを取得（基準値、最大値、デッドゾーンを考慮する）
+FVector USensorManager::GetSensorData(FString& _strAdr, int _tryNum/* = 500*/)
+{
+	FVector dataTemp = GetSensorDataRaw(_strAdr, _tryNum);
+
+	// 基準値を考慮（値から基準値を減算）
+	dataTemp -= m_Standard;
+
+	// デッドゾーンを考慮（ -デッドゾーン ～ +デッドゾーン の間であれば0にする）
+	// X軸
+	if (dataTemp.X < m_Deadzone.X && dataTemp.X > -m_Deadzone.X)
+	{
+		dataTemp.X = 0.0f;
+	}
+	// Y軸
+	if (dataTemp.Y < m_Deadzone.Y && dataTemp.Y > -m_Deadzone.Y)
+	{
+		dataTemp.Y = 0.0f;
+	}
+	// Z軸
+	if (dataTemp.Z < m_Deadzone.Z && dataTemp.Z > -m_Deadzone.Z)
+	{
+		dataTemp.Z = 0.0f;
+	}
+
+	return dataTemp;
 }
 
 // センサーのボタンが押されているかを取得
