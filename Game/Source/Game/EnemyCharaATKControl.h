@@ -68,7 +68,7 @@ public:
 		EEnemyAttackType enemyATKType;
 
 	// The shootableDistance between Player and Enemy. (Playerとの射撃可能距離)
-	UPROPERTY(EditAnywhere, Category = "Attack")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 		float shootableDistance;
 
 	// Bullet type (弾の使用タイプ)
