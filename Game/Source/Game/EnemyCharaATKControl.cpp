@@ -89,7 +89,7 @@ void AEnemyCharaATKControl::Tick(float DeltaTime)
 			}
 			// ŽË’öŒ—“à
 			else if (CloseToPlayer() == true && !isDead) {
-				//UE_LOG(LogTemp, Warning, TEXT("closeToPlayer!!!!"));
+				//UE_LOG(LogTemp, Warning, TEXT("%s can shoot."),*this->GetName());
 				canAttack = true;
 				isMoving = true;
 				Shooting(DeltaTime);
