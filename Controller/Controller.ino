@@ -16,8 +16,8 @@ const int leftButton = 12;
 const int rightButton = 13;
 
 // センサー正規化の値
-const float ROTATION_COLLECTION = 90.0f;		// X, Y軸のセンサーの値（0.0～1.0）に対して掛ける値
-//const float ROTATION_COLLECTION = 900.0f;		// X, Y軸のセンサーの値（0.0～1.0）に対して掛ける値
+const float MULTIPUL = 10.0f;					// X, Y軸のセンサーの値の補正値
+const float ROTATION_COLLECTION = 90.0f * MULTIPUL;		// X, Y軸のセンサーの値（0.0～1.0）に対して掛ける値
 const float POTENTIOMETER_OFFSET = 512.0f;		// ポテンショメーターの最大値（1024）と最小値（0）の中間の値 0～1024の値を -512～512に変換する
 const float POTENTIOMETER_COLLECTION = 5.689f;	// 正規化したポテンショメーターの値に対して割る値 512を90°に変換する
 
@@ -127,6 +127,9 @@ void loop() {
 
     accArray[2] -= POTENTIOMETER_OFFSET;
     accArray[2] /= POTENTIOMETER_COLLECTION;
+
+    accArray[2] -= 5;
+    accArray[2] += 5;
     
     // シリアル出力
     // センサーデータ

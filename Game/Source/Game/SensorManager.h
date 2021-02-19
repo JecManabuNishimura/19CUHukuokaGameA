@@ -37,6 +37,11 @@ private:
 	// デッドゾーン
 	static FVector m_Deadzone;
 
+	// 値反転
+	static bool isFlipX;
+	static bool isFlipY;
+	static bool isFlipZ;
+
 	// publicクラスメソッド
 public:
 
@@ -152,6 +157,16 @@ public:
 		return _data == SENSOR_ERROR_ROTATOR;
 	}
 
+
+	// 値反転
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+		static void SetFlipAxis(bool _flipX = true, bool _flipY = true, bool _flipZ = true)
+	{
+		isFlipX = _flipX;
+		isFlipY = _flipY;
+		isFlipZ = _flipZ;
+	}
+
 	//-------------------------------------------------------------------------------------------------------------
 	
 	// センサーとの接続
@@ -184,7 +199,11 @@ public:
 
 	// センサーの最大値に対する傾きの割合を取得する
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
-	static FVector GetSensorRatio(int _divNum = 5, int _tryNum = 500);
+	static FVector GetSensorRatio(int _divNum = 5, int _tryNum = 500, FVector _maxVector = FVector(60.0f, 60.0f, 90.0f));
+
+	// センサーの最大値に対する傾きの割合を取得する
+	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
+	static FRotator GetSensorRatioRotator(int _divNum = 5, int _tryNum = 500, FVector _maxVector = FVector(60.0f, 60.0f, 90.0f));
 
 	// センサーからの生のデータを取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
@@ -198,8 +217,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
 	static bool GetSensorButton(int _tryNum = 500);
 
-	// センサーのデータをFRotatorとして取得
+	// センサーの生のデータをFRotatorとして取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
-	static FRotator GetSensorDataRotator(int _tryNum = 500);
+	static FRotator GetSensorDataRotatorRaw(int _tryNum = 500);
+
+	// センサーの生のデータをFRotatorとして取得
+	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
+		static FRotator GetSensorDataRotator(int _tryNum = 500);
+
+	// 
 
 };

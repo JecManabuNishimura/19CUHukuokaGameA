@@ -11,6 +11,9 @@ int		 USensorManager::m_SerialPort = -1;
 FVector	 USensorManager::m_Standard = FVector::ZeroVector;
 FVector  USensorManager::m_MaxIncline = FVector::ZeroVector;
 FVector	 USensorManager::m_Deadzone = FVector::ZeroVector;
+bool	 USensorManager::isFlipX = false;
+bool	 USensorManager::isFlipY = false;
+bool	 USensorManager::isFlipZ = false;
 
 // センサーとの接続
 bool USensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSensorNum/* = 500*/, int _tryConnectNum /* = 1*/, bool _isResetStandard/* = true*/, bool _isResetMaxIncline/* = true*/, bool _isResetDeadZone/* = true*/)
@@ -291,7 +294,7 @@ FVector USensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 }
 
 // センサーの最大値に対する傾きの割合を取得する
-FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*/)
+FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*/, FVector _maxVector/* = FVector(60.0f, 60.0f, 90.0f)*/)
 {
 	FString tmp;
 
@@ -305,13 +308,16 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 		// 最大値を分割したときの値
 		FVector maxInclineRatio = GetMaxIncline() / _divNum;
 
+		// 実際の値を分割したときの値
+		FVector targetVector = _maxVector / _divNum;
+
 		// センサーとの値を比較する値
 		FVector comparison = maxInclineRatio;
 
 		// 値の代入回数
 		int substitutionNum = 0;
 
-		for (int i = 1; (substitutionNum < 3) && (i <= _divNum); ++i)
+		for (int i = 1; (substitutionNum < 3) && (i < _divNum); ++i)
 		{
 			// X軸の比較
 			// 代入していない場合
@@ -322,7 +328,7 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 				{
 					if (sensorData.X <= comparison.X)
 					{
-						resultData.X = comparison.X;
+						resultData.X = targetVector.X;
 						substitutionNum++;
 					}
 				}
@@ -331,7 +337,7 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 				{
 					if (sensorData.X >= -comparison.X)
 					{
-						resultData.X = -comparison.X;
+						resultData.X = -targetVector.X;
 						substitutionNum++;
 					}
 				}
@@ -350,18 +356,18 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 				// Yがプラス
 				if (sensorData.Y > 0.0f)
 				{
-					if (sensorData.Y <= comparison.Y)
+					if (sensorData.Y <= targetVector.Y)
 					{
-						resultData.Y = comparison.Y;
+						resultData.Y = targetVector.Y;
 						substitutionNum++;
 					}
 				}
 				// Yがマイナス
 				else if (sensorData.Y < 0.0f)
 				{
-					if (sensorData.Y >= -comparison.Y)
+					if (sensorData.Y >= -targetVector.Y)
 					{
-						resultData.Y = -comparison.Y;
+						resultData.Y = -targetVector.Y;
 						substitutionNum++;
 					}
 				}
@@ -382,7 +388,7 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 				{
 					if (sensorData.Z <= comparison.Z)
 					{
-						resultData.Z = comparison.Z;
+						resultData.Z = targetVector.Z;
 						substitutionNum++;
 					}
 				}
@@ -391,7 +397,7 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 				{
 					if (sensorData.Z >= -comparison.Z)
 					{
-						resultData.Z = -comparison.Z;
+						resultData.Z = -targetVector.Z;
 						substitutionNum++;
 					}
 				}
@@ -403,20 +409,21 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 				}
 			}
 			comparison += maxInclineRatio;
+			targetVector += (_maxVector / _divNum);
 		}
 
 		if (resultData.X == SENSOR_ERROR_READ.X)
 		{
-			resultData.X = sensorData.X > 0.0f ? GetMaxIncline().X : -GetMaxIncline().X;
+			resultData.X = sensorData.X > 0.0f ? _maxVector.X : -_maxVector.X;
 		}
 		if (resultData.Y == SENSOR_ERROR_READ.Y)
 		{
-			resultData.Y = sensorData.Y > 0.0f ? GetMaxIncline().Y : -GetMaxIncline().Y;
+			resultData.Y = sensorData.Y > 0.0f ? _maxVector.Y : -_maxVector.Y;
 		}
 		if (resultData.Z == SENSOR_ERROR_READ.Z)
 		{
-			resultData.Z = sensorData.Z > 0.0f ? GetMaxIncline().Z : -GetMaxIncline().Z;
-		}
+			resultData.Z = sensorData.Z > 0.0f ? _maxVector.Z : -_maxVector.Z;
+		}		
 	}
 	// 設定されていない
 	else
@@ -425,6 +432,16 @@ FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*
 	}
 
 	return resultData;
+}
+
+// センサーの最大値に対する傾きの割合を取得する
+UFUNCTION(BlueprintPure, Category = "Sensor Manager")
+FRotator USensorManager::GetSensorRatioRotator(int _divNum/* = 5*/, int _tryNum/* = 500*/, FVector _maxVector/* = FVector(60.0f, 60.0f, 90.0f)*/)
+{
+	FString tmp;
+	FVector tempVector = GetSensorRatio(_divNum, _tryNum, _maxVector);
+
+	return FRotator(tempVector.Y, tempVector.Z, tempVector.X);
 }
 
 // センサーからの生のデータを取得
@@ -511,6 +528,19 @@ FVector USensorManager::GetSensorDataRaw(FString& _strAdr, int _tryNum/* = 500*/
 
 		UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] SensorData : %f  Y:%f  Z:%f"), sensorDataArray[0], sensorDataArray[1], sensorDataArray[2]);
 
+		if (isFlipX)
+		{
+			sensorDataArray[0] *= -1;
+		}
+		if (isFlipY)
+		{
+			sensorDataArray[1] *= -1;
+		}
+		if (isFlipZ)
+		{
+			sensorDataArray[2] *= -1;
+		}
+
 		return FVector(sensorDataArray[0], sensorDataArray[1], sensorDataArray[2]);
 	}
 	// ConnectToSensor()を呼び出していない可能性がある
@@ -567,10 +597,19 @@ bool USensorManager::GetSensorButton(int _tryNum/* = 500*/)
 }
 
 // センサーのデータをFRotatorとして取得
-FRotator USensorManager::GetSensorDataRotator(int _tryNum/* = 500*/)
+FRotator USensorManager::GetSensorDataRotatorRaw(int _tryNum/* = 500*/)
 {
 	FString tmp;
 	FVector tempVector = GetSensorDataRaw(tmp, _tryNum);
+
+	return FRotator(tempVector.Y, tempVector.Z, tempVector.X);
+}
+
+// センサーのデータをFRotatorとして取得
+FRotator USensorManager::GetSensorDataRotator(int _tryNum/* = 500*/)
+{
+	FString tmp;
+	FVector tempVector = GetSensorData(tmp, _tryNum);
 
 	return FRotator(tempVector.Y, tempVector.Z, tempVector.X);
 }
