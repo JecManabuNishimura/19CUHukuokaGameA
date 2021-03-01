@@ -513,7 +513,7 @@ void AMapCreator::LinkingVerticalFence(TArray<FCreateData>& _generateInfoArray)
 							int fenceDataIndex = GetLinkIndex(linkIndex, m_VerticalFenceData);
 
 							// Y方向のスケールを変更
-							if (fenceDataIndex >= 0 && fenceDataIndex < m_FenceData.Num())
+							if (fenceDataIndex >= 0 && fenceDataIndex < m_VerticalFenceData.Num())
 							{
 								if (_generateInfoArray[actorIndex].generateActorStruct.isScaleXAxis)
 								{
