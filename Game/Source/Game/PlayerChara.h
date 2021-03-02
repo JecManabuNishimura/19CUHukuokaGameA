@@ -160,7 +160,7 @@ private:
 
 public:
 	//	ƒZƒ“ƒT[‚ª‚Á‚Ä‚¢‚Ü‚·‚©
-	UPROPERTY(EditAnywhere, Category = "Sensor")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sensor")
 		bool withSensor;
 	//------------------------------------------------------
 
