@@ -280,8 +280,14 @@ void APlayerChara::UpdateMove(float _deltaTime)
 
 	//	キャラクターのY軸移動
 	{
-		YRotation.Y = 0.f;
-		NewLocation.Y += 0.8f * -tempRoll * fps;
+		if (withSensor == false)
+		{
+			NewLocation.Y += 0.8f * -tempRoll * fps;
+		}
+		else
+		{
+			NewLocation.Y += 5.0f * tempRoll * fps;
+		}
 		SetActorLocation(NewLocation);
 	}
 
@@ -303,13 +309,25 @@ void APlayerChara::UpdateMove(float _deltaTime)
 //	ジャンプ処理
 void APlayerChara::UpdateJump(float _deltaTime)
 {
-	//	ジャンプできるかの判断
-	if (tempPitch > 30.f && canJump && !isGuarding)
+	if (withSensor == false)
 	{
-		canJump = false;
-		isJumping = true;
-		posBeforeJump = GetActorLocation();
+		if (tempPitch > 30.f && canJump && !isGuarding)
+		{
+			canJump = false;
+			isJumping = true;
+			posBeforeJump = GetActorLocation();
+		}
 	}
+	else
+	{
+		if (tempPitch > 10.f && canJump && !isGuarding)
+		{
+			canJump = false;
+			isJumping = true;
+			posBeforeJump = GetActorLocation();
+		}
+	}
+	//	ジャンプできるかの判断
 
 	if (isJumping)
 	{
@@ -379,9 +397,20 @@ void APlayerChara::UpdateGuard()
 void APlayerChara::UpdateAccelerate()
 {
 	FRotator nowRot = GetActorRotation();
-	if (tempPitch < -30.f && haveDashEnergy && !isDead && !isGoal)
+
+	if (withSensor == false)
 	{
-		isDashing = true;
+		if (tempPitch < -30.f && haveDashEnergy && !isDead && !isGoal)
+		{
+			isDashing = true;
+		}
+	}
+	else
+	{
+		if (tempPitch < -10.f && haveDashEnergy && !isDead && !isGoal)
+		{
+			isDashing = true;
+		}
 	}
 
 	if (DashEnergy <= 0.5f)
