@@ -260,11 +260,11 @@ void APlayerChara::UpdateMove(float _deltaTime)
 	}
 
 	//	‘O‚ÉŒü‚­‚¸‚Á‚ÆˆÚ“®‚·‚é
-	if ((isDashing || isDashLine) && haveShotEnergy)
+	if ((isDashing || isDashLine) && haveShotEnergy && !isJumping)
 	{
 		NewLocation.X += playerSpeed * 1.5f * fps;
 	}
-	else if (!isGuarding && !isDashing && haveShotEnergy)
+	else if (!isGuarding && !isDashing && haveShotEnergy || isJumping)
 	{
 		NewLocation.X += playerSpeed * fps;
 	}
