@@ -36,6 +36,10 @@ AStageSelect::AStageSelect() :
 	m_Stage02(NULL),
 	m_Stage03(NULL),
 	m_Stage04(NULL),
+	m_Stage05(NULL),
+	m_Stage06(NULL),
+	m_Stage07(NULL),
+	m_Stage08(NULL),
 	ButtonRightPressed(false),
 	ButtonLeftPressed(false)
 	//isEnterButtonPressed(false),
@@ -62,6 +66,13 @@ AStageSelect::AStageSelect() :
 		m_Stage01->SetupAttachment(m_SceneComponent);
 		m_Stage01->SetDrawSize(FVector2D(1280.0f, 720.0f));
 		m_Stage01->SetRelativeLocationAndRotation(FVector(0.0f, 60.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
+	}
+
+	m_Stage05 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage05"));
+	if (m_Stage05 != NULL) {
+		m_Stage05->SetupAttachment(m_SceneComponent);
+		m_Stage05->SetDrawSize(FVector2D(1280.0f, 720.0f));
+		m_Stage05->SetRelativeLocationAndRotation(FVector(0.0f, 60.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
 	}
 
 	m_Stage02 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage02"));
