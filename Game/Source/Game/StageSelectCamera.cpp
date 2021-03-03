@@ -204,15 +204,19 @@ void AStageSelectCamera::ReturnObject()
 			switch (pStageSelect->currentStage)
 			{
 			case 1:
+			case 5:
 				SSCurrentRotation = FRotator(0.0f, 0.0f, 0.0f);
 				break;
 			case 2:
+			case 6:
 				SSCurrentRotation = FRotator(0.0f, 90.0f, 0.0f);
 				break;
 			case 3:
+			case 7:
 				SSCurrentRotation = FRotator(0.0f, 180.0f, 0.0f);
 				break;
 			case 4:
+			case 8:
 				SSCurrentRotation = FRotator(0.0f, -90.0f, 0.0f);
 				break;
 			default:

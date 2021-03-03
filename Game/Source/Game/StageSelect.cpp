@@ -4,6 +4,7 @@
 // 作成者			：19CU0222 鍾家同
 // 更新内容			：2020/10/27
 //					：2020/12/12 更新　画面の移動をStageSelectCameraで制御
+//					：2021/03/04 更新　ステージ選択範囲を4から8までに増加
 //----------------------------------------------------------
 
 #include "StageSelect.h"
@@ -64,36 +65,64 @@ AStageSelect::AStageSelect() :
 	m_Stage01 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage01"));
 	if (m_Stage01 != NULL) {
 		m_Stage01->SetupAttachment(m_SceneComponent);
-		m_Stage01->SetDrawSize(FVector2D(1280.0f, 720.0f));
-		m_Stage01->SetRelativeLocationAndRotation(FVector(0.0f, 60.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
+		m_Stage01->SetDrawSize(FVector2D(1920.0f, 1080.0f));
+		m_Stage01->SetRelativeLocationAndRotation(FVector(0.0f, 870.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
 	}
 
 	m_Stage05 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage05"));
 	if (m_Stage05 != NULL) {
 		m_Stage05->SetupAttachment(m_SceneComponent);
-		m_Stage05->SetDrawSize(FVector2D(1280.0f, 720.0f));
-		m_Stage05->SetRelativeLocationAndRotation(FVector(0.0f, 60.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
+		m_Stage05->SetDrawSize(FVector2D(1920.0f, 1080.0f));
+		m_Stage05->SetRelativeLocationAndRotation(FVector(0.0f, 870.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
+	}
+
+	m_Stage09 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage09"));
+	if (m_Stage09 != NULL) {
+		m_Stage09->SetupAttachment(m_SceneComponent);
+		m_Stage09->SetDrawSize(FVector2D(1920.0f, 1080.0f));
+		m_Stage09->SetRelativeLocationAndRotation(FVector(0.0f, 870.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f));
 	}
 
 	m_Stage02 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage02"));
 	if (m_Stage02 != NULL) {
 		m_Stage02->SetupAttachment(m_SceneComponent);
-		m_Stage02->SetDrawSize(FVector2D(1280.0f, 720.0f));
-		m_Stage02->SetRelativeLocation(FVector(60.0f, 0.0f, 0.0f));
+		m_Stage02->SetDrawSize((FVector2D(1920.0f, 1080.0f)));
+		m_Stage02->SetRelativeLocation(FVector(870.0f, 0.0f, 0.0f));
+	}
+
+	m_Stage06 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage06"));
+	if (m_Stage06 != NULL) {
+		m_Stage06->SetupAttachment(m_SceneComponent);
+		m_Stage06->SetDrawSize((FVector2D(1920.0f, 1080.0f)));
+		m_Stage06->SetRelativeLocation(FVector(870.0f, 0.0f, 0.0f));
 	}
 
 	m_Stage03 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage03"));
 	if (m_Stage03 != NULL) {
-		m_Stage03->SetDrawSize(FVector2D(1280.0f, 720.0f));
-		m_Stage03->SetRelativeLocationAndRotation(FVector(0.0f, -60.0f, 0.0f), FRotator(0.0f, -90.0f, 0.0f));
+		m_Stage03->SetDrawSize((FVector2D(1920.0f, 1080.0f)));
+		m_Stage03->SetRelativeLocationAndRotation(FVector(0.0f, -870.0f, 0.0f), FRotator(0.0f, -90.0f, 0.0f));
 		m_Stage03->SetupAttachment(m_SceneComponent);
+	}
+
+	m_Stage07 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage07"));
+	if (m_Stage07 != NULL) {
+		m_Stage07->SetDrawSize((FVector2D(1920.0f, 1080.0f)));
+		m_Stage07->SetRelativeLocationAndRotation(FVector(0.0f, -870.0f, 0.0f), FRotator(0.0f, -90.0f, 0.0f));
+		m_Stage07->SetupAttachment(m_SceneComponent);
 	}
 
 	m_Stage04 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage04"));
 	if (m_Stage04 != NULL) {
 		m_Stage04->SetupAttachment(m_SceneComponent);
-		m_Stage04->SetDrawSize(FVector2D(1280.0f, 720.0f));
-		m_Stage04->SetRelativeLocationAndRotation(FVector(-60.0f, 0.0f, 0.0f), FRotator(0.0f, -180.0f, 0.0f));
+		m_Stage04->SetDrawSize((FVector2D(1920.0f, 1080.0f)));
+		m_Stage04->SetRelativeLocationAndRotation(FVector(-870.0f, 0.0f, 0.0f), FRotator(0.0f, -180.0f, 0.0f));
+	}
+
+	m_Stage08 = CreateDefaultSubobject<UWidgetComponent>(TEXT("stage08"));
+	if (m_Stage08 != NULL) {
+		m_Stage08->SetupAttachment(m_SceneComponent);
+		m_Stage08->SetDrawSize((FVector2D(1920.0f, 1080.0f)));
+		m_Stage08->SetRelativeLocationAndRotation(FVector(-870.0f, 0.0f, 0.0f), FRotator(0.0f, -180.0f, 0.0f));
 	}
 
 	/*m_Stage01 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Stage01"));
@@ -151,6 +180,7 @@ AStageSelect::AStageSelect() :
 void AStageSelect::BeginPlay()
 {
 	Super::BeginPlay();
+	CurrentStage();
 }
 
 // Called every frame
@@ -291,7 +321,83 @@ void AStageSelect::StageChanging(float _deltaTime)
 // 現在選択されたステージ
 void AStageSelect::CurrentStage()
 {
+	switch (currentStage)
+	{
+	case 1:
+		m_Stage01->SetHiddenInGame(false);
 
+		m_Stage08->SetHiddenInGame(false);
+		m_Stage04->SetHiddenInGame(true);
+
+		m_Stage02->SetHiddenInGame(false);
+		m_Stage06->SetHiddenInGame(true);
+		break;
+	case 2:
+		m_Stage02->SetHiddenInGame(false);
+
+		m_Stage01->SetHiddenInGame(false);
+		m_Stage05->SetHiddenInGame(true);
+
+		m_Stage03->SetHiddenInGame(false);
+		m_Stage07->SetHiddenInGame(true);
+		break;
+	case 3:
+		m_Stage03->SetHiddenInGame(false);
+
+		m_Stage02->SetHiddenInGame(false);
+		m_Stage06->SetHiddenInGame(true);
+
+		m_Stage04->SetHiddenInGame(false);
+		m_Stage08->SetHiddenInGame(true);
+		break;
+	case 4:
+		m_Stage04->SetHiddenInGame(false);
+
+		m_Stage03->SetHiddenInGame(false);
+		m_Stage07->SetHiddenInGame(true);
+
+		m_Stage05->SetHiddenInGame(false);
+		m_Stage01->SetHiddenInGame(true);
+		break;
+	case 5:
+		m_Stage05->SetHiddenInGame(false);
+
+		m_Stage04->SetHiddenInGame(false);
+		m_Stage08->SetHiddenInGame(true);
+
+		m_Stage06->SetHiddenInGame(false);
+		m_Stage02->SetHiddenInGame(true);
+		break;
+	case 6:
+		m_Stage06->SetHiddenInGame(false);
+
+		m_Stage05->SetHiddenInGame(false);
+		m_Stage01->SetHiddenInGame(true);
+
+		m_Stage07->SetHiddenInGame(false);
+		m_Stage03->SetHiddenInGame(true);
+		break;
+	case 7:
+		m_Stage07->SetHiddenInGame(false);
+
+		m_Stage06->SetHiddenInGame(false);
+		m_Stage02->SetHiddenInGame(true);
+
+		m_Stage08->SetHiddenInGame(false);
+		m_Stage04->SetHiddenInGame(true);
+		break;
+	case 8:
+		m_Stage08->SetHiddenInGame(false);
+
+		m_Stage07->SetHiddenInGame(false);
+		m_Stage03->SetHiddenInGame(true);
+
+		m_Stage01->SetHiddenInGame(false);
+		m_Stage05->SetHiddenInGame(true);
+		break;
+	default:
+		break;
+	}
 }
 
 void AStageSelect::SelectRight()
@@ -304,6 +410,8 @@ void AStageSelect::SelectRight()
 		currentStage += 1;
 		if (currentStage >= stageAmount + 1) currentStage = 1;
 		pressCount += 1;
+		
+		CurrentStage();
 	}
 	/*if (canEnter) {
 		currentStage += 1;
@@ -321,12 +429,15 @@ void AStageSelect::SelectLeft()
 		currentStage -= 1;
 		if (currentStage <= 0) currentStage = stageAmount;
 		pressCount += 1;
+
+		CurrentStage();
 	}
 	/*if (canEnter) {
 		currentStage -= 1;
 		if (currentStage <= 0) currentStage = stageAmount;
 		pressCount += 1;
 	}*/
+
 
 }
 
