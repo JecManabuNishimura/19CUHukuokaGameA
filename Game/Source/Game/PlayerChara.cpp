@@ -180,7 +180,11 @@ void APlayerChara::Tick(float DeltaTime)
 		{
 			UpdateSensor(DeltaTime);
 
-			if (USensorManager::GetSensorButton())
+			bool left;
+			bool right;
+			USensorManager::GetSensorButton(left, right);
+
+			if (right == true || left == true)
 			{
 				if (isButtonRelerse == true)
 				{

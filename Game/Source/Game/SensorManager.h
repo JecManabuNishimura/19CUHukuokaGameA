@@ -42,6 +42,12 @@ private:
 	static bool isFlipY;
 	static bool isFlipZ;
 
+	// X,Yを固定するZ軸の回転量
+	static float m_XYFreezeZAxisRotation;
+
+	// この値より大きく変わったら値を反映させない
+	static FVector m_MaxVariation;
+
 	// publicクラスメソッド
 public:
 
@@ -167,6 +173,20 @@ public:
 		isFlipZ = _flipZ;
 	}
 
+	// X,Yを固定するZ軸の回転量
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+		static void SetFreezeZAxisRotation(float _value)
+	{
+		m_XYFreezeZAxisRotation = _value;
+	}
+
+	// この値より大きく変わったら値を反映させない
+	UFUNCTION(BlueprintCallable, Category = "Sensor Manager")
+		static void SetMaxVariation(FVector _value)
+	{
+		m_MaxVariation = _value;
+	}
+
 	//-------------------------------------------------------------------------------------------------------------
 	
 	// センサーとの接続
@@ -207,15 +227,15 @@ public:
 
 	// センサーからの生のデータを取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
-	static FVector GetSensorDataRaw(FString& _strAdr, int _tryNum = 500);
+	static FVector GetSensorDataRaw(bool& _left, bool& _right, int _tryNum = 500);
 
 	// センサーのデータを取得（基準値、最大値、デッドゾーンを考慮する）
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
-	static FVector GetSensorData(FString& _strAdr, int _tryNum = 500);
+	static FVector GetSensorData(int _tryNum = 500);
 
 	// センサーのボタンが押されているかを取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")
-	static bool GetSensorButton(int _tryNum = 500);
+	static void GetSensorButton(bool& _left, bool& _right, int _tryNum = 500);
 
 	// センサーの生のデータをFRotatorとして取得
 	UFUNCTION(BlueprintPure, Category = "Sensor Manager")

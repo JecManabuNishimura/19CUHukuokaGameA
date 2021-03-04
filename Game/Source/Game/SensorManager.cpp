@@ -14,11 +14,14 @@ FVector	 USensorManager::m_Deadzone = FVector::ZeroVector;
 bool	 USensorManager::isFlipX = false;
 bool	 USensorManager::isFlipY = false;
 bool	 USensorManager::isFlipZ = false;
+float	 USensorManager::m_XYFreezeZAxisRotation = 0.0f;
+FVector	 USensorManager::m_MaxVariation = FVector(10.0f, 10.0f, 10.0f);
 
 // センサーとの接続
 bool USensorManager::ConnectToSensor(int _maxSerialPort /* = 20*/, int _checkSensorNum/* = 500*/, int _tryConnectNum /* = 1*/, bool _isResetStandard/* = true*/, bool _isResetMaxIncline/* = true*/, bool _isResetDeadZone/* = true*/)
 {
 	DisconnectToSensor(_isResetStandard, _isResetMaxIncline, _isResetDeadZone);
+	m_IsOpen = false;
 
 	// 繰り返し接続を試みる回数
 	for (int tryCnt = 0; tryCnt < _tryConnectNum; ++tryCnt)
@@ -89,10 +92,7 @@ void USensorManager::DisconnectToSensor(bool _isResetStandard/* = true*/, bool _
 
 	// センサーの管理を終了
 	m_ArduinoSerial = NULL;
-
-	// ポートを開いていない状態に
-	m_IsOpen = false;
-
+	
 	// シリアルポート初期化
 	m_SerialPort = -1;
 
@@ -142,10 +142,10 @@ float USensorManager::SetMaxInclineAuto(FString _element, int _getMaxLoop/* = 10
 
 	for (int loop = 0; loop < _getMaxLoop; ++loop)
 	{
-		FString tmp;
+		bool tmp;
 
 		// センサーデータを取得
-		FVector rowData = GetSensorDataRaw(tmp, _qualityLoop);
+		FVector rowData = GetSensorDataRaw(tmp, tmp, _qualityLoop);
 
 		// 配列に格納
 		sensorArray[0] = rowData.X;
@@ -258,8 +258,8 @@ FVector USensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 	// センサーから複数回データを取得する
 	for (int i = 0; i < _qualityLoop; ++i)
 	{
-		FString tmpStr;
-		FVector tmp = GetSensorDataRaw(tmpStr);
+		bool bTmp;
+		FVector tmp = GetSensorDataRaw(bTmp, bTmp);
 
 		if (tmp.Equals(SENSOR_ERROR_READ) == false)
 		{
@@ -296,9 +296,7 @@ FVector USensorManager::GetSensorAverage(int _qualityLoop/* = 100*/)
 // センサーの最大値に対する傾きの割合を取得する
 FVector USensorManager::GetSensorRatio(int _divNum/* = 5*/, int _tryNum/* = 500*/, FVector _maxVector/* = FVector(60.0f, 60.0f, 90.0f)*/)
 {
-	FString tmp;
-
-	FVector sensorData = GetSensorData(tmp, _tryNum);
+	FVector sensorData = GetSensorData(_tryNum);
 
 	FVector resultData = SENSOR_ERROR_READ;
 
@@ -445,7 +443,7 @@ FRotator USensorManager::GetSensorRatioRotator(int _divNum/* = 5*/, int _tryNum/
 }
 
 // センサーからの生のデータを取得
-FVector USensorManager::GetSensorDataRaw(FString& _strAdr, int _tryNum/* = 500*/)
+FVector USensorManager::GetSensorDataRaw(bool& _left, bool& _right, int _tryNum/* = 500*/)
 {
 	bool isRead = false;		// データを読み取れたか
 	FString fStr = "";			// 読み取りデータ格納用
@@ -507,24 +505,41 @@ FVector USensorManager::GetSensorDataRaw(FString& _strAdr, int _tryNum/* = 500*/
 		}
 
 		// ボタンの状態を読み取りたい
-			// splitTextArrayの要素番号 3にアクセスできなければ OFFにする
-			if (splitTextArray.IsValidIndex(3) == false)
+		// splitTextArrayの要素番号 3にアクセスできなければ OFFにする
+		if (splitTextArray.IsValidIndex(3) == false)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Failed Get ButtonCondition. Set to \"OFF\"."));
+			_left = false;
+		}
+		// アクセスできた
+		else
+		{
+			if (splitTextArray[3] == "1")
 			{
-				UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Failed Get ButtonCondition. Set to \"OFF\"."));
-				_strAdr = "OFF";
+				_left = true;
 			}
-			// アクセスできた
 			else
 			{
-				if (splitTextArray[3] == "ON")
-				{
-					_strAdr = "ON";
-				}
-				else
-				{
-					_strAdr = "OFF";
-				}
+				_left = false;
 			}
+		}
+		if (splitTextArray.IsValidIndex(4) == false)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[SensorManager] Failed Get ButtonCondition. Set to \"OFF\"."));
+			_right = false;
+		}
+		// アクセスできた
+		else
+		{
+			if (splitTextArray[4] == "1")
+			{
+				_right = true;
+			}
+			else
+			{
+				_right = false;
+			}
+		}
 
 		UE_LOG(LogTemp, Verbose, TEXT("[SensorManager] SensorData : %f  Y:%f  Z:%f"), sensorDataArray[0], sensorDataArray[1], sensorDataArray[2]);
 
@@ -553,9 +568,12 @@ FVector USensorManager::GetSensorDataRaw(FString& _strAdr, int _tryNum/* = 500*/
 }
 
 // センサーのデータを取得（基準値、最大値、デッドゾーンを考慮する）
-FVector USensorManager::GetSensorData(FString& _strAdr, int _tryNum/* = 500*/)
+FVector USensorManager::GetSensorData(int _tryNum/* = 500*/)
 {
-	FVector dataTemp = GetSensorDataRaw(_strAdr, _tryNum);
+	bool tmp;
+
+	FVector dataTempRaw = GetSensorDataRaw(tmp, tmp, _tryNum);
+	FVector	dataTemp = dataTempRaw;
 
 	// 基準値を考慮（値から基準値を減算）
 	dataTemp -= m_Standard;
@@ -577,30 +595,45 @@ FVector USensorManager::GetSensorData(FString& _strAdr, int _tryNum/* = 500*/)
 		dataTemp.Z = 0.0f;
 	}
 
+	// 最大回転量に補正
+	static FVector prevVector = dataTemp;
+
+	if (FMath::Abs(prevVector.X - dataTemp.X) > m_MaxVariation.X)
+	{
+		dataTemp.X = prevVector.X;
+	}
+	if (FMath::Abs(prevVector.Y - dataTemp.Y) > m_MaxVariation.Y)
+	{
+		dataTemp.Y = prevVector.Y;
+	}
+	if (FMath::Abs(prevVector.Z - dataTemp.Z) > m_MaxVariation.Z)
+	{
+		dataTemp.Z = prevVector.Z;
+	}
+
+	// Z軸回転中にX, Yの回転を切る
+	if (FMath::Abs(prevVector.Z - dataTemp.Z) >= m_XYFreezeZAxisRotation)
+	{
+		dataTemp.X = 0.0f;
+		dataTemp.Y = 0.0f;
+	}
+
+	prevVector = dataTempRaw;
+
 	return dataTemp;
 }
 
 // センサーのボタンが押されているかを取得
-bool USensorManager::GetSensorButton(int _tryNum/* = 500*/)
+void USensorManager::GetSensorButton(bool& _left, bool& _right, int _tryNum/* = 500*/)
 {
-	FString result;
-	GetSensorDataRaw(result, _tryNum);
-
-	if (result == "ON")
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+	GetSensorDataRaw(_left, _right, _tryNum);
 }
 
 // センサーのデータをFRotatorとして取得
 FRotator USensorManager::GetSensorDataRotatorRaw(int _tryNum/* = 500*/)
 {
-	FString tmp;
-	FVector tempVector = GetSensorDataRaw(tmp, _tryNum);
+	bool tmp;
+	FVector tempVector = GetSensorDataRaw(tmp, tmp, _tryNum);
 
 	return FRotator(tempVector.Y, tempVector.Z, tempVector.X);
 }
@@ -608,8 +641,7 @@ FRotator USensorManager::GetSensorDataRotatorRaw(int _tryNum/* = 500*/)
 // センサーのデータをFRotatorとして取得
 FRotator USensorManager::GetSensorDataRotator(int _tryNum/* = 500*/)
 {
-	FString tmp;
-	FVector tempVector = GetSensorData(tmp, _tryNum);
+	FVector tempVector = GetSensorData(_tryNum);
 
 	return FRotator(tempVector.Y, tempVector.Z, tempVector.X);
 }
