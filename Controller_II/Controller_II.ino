@@ -22,7 +22,9 @@ const float MULTIPUL = 7.0f;					// X, Y軸のセンサーの値の補正値
 const float POTENTIOMETER_OFFSET = 512.0f;		// ポテンショメーターの最大値（1024）と最小値（0）の中間の値 0～1024の値を -512～512に変換する
 const float POTENTIOMETER_COLLECTION = 5.689f;	// 正規化したポテンショメーターの値に対して割る値 512を90°に変換する
 
-float prevData = 0.0f;
+float prevXData = 0.0f;
+float prevYData = 0.0f;
+float prevZData = 0.0f;
 float standard = 180.0f;
 
 bool IsButtonPush(int _port, int _chatteringLoop = 100, float _chatteringRatio = 0.8f)
@@ -73,7 +75,7 @@ void setup() {
   Wire.endTransmission();
 
   // サンプリング周波数の設定
-  MadgwickFilter.begin(100); //100Hz
+  MadgwickFilter.begin(60); //60Hz
 }
 
 
@@ -153,9 +155,9 @@ void loop()
 
     float sendZData = 0.0f;
 
-    if (abs(MadgwickFilter.getYaw() - prevData) > 0.1f)
+    if (abs(MadgwickFilter.getYaw() - prevZData) > 0.1f)
     {
-      sendZData = prevData - MadgwickFilter.getYaw();
+      sendZData = prevZData - MadgwickFilter.getYaw();
     }
     // シリアル出力
     // センサーデータ
@@ -172,6 +174,8 @@ void loop()
     Serial.print(IsButtonPush(rightButton) ? "1" : "0");
     Serial.println();
     
-    prevData = MadgwickFilter.getYaw();
+    prevXData = MadgwickFilter.getPitch();
+    prevYData = MadgwickFilter.getRoll();
+    prevZData = MadgwickFilter.getYaw();
   }
 }
