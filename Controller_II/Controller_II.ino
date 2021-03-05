@@ -22,6 +22,9 @@ const float MULTIPUL = 7.0f;					// X, Y軸のセンサーの値の補正値
 const float POTENTIOMETER_OFFSET = 512.0f;		// ポテンショメーターの最大値（1024）と最小値（0）の中間の値 0～1024の値を -512～512に変換する
 const float POTENTIOMETER_COLLECTION = 5.689f;	// 正規化したポテンショメーターの値に対して割る値 512を90°に変換する
 
+float prevData = 0.0f;
+float standard = 180.0f;
+
 bool IsButtonPush(int _port, int _chatteringLoop = 100, float _chatteringRatio = 0.8f)
 {
   bool isPushing = false;
@@ -76,14 +79,14 @@ void setup() {
 
 void loop()
 {
-  if (Serial.available() > 0)
+  //if (Serial.available() > 0)
   {
     int input = Serial.read();
 
     // 入力文字が "s" でないなら処理を中断
     if (input != 's')
     {
-      return;
+      //return;
     }
 
 
@@ -143,17 +146,23 @@ void loop()
     //Madgwickフィルター（ブレをおさえる計算）を用いて、PRY（pitch, roll, yaw）を計算
     MadgwickFilter.updateIMU(gyroArray[0], gyroArray[1], gyroArray[2], accArray[0], accArray[1], accArray[2]);
 
-	float yawPotentiometer = YAW_POTENTIOMETER_READ;
+    float yawPotentiometer = YAW_POTENTIOMETER_READ;
 
-   	yawPotentiometer -= POTENTIOMETER_OFFSET;
+    yawPotentiometer -= POTENTIOMETER_OFFSET;
     yawPotentiometer /= POTENTIOMETER_COLLECTION;
 
+    float sendZData = 0.0f;
+
+    if (abs(MadgwickFilter.getYaw() - prevData) > 0.1f)
+    {
+      sendZData = prevData - MadgwickFilter.getYaw();
+    }
     // シリアル出力
     // センサーデータ
     Serial.print(MadgwickFilter.getPitch() * MULTIPUL, 1);		Serial.print(":");		// Roll	 	X
     Serial.print(MadgwickFilter.getRoll() * MULTIPUL, 1);		Serial.print(":");		// Pitch 	Y
-    Serial.print(yawPotentiometer, 1);						Serial.print(":");		// Yaw	 	Z
-    //Serial.print(MadgwickFilter.getYaw(), 1);					Serial.print(":");		// Yaw	 	Z
+    //Serial.print(yawPotentiometer, 1);						Serial.print(":");		// Yaw	 	Z
+    Serial.print(sendZData, 1);					Serial.print(":");		// Yaw	 	Z
     //Serial.print(0.0f, 1);									Serial.print(":");		// Yaw	 	Z
 
     // ボタンデータ
@@ -162,5 +171,7 @@ void loop()
 
     Serial.print(IsButtonPush(rightButton) ? "1" : "0");
     Serial.println();
+    
+    prevData = MadgwickFilter.getYaw();
   }
 }
