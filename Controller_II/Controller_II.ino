@@ -18,7 +18,7 @@ const int leftButton = 12;
 const int rightButton = 13;
 
 // センサー正規化の値
-const float MULTIPUL = 1.0f; //20.0f;					// X, Y軸のセンサーの値の補正値
+const float MULTIPUL = 7.0f;					// X, Y軸のセンサーの値の補正値
 const float POTENTIOMETER_OFFSET = 512.0f;		// ポテンショメーターの最大値（1024）と最小値（0）の中間の値 0～1024の値を -512～512に変換する
 const float POTENTIOMETER_COLLECTION = 5.689f;	// 正規化したポテンショメーターの値に対して割る値 512を90°に変換する
 
@@ -152,8 +152,8 @@ void loop()
     // センサーデータ
     Serial.print(MadgwickFilter.getPitch() * MULTIPUL, 1);		Serial.print(":");		// Roll	 	X
     Serial.print(MadgwickFilter.getRoll() * MULTIPUL, 1);		Serial.print(":");		// Pitch 	Y
-    //Serial.print(yawPotentiometer, 1);						Serial.print(":");		// Yaw	 	Z
-    Serial.print(MadgwickFilter.getYaw(), 1);					Serial.print(":");		// Yaw	 	Z
+    Serial.print(yawPotentiometer, 1);						Serial.print(":");		// Yaw	 	Z
+    //Serial.print(MadgwickFilter.getYaw(), 1);					Serial.print(":");		// Yaw	 	Z
     //Serial.print(0.0f, 1);									Serial.print(":");		// Yaw	 	Z
 
     // ボタンデータ
