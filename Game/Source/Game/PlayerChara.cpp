@@ -290,7 +290,7 @@ void APlayerChara::UpdateMove(float _deltaTime)
 		}
 		else
 		{
-			NewLocation.Y += 5.0f * tempRoll * fps;
+			NewLocation.Y += 8.0f * tempRoll * fps;
 		}
 		SetActorLocation(NewLocation);
 	}
