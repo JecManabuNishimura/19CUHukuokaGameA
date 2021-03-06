@@ -324,7 +324,7 @@ void APlayerChara::UpdateJump(float _deltaTime)
 	}
 	else
 	{
-		if (tempPitch > 10.f && canJump && !isGuarding)
+		if (tempPitch > 2.f && canJump && !isGuarding)
 		{
 			canJump = false;
 			isJumping = true;
@@ -372,13 +372,56 @@ void APlayerChara::UpdateGuard()
 	}
 
 	FRotator nowRot = GetActorRotation();
-	if ((tempYaw < -30.f || tempYaw > 30.f) && haveGuardEnergy && !isDead && !isGoal)
+
+	if (withSensor == false)
 	{
-		isGuarding = true;
+		if ((tempYaw < -30.f || tempYaw > 30.f) && haveGuardEnergy && !isDead && !isGoal)
+		{
+			isGuarding = true;
+		}
+		else
+		{
+			isGuarding = false;
+		}
 	}
 	else
 	{
-		isGuarding = false;
+		static bool guardFlg = false;
+		static bool guardStay = false;
+
+		if (haveGuardEnergy && !isDead && !isGoal)
+		{
+
+			if (guardFlg == false && guardStay == false && FMath::Abs(tempYaw) > 2.0f)
+			{
+				guardFlg = true;
+
+				isGuarding = true;
+			}
+			else if (guardFlg == true && guardStay == false && FMath::Abs(tempYaw) < 0.05f)
+			{
+				guardStay = true;
+
+				isGuarding = true;
+			}
+			else if (guardFlg == true && guardStay == true && FMath::Abs(tempYaw) > 2.0f)
+			{
+				guardFlg = false;
+
+				isGuarding = false;
+			}
+			else if (guardFlg == false && guardStay == true && FMath::Abs(tempYaw) < 0.05f)
+			{
+				guardStay = false;
+
+				isGuarding = false;
+			}
+		}
+		else
+		{
+			guardFlg = false;
+			guardStay = false;
+		}
 	}
 
 	if (isGuarding && haveGuardEnergy)
@@ -411,7 +454,7 @@ void APlayerChara::UpdateAccelerate()
 	}
 	else
 	{
-		if (tempPitch < -10.f && haveDashEnergy && !isDead && !isGoal)
+		if (tempPitch < -8.f && haveDashEnergy && !isDead && !isGoal)
 		{
 			isDashing = true;
 		}

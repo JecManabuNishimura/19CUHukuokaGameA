@@ -618,6 +618,12 @@ FVector USensorManager::GetSensorData(int _tryNum/* = 500*/)
 		dataTemp.Y = 0.0f;
 	}
 
+	// エラー値の場合は前の値を返す
+	if (dataTempRaw == SENSOR_ERROR_READ)
+	{
+		return prevVector;
+	}
+
 	prevVector = dataTempRaw;
 
 	return dataTemp;
