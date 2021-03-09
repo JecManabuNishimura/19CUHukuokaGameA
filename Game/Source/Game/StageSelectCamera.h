@@ -73,6 +73,10 @@ public:
 		bool isReturning;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
 		bool isEnterButtonPressed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
+		float sensorThreshold;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
 		bool isCancelButtonPressed;
 	UPROPERTY(EditAnywhere, Category = "Object")
