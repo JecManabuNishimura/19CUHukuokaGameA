@@ -81,6 +81,13 @@ AStageSelectCamera::AStageSelectCamera() :
 void AStageSelectCamera::BeginPlay()
 {
 	Super::BeginPlay();
+
+	isEnterButtonPressed = false;
+	isCancelButtonPressed = false;
+	isReturning = false;
+	canBPPlayAction = false;
+	canDisplayUI = false;
+	isPlayingAction = false;
 }
 
 // Called every frame
