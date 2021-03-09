@@ -2,6 +2,7 @@
 
 
 #include "InputName.h"
+#include "SensorManager.h"
 #include "Engine.h"
 
 // Sets default values
@@ -73,6 +74,32 @@ void AInputName::Tick(float DeltaTime)
 	else if (confirmIndex == 5)
 	{
 		nameIsConfirm = true;
+	}
+
+	if (USensorManager::GetIsOpen() == true)
+	{
+		bool left = false;
+		bool right = false;
+		USensorManager::GetSensorButton(left, right);
+
+		if (left)
+		{
+			SpaceButton();
+		}
+		if (right)
+		{
+			EnterButton();
+		}
+
+		float sensorDataY = USensorManager::GetSensorData().Y;
+		if (sensorDataY > sensorThreshold)
+		{
+			UpButton();
+		}
+		else if (sensorDataY < -sensorThreshold)
+		{
+			DownButton();
+		}
 	}
 
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, nameIsConfirm ? TEXT("true") : TEXT("false"));

@@ -37,6 +37,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int confirmIndex;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float sensorThreshold;
+
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly)
 		int tempSelectIndex;
 
