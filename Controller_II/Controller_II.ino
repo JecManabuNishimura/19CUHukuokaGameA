@@ -17,6 +17,11 @@ Madgwick MadgwickFilter;
 const int leftButton = 12;
 const int rightButton = 13;
 
+const int X_Plus = 8;
+const int X_Minus = 9;
+const int Y_Plus = 10;
+const int Y_Minus = 11;
+
 // センサー正規化の値
 const float MULTIPUL = 7.0f;					// X, Y軸のセンサーの値の補正値
 const float POTENTIOMETER_OFFSET = 512.0f;		// ポテンショメーターの最大値（1024）と最小値（0）の中間の値 0～1024の値を -512～512に変換する
@@ -58,6 +63,10 @@ void setup() {
   // ボタン用ピンの初期化
   pinMode(leftButton, INPUT_PULLUP);
   pinMode(rightButton, INPUT_PULLUP);
+  pinMode(X_Plus, INPUT_PULLUP);
+  pinMode(X_Minus, INPUT_PULLUP);
+  pinMode(Y_Plus, INPUT_PULLUP);
+  pinMode(Y_Minus, INPUT_PULLUP);
 
   // PCとの通信を開始
   Serial.begin(115200); //115200bps
@@ -81,17 +90,18 @@ void setup() {
 
 void loop()
 {
-  //if (Serial.available() > 0)
+  if (Serial.available() > 0)
   {
     int input = Serial.read();
 
     // 入力文字が "s" でないなら処理を中断
     if (input != 's')
     {
-      //return;
+      return;
     }
 
 
+/*
     Wire.beginTransmission(0x68);
     // データ送信を開始するレジスタの指定（ACCEL_XOUT_H, 0x3B番地）
     Wire.write(0x3B);
@@ -166,7 +176,35 @@ void loop()
     //Serial.print(yawPotentiometer, 1);						Serial.print(":");		// Yaw	 	Z
     Serial.print(sendZData, 1);					Serial.print(":");		// Yaw	 	Z
     //Serial.print(0.0f, 1);									Serial.print(":");		// Yaw	 	Z
-
+*/
+	if(IsButtonPush(X_Plus) == true)
+	{		
+    	Serial.print(10.0f, 1);		Serial.print(":");		// Roll	 	X
+	}
+	else if (IsButtonPush(X_Minus) == true)
+	{
+    	Serial.print(-10.0f, 1);		Serial.print(":");		// Roll	 	X
+	}
+	else
+	{
+    	Serial.print(0.1f, 1);		Serial.print(":");		// Roll	 	X		
+	}
+	
+	if(IsButtonPush(Y_Plus) == true)
+	{		
+    	Serial.print(10.0f, 1);		Serial.print(":");		// Roll	 	X
+	}
+	else if (IsButtonPush(Y_Minus) == true)
+	{
+    	Serial.print(-10.0f, 1);		Serial.print(":");		// Roll	 	X
+	}
+	else
+	{
+    	Serial.print(0.1f, 1);		Serial.print(":");		// Roll	 	X		
+	}
+	
+    Serial.print(0.0f, 1);		Serial.print(":");		// Roll	 	X
+    
     // ボタンデータ
     Serial.print(IsButtonPush(leftButton) ? "1" : "0");
     Serial.print(":");

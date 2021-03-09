@@ -8,6 +8,7 @@
 // Sets default values
 AInputName::AInputName()
 	: confirmIndex(1)
+	, sensorThreshold(5.0f)
 	, tempSelectIndex(0)
 	, firstNameIndex(0)
 	, middleNameIndex(0)
@@ -78,27 +79,44 @@ void AInputName::Tick(float DeltaTime)
 
 	if (USensorManager::GetIsOpen() == true)
 	{
+		static bool isPush = false;
 		bool left = false;
 		bool right = false;
 		USensorManager::GetSensorButton(left, right);
 
-		if (left)
+		if (isPush == false && left == true)
 		{
 			SpaceButton();
+			isPush = true;
 		}
-		if (right)
+		else if (isPush == false && right == true)
 		{
 			EnterButton();
+			isPush = true;
+		}
+		else if (left == false && right == false)
+		{
+			isPush = false;
 		}
 
-		float sensorDataY = USensorManager::GetSensorData().Y;
-		if (sensorDataY > sensorThreshold)
+		FVector sensorData = USensorManager::GetSensorDataRaw(left, right);
+		float sensorDataY = sensorData.Y;
+		static bool isMove = false;
+
+		UE_LOG(LogTemp, Warning, TEXT("%f"), sensorData.Y);
+		if (isMove == false && sensorDataY > sensorThreshold)
 		{
 			UpButton();
+			isMove = true;
 		}
-		else if (sensorDataY < -sensorThreshold)
+		else if (isMove == false && sensorDataY < -sensorThreshold)
 		{
 			DownButton();
+			isMove = true;
+		}
+		else if (sensorDataY <= sensorThreshold && sensorDataY >= -sensorThreshold)
+		{
+			isMove = false;
 		}
 	}
 

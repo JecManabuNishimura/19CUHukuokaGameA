@@ -10,6 +10,7 @@
 #include "StageSelectCamera.h"
 #include "StageSelect.h"
 #include "Engine.h"
+#include "SensorManager.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFrameWork/Actor.h"
 #include "Camera/CameraComponent.h"
@@ -40,7 +41,9 @@ AStageSelectCamera::AStageSelectCamera() :
 	SpawnMainActorLocation(300.0f, 0.0f, 0.0f),
 	SSCurrentRotation(0.0f, 0.0f, 0.0f),
 	CurrentStageNum(1),
-	currentTime(0.0f)
+	currentTime(0.0f),
+
+	sensorThreshold(5.0f)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -96,6 +99,42 @@ void AStageSelectCamera::Tick(float DeltaTime)
 	Timer(DeltaTime);
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, isHit ? TEXT("TRUE") : TEXT("FALSE"));
 
+	if (USensorManager::GetIsOpen() == true)
+	{
+		bool left;
+		bool right;
+
+		USensorManager::GetSensorButton(left, right);
+
+		if (left)
+		{
+			ButtonCancel();
+		}
+		else if (right)
+		{
+			ButtonEnter();
+		}
+
+		FVector sensorData = USensorManager::GetSensorDataRaw(left, right);
+		float sensorDataX = sensorData.X;
+		static bool isMove = false;
+
+		UE_LOG(LogTemp, Warning, TEXT("%f"), sensorData.X);
+		if (isMove == false && sensorDataX > sensorThreshold)
+		{
+			ButtonRight();
+			isMove = true;
+		}
+		else if (isMove == false && sensorDataX < -sensorThreshold)
+		{
+			ButtonLeft();
+			isMove = true;
+		}
+		else if (sensorDataX <= sensorThreshold && sensorDataX >= -sensorThreshold)
+		{
+			isMove = false;
+		}
+	}
 }
 
 // y“ü—ÍƒoƒCƒ“ƒhz
