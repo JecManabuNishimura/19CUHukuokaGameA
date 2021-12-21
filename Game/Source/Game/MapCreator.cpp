@@ -869,7 +869,7 @@ bool AMapCreator::ExportCSVFromActorArray(const TArray<FMapActorStructCpp> _mapA
 	FString mapName = GetWorld()->GetMapName();
 	mapName = GetWorld()->RemovePIEPrefix(mapName);
 
-	FString path = FPaths::GameDir() + (TEXT("Content/_MapCreator_MapActorCSV/"));
+	FString path = FPaths::ProjectDir() + (TEXT("Content/_MapCreator_MapActorCSV/"));
 
 	FString name = TEXT("MapActorList_");
 	name += mapName;
