@@ -96,6 +96,10 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UBoxComponent* m_BoxCollision;
 
+	// ルートコンポーネントのY回転
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings")
+		float m_RootRotationY;
+
 	// 移動可能かどうか
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		bool m_CanMove;

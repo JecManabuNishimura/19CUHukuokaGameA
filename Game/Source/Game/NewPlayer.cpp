@@ -20,11 +20,12 @@ ANewPlayer::ANewPlayer()
 	, m_PlayerMesh(nullptr)
 	, m_PlayerCamera(nullptr)
 	, m_BoxCollision(nullptr)
+	, m_RootRotationY(90.0f)
 	, m_CanMove(false)
-	, m_ForwardMaxSpeed(15.0f)
+	, m_ForwardMaxSpeed(5.0f)
 	, m_ForwardAcceleration(0.0125f)
-	, m_SideMaxSpeed(15.0f)
-	, m_SideAcceleration(0.05f)
+	, m_SideMaxSpeed(5.0f)
+	, m_SideAcceleration(0.00625f)
 	, m_BrakePower(0.075f)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -40,34 +41,33 @@ ANewPlayer::ANewPlayer()
 	m_BoardCapsuleCollision->SetEnableGravity(true);
 	m_BoardCapsuleCollision->SetUseCCD(true);
 	m_BoardCapsuleCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
-	m_BoardCapsuleCollision->SetCapsuleHalfHeight(85.0f);
+	m_BoardCapsuleCollision->SetCapsuleHalfHeight(90.0f);
 	m_BoardCapsuleCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoardCapsuleCollision->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	m_BoardCapsuleCollision->SetRelativeRotation(FRotator(m_RootRotationY, 0.0f, 0.0f));
 
 	m_BoardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoardMesh"));
 	m_BoardMesh->SetupAttachment(m_BoardCapsuleCollision);
 	m_BoardMesh->SetCollisionProfileName("NoCollision");
 	m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoardMesh->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+	m_BoardMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
 
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	m_PlayerMesh->SetupAttachment(m_BoardCapsuleCollision);
 	m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_PlayerMesh->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+	m_PlayerMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
 
 	m_PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
 	m_PlayerCamera->SetupAttachment(m_BoardCapsuleCollision);
-	m_PlayerCamera->SetRelativeLocation(FVector(-300.0f, 0.0f, -250.0f));
-	m_PlayerCamera->SetRelativeRotation(FRotator(60.0f, 0.0f, 0.0f));
+	m_PlayerCamera->SetRelativeLocation(FVector(300.0f, 0.0f, 250.0f));
+	m_PlayerCamera->SetRelativeRotation(FRotator(-m_RootRotationY - 30.0f, 0.0f, 0.0f));
 
 	m_BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
 	m_BoxCollision->SetupAttachment(m_BoardCapsuleCollision);
 	m_BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ANewPlayer::OnOverlapBegin);
 	m_BoxCollision->SetBoxExtent(FVector(100.0f, 100.0f, 100.0f));
 	m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoxCollision->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+	m_BoxCollision->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
 }
-
 // 移動値入力処理（コントローラー）
 void ANewPlayer::InputSensor()
 {
@@ -125,7 +125,7 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 			}
 		}
 
-		m_UpdateValue.Y = FMath::Clamp(value, -1.0f, 1.0f) * m_SideMaxSpeed;
+		AddActorWorldRotation(FRotator(0.0f, FMath::Clamp(value, -1.0f, 1.0f) * m_SideMaxSpeed, 0.0f));
 	}
 }
 
@@ -137,10 +137,23 @@ void ANewPlayer::UpdateMove()
 	m_CurrentForwardAcceleration = FMath::Clamp(m_CurrentForwardAcceleration, 0.0f, 1.0f);
 	
 	// 実際に移動量を反映させる
-	m_UpdateValue.X = m_ForwardMaxSpeed * m_CurrentForwardAcceleration;
-	SetActorLocation(GetActorLocation() + m_UpdateValue);
+	float speed = m_ForwardMaxSpeed * m_CurrentForwardAcceleration;
 
-	UE_LOG(LogTemp, Warning, TEXT("POS = %s"), *GetActorLocation().ToString());
+	// 前方向ベクトルの取得
+	FVector forwardVec = GetActorForwardVector();
+
+	FVector meshVec = m_BoardMesh->GetForwardVector();
+	
+	UE_LOG(LogTemp, Warning, TEXT("Forward Vec = %s"), *forwardVec.ToString());
+	UE_LOG(LogTemp, Warning, TEXT("Board Vec = %s"), *meshVec.ToString());
+
+	// 前進加速量に応じて左右移動のベクトルを制御
+	forwardVec.X *= m_CurrentForwardAcceleration;
+
+	// Z軸のベクトルが反転しているので値も反転させて速度を乗算
+	forwardVec.Z *= -speed;
+
+	AddActorLocalOffset(forwardVec);
 }
 
 // 加速リセット
@@ -167,9 +180,6 @@ void ANewPlayer::BeginPlay()
 void ANewPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-
-	UE_LOG(LogTemp, Warning, TEXT("velocity = %f"), GetVelocity().X);
 
 	// 移動可能状態
 	if (m_CanMove)
