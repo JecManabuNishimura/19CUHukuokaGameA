@@ -11,6 +11,7 @@ ANewPlayer::ANewPlayer()
 	: m_IsSensor(false)
 	, m_IsSharpcurve(false)
 	, m_CurrentForwardAcceleration(0.0f)
+	, m_SideValue(0.0f)
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_UpdateValue(FVector::ZeroVector)
@@ -18,6 +19,7 @@ ANewPlayer::ANewPlayer()
 	, m_BoardCapsuleCollision(nullptr)
 	, m_BoardMesh(nullptr)
 	, m_PlayerMesh(nullptr)
+	, m_SpringArm(nullptr)
 	, m_PlayerCamera(nullptr)
 	, m_BoxCollision(nullptr)
 	, m_RootRotationY(90.0f)
@@ -25,8 +27,7 @@ ANewPlayer::ANewPlayer()
 	, m_ForwardMaxSpeed(5.0f)
 	, m_ForwardAcceleration(0.0125f)
 	, m_SideMaxSpeed(5.0f)
-	, m_SideAcceleration(0.00625f)
-	, m_BrakePower(0.075f)
+	, m_SideAcceleration(0.1f)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -56,6 +57,8 @@ ANewPlayer::ANewPlayer()
 	m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	m_PlayerMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
 
+	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+
 	m_PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
 	m_PlayerCamera->SetupAttachment(m_BoardCapsuleCollision);
 	m_PlayerCamera->SetRelativeLocation(FVector(300.0f, 0.0f, 250.0f));
@@ -80,62 +83,38 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 	// コントローラー未使用時のみ
 	if (!m_IsSensor)
 	{
-		// 入力中 or ブレーキ中
-		static bool isStartInput = false;
+		// 加速する方向の取得
+		float accelDir = (_axisValue > 0.0f) ? 1.0f : -1.0f;
 
-		// 実際の移動値
-		static float value = 0.0f;
-
-		// 入力あり
-		if (_axisValue != 0.0f)
+		// ドリフトかどうか
+		if (m_IsSharpcurve)
 		{
-			// 入力あり状態に
-			isStartInput = true;
-
-			// 加速する方向の取得
-			float accelDir = (_axisValue > 0.0f) ? 1.0f : -1.0f;
-
-			// ドリフトかどうか
-			if (m_IsSharpcurve)
-			{
-				// 加速する
-			}
-			else
-			{
-				// 加速する
-				m_CurrentSideAcceleration += m_SideAcceleration * accelDir;
-				m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, -1.0f, 1.0f);
-
-				value = _axisValue * m_CurrentSideAcceleration * accelDir;
-			}
+			// 加速する
 		}
-		// 入力なし
-		else if (isStartInput)
+		else
 		{
-			float mag = 1.0f - m_BrakePower;
-			value *= mag;
-			m_CurrentSideAcceleration *= mag;
+			// 加速する
+			m_CurrentSideAcceleration += m_SideAcceleration * accelDir;
 
-			// 停止
-			if (FMath::IsNearlyEqual(value, 0.0f, (m_BrakePower / 5.0f)))
-			{
-				isStartInput = false;
-				m_CurrentSideAcceleration = 0.0f;
-				value = 0.0f;
-			}
+			// 最大速度にクランプする
+			m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, -m_SideMaxSpeed, m_SideMaxSpeed);
 		}
 
-		AddActorWorldRotation(FRotator(0.0f, FMath::Clamp(value, -1.0f, 1.0f) * m_SideMaxSpeed, 0.0f));
+		m_SideValue = FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
 	}
 }
 
 // 移動処理
 void ANewPlayer::UpdateMove()
-{	
+{
+	// 左右移動の量に応じて回転
+	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
+	m_SideValue = 0.0f;
+
 	// 前進を加速させる
 	m_CurrentForwardAcceleration += m_ForwardAcceleration;
 	m_CurrentForwardAcceleration = FMath::Clamp(m_CurrentForwardAcceleration, 0.0f, 1.0f);
-	
+
 	// 実際に移動量を反映させる
 	float speed = m_ForwardMaxSpeed * m_CurrentForwardAcceleration;
 
@@ -143,7 +122,7 @@ void ANewPlayer::UpdateMove()
 	FVector forwardVec = GetActorForwardVector();
 
 	FVector meshVec = m_BoardMesh->GetForwardVector();
-	
+
 	UE_LOG(LogTemp, Warning, TEXT("Forward Vec = %s"), *forwardVec.ToString());
 	UE_LOG(LogTemp, Warning, TEXT("Board Vec = %s"), *meshVec.ToString());
 

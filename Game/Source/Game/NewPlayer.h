@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "NewPlayer.generated.h"
@@ -62,6 +63,9 @@ private:
 	// 前進の現在の加速量
 	float m_CurrentForwardAcceleration;
 
+	// 左右移動の量
+	float m_SideValue;
+
 	// 左右の現在の加速量
 	float m_CurrentSideAcceleration;
 
@@ -87,6 +91,10 @@ public:
 	// プレイヤーのメッシュ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		USkeletalMeshComponent* m_PlayerMesh;
+
+	// スプリングアーム
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		USpringArmComponent* m_SpringArm;
 
 	// カメラ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
@@ -119,10 +127,6 @@ public:
 	// 左右の移動量の加速量
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move|Side")
 		float m_SideAcceleration;
-
-	// 左右移動の停止時の強さ
-	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move|Side")
-		float m_BrakePower;
 
 public:
 	UFUNCTION()
