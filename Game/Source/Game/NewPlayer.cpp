@@ -47,7 +47,7 @@ ANewPlayer::ANewPlayer()
 		m_BoardCapsuleCollision->SetUseCCD(true);
 		m_BoardCapsuleCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
 		m_BoardCapsuleCollision->SetCapsuleHalfHeight(90.0f);
-		m_BoardCapsuleCollision->SetCenterOfMass(FVector(0.0f, 0.0f, -10.0f));
+		m_BoardCapsuleCollision->SetCenterOfMass(FVector(0.0f, 0.0f, -1.0f));
 		m_BoardCapsuleCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoardCapsuleCollision->SetRelativeRotation(FRotator(m_RootRotationY, 0.0f, 0.0f));
 	}
@@ -160,17 +160,19 @@ void ANewPlayer::UpdateMove()
 	FVector meshVec = m_BoardMesh->GetForwardVector();
 
 	// 前進加速量に応じて左右移動のベクトルを制御
-	forwardVec.X *= m_CurrentForwardAcceleration;
+	if (GetVelocity().X > 0.0f)
+	{
+		forwardVec.Y *= (GetVelocity().X / 15.0f);
+	}
 
 	// Z軸のベクトルが反転しているので値も反転させて速度を乗算
 	forwardVec.Z *= -speed;
 
-	AddActorLocalOffset(forwardVec * 1.2f);
+	AddActorLocalOffset(forwardVec * 2.0f);
 
 	// スプリングアームの距離調整
 	float addLength = GetVelocity().X / m_ArmLengthAdjust;
 	m_SpringArm->TargetArmLength = m_SpringArmLength + addLength;
-	UE_LOG(LogTemp, Warning, TEXT("Arm Length = %f"), m_SpringArm->TargetArmLength);
 
 }
 
