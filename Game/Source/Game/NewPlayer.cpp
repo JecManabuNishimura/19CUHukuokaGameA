@@ -23,11 +23,13 @@ ANewPlayer::ANewPlayer()
 	, m_PlayerCamera(nullptr)
 	, m_BoxCollision(nullptr)
 	, m_RootRotationY(90.0f)
+	, m_SpringArmLength(350.0f)
+	, m_ArmLengthAdjust(100.0f)
 	, m_CanMove(false)
 	, m_ForwardMaxSpeed(5.0f)
 	, m_ForwardAcceleration(0.0125f)
-	, m_SideMaxSpeed(5.0f)
-	, m_SideAcceleration(0.1f)
+	, m_SideMaxSpeed(2.0f)
+	, m_SideAcceleration(0.3f)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -37,39 +39,68 @@ ANewPlayer::ANewPlayer()
 	m_ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 
 	m_BoardCapsuleCollision = CreateDefaultSubobject<UCapsuleComponent>(TEXT("BoardCapsuleCollision"));
-	RootComponent = m_BoardCapsuleCollision;
-	m_BoardCapsuleCollision->SetSimulatePhysics(true);
-	m_BoardCapsuleCollision->SetEnableGravity(true);
-	m_BoardCapsuleCollision->SetUseCCD(true);
-	m_BoardCapsuleCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
-	m_BoardCapsuleCollision->SetCapsuleHalfHeight(90.0f);
-	m_BoardCapsuleCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoardCapsuleCollision->SetRelativeRotation(FRotator(m_RootRotationY, 0.0f, 0.0f));
+	if (m_BoardCapsuleCollision)
+	{
+		RootComponent = m_BoardCapsuleCollision;
+		m_BoardCapsuleCollision->SetSimulatePhysics(true);
+		m_BoardCapsuleCollision->SetEnableGravity(true);
+		m_BoardCapsuleCollision->SetUseCCD(true);
+		m_BoardCapsuleCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
+		m_BoardCapsuleCollision->SetCapsuleHalfHeight(90.0f);
+		m_BoardCapsuleCollision->SetCenterOfMass(FVector(0.0f, 0.0f, -10.0f));
+		m_BoardCapsuleCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_BoardCapsuleCollision->SetRelativeRotation(FRotator(m_RootRotationY, 0.0f, 0.0f));
+	}
 
 	m_BoardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoardMesh"));
-	m_BoardMesh->SetupAttachment(m_BoardCapsuleCollision);
-	m_BoardMesh->SetCollisionProfileName("NoCollision");
-	m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoardMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	if (m_BoardMesh)
+	{
+		m_BoardMesh->SetupAttachment(RootComponent);
+		m_BoardMesh->SetCollisionProfileName("NoCollision");
+		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_BoardMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	}
 
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
-	m_PlayerMesh->SetupAttachment(m_BoardCapsuleCollision);
-	m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_PlayerMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	if (m_PlayerMesh)
+	{
+		m_PlayerMesh->SetupAttachment(RootComponent);
+		m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_PlayerMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	}
 
 	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+	if (m_SpringArm)
+	{
+		m_SpringArm->SetupAttachment(RootComponent);
+		m_SpringArm->TargetArmLength = m_SpringArmLength;
+		m_SpringArm->bDoCollisionTest = true;
+		m_SpringArm->bEnableCameraLag = true;
+		m_SpringArm->CameraLagSpeed = 10.0f;
+		m_SpringArm->bEnableCameraRotationLag = true;
+		m_SpringArm->CameraRotationLagSpeed = 10.0f;
+		m_SpringArm->bInheritPitch = false;
+		m_SpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_SpringArm->SetRelativeRotation(FRotator(-m_RootRotationY + 315.0f, 0.0f, 0.0f));
+	}
 
 	m_PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
-	m_PlayerCamera->SetupAttachment(m_BoardCapsuleCollision);
-	m_PlayerCamera->SetRelativeLocation(FVector(300.0f, 0.0f, 250.0f));
-	m_PlayerCamera->SetRelativeRotation(FRotator(-m_RootRotationY - 30.0f, 0.0f, 0.0f));
+	if (m_PlayerCamera)
+	{
+		m_PlayerCamera->SetupAttachment(m_SpringArm, USpringArmComponent::SocketName);
+		m_PlayerCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_PlayerCamera->SetRelativeRotation(FRotator(15.0f, 0.0f, 0.0f));
+	}
 
 	m_BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
-	m_BoxCollision->SetupAttachment(m_BoardCapsuleCollision);
-	m_BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ANewPlayer::OnOverlapBegin);
-	m_BoxCollision->SetBoxExtent(FVector(100.0f, 100.0f, 100.0f));
-	m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoxCollision->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	if (m_BoxCollision)
+	{
+		m_BoxCollision->SetupAttachment(RootComponent);
+		m_BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ANewPlayer::OnOverlapBegin);
+		m_BoxCollision->SetBoxExtent(FVector(100.0f, 100.0f, 100.0f));
+		m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_BoxCollision->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	}
 }
 // 移動値入力処理（コントローラー）
 void ANewPlayer::InputSensor()
@@ -83,24 +114,28 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 	// コントローラー未使用時のみ
 	if (!m_IsSensor)
 	{
-		// 加速する方向の取得
-		float accelDir = (_axisValue > 0.0f) ? 1.0f : -1.0f;
-
-		// ドリフトかどうか
-		if (m_IsSharpcurve)
+		if (_axisValue != 0.0f)
 		{
-			// 加速する
+			// ドリフトかどうか
+			if (m_IsSharpcurve)
+			{
+				// 加速する
+			}
+			else
+			{
+				// 加速する
+				m_CurrentSideAcceleration += m_SideAcceleration;
+
+				// 最大速度にクランプする
+				m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, 0.0f, m_SideMaxSpeed);
+			}
 		}
 		else
 		{
-			// 加速する
-			m_CurrentSideAcceleration += m_SideAcceleration * accelDir;
-
-			// 最大速度にクランプする
-			m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, -m_SideMaxSpeed, m_SideMaxSpeed);
+			m_CurrentSideAcceleration = 0.0f;
 		}
 
-		m_SideValue = FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
+		m_SideValue = -FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
 	}
 }
 
@@ -108,8 +143,9 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 void ANewPlayer::UpdateMove()
 {
 	// 左右移動の量に応じて回転
-	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
-	m_SideValue = 0.0f;
+	AddActorLocalRotation(FRotator(0.0f, 0.0f, m_SideValue));
+
+	// 回転の量を
 
 	// 前進を加速させる
 	m_CurrentForwardAcceleration += m_ForwardAcceleration;
@@ -123,16 +159,19 @@ void ANewPlayer::UpdateMove()
 
 	FVector meshVec = m_BoardMesh->GetForwardVector();
 
-	UE_LOG(LogTemp, Warning, TEXT("Forward Vec = %s"), *forwardVec.ToString());
-	UE_LOG(LogTemp, Warning, TEXT("Board Vec = %s"), *meshVec.ToString());
-
 	// 前進加速量に応じて左右移動のベクトルを制御
 	forwardVec.X *= m_CurrentForwardAcceleration;
 
 	// Z軸のベクトルが反転しているので値も反転させて速度を乗算
 	forwardVec.Z *= -speed;
 
-	AddActorLocalOffset(forwardVec);
+	AddActorLocalOffset(forwardVec * 1.2f);
+
+	// スプリングアームの距離調整
+	float addLength = GetVelocity().X / m_ArmLengthAdjust;
+	m_SpringArm->TargetArmLength = m_SpringArmLength + addLength;
+	UE_LOG(LogTemp, Warning, TEXT("Arm Length = %f"), m_SpringArm->TargetArmLength);
+
 }
 
 // 加速リセット

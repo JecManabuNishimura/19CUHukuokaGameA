@@ -108,6 +108,14 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings")
 		float m_RootRotationY;
 
+	// スプリングアームのもともとの長さ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Camera")
+		float m_SpringArmLength;
+
+	// スプリングアームの長さの調整
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Camera")
+		float m_ArmLengthAdjust;
+
 	// 移動可能かどうか
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		bool m_CanMove;
