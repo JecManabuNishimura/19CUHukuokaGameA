@@ -3,8 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -53,7 +54,6 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
-
 	// コントローラーが接続されているか
 	bool m_IsSensor;
 
@@ -76,10 +76,12 @@ private:
 	FVector m_UpdateValue;
 
 public:
-	// プレイヤーの移動
+	/*
+	// プレイヤーのMovementComponent
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		UProjectileMovementComponent* m_ProjectileMovement;
-	
+		UProjectileMovementComponent* m_ProjectileMovementComponent;
+	*/
+
 	// ボードの当たり判定に使用する
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UCapsuleComponent* m_BoardCapsuleCollision;
@@ -139,4 +141,7 @@ public:
 public:
 	UFUNCTION()
 		void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+		void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 };

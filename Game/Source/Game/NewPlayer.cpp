@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "NewPlayer.h"
 #include "SensorManager.h"
 #include "Camera/CameraComponent.h"
@@ -15,7 +14,7 @@ ANewPlayer::ANewPlayer()
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_UpdateValue(FVector::ZeroVector)
-	, m_ProjectileMovement(nullptr)
+	//, m_ProjectileMovementComponent(nullptr)
 	, m_BoardCapsuleCollision(nullptr)
 	, m_BoardMesh(nullptr)
 	, m_PlayerMesh(nullptr)
@@ -28,20 +27,19 @@ ANewPlayer::ANewPlayer()
 	, m_CanMove(false)
 	, m_ForwardMaxSpeed(5.0f)
 	, m_ForwardAcceleration(0.0125f)
-	, m_SideMaxSpeed(2.0f)
-	, m_SideAcceleration(0.3f)
+	, m_SideMaxSpeed(1.0f)
+	, m_SideAcceleration(0.15f)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
-	m_ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-
 	m_BoardCapsuleCollision = CreateDefaultSubobject<UCapsuleComponent>(TEXT("BoardCapsuleCollision"));
 	if (m_BoardCapsuleCollision)
 	{
 		RootComponent = m_BoardCapsuleCollision;
+		m_BoardCapsuleCollision->OnComponentHit.AddDynamic(this, &ANewPlayer::OnHit);
 		m_BoardCapsuleCollision->SetSimulatePhysics(true);
 		m_BoardCapsuleCollision->SetEnableGravity(true);
 		m_BoardCapsuleCollision->SetUseCCD(true);
@@ -101,6 +99,15 @@ ANewPlayer::ANewPlayer()
 		m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoxCollision->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
 	}
+
+	/*
+	m_ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
+	if (m_ProjectileMovementComponent)
+	{
+		m_ProjectileMovementComponent->SetUpdatedComponent(m_BoardCapsuleCollision);
+		m_ProjectileMovementComponent->bRotationFollowsVelocity = true;
+		m_ProjectileMovementComponent->bShouldBounce = true;
+	}*/
 }
 // 移動値入力処理（コントローラー）
 void ANewPlayer::InputSensor()
@@ -145,8 +152,6 @@ void ANewPlayer::UpdateMove()
 	// 左右移動の量に応じて回転
 	AddActorLocalRotation(FRotator(0.0f, 0.0f, m_SideValue));
 
-	// 回転の量を
-
 	// 前進を加速させる
 	m_CurrentForwardAcceleration += m_ForwardAcceleration;
 	m_CurrentForwardAcceleration = FMath::Clamp(m_CurrentForwardAcceleration, 0.0f, 1.0f);
@@ -155,25 +160,54 @@ void ANewPlayer::UpdateMove()
 	float speed = m_ForwardMaxSpeed * m_CurrentForwardAcceleration;
 
 	// 前方向ベクトルの取得
-	FVector forwardVec = GetActorForwardVector();
+	FVector meshForwardVec = m_BoardMesh->GetForwardVector();
+	FVector meshRightVec = m_BoardMesh->GetRightVector();
 
-	FVector meshVec = m_BoardMesh->GetForwardVector();
+	// プレイヤーのX方向のベロシティと角度からY方向への移動量を算出
+	// プレイヤーのボードの角度を算出
+	FVector playerLocation = GetActorLocation();
+	FVector vectorLocation = GetActorLocation() + (meshForwardVec * 10.0f);
 
-	// 前進加速量に応じて左右移動のベクトルを制御
-	if (GetVelocity().X > 0.0f)
+	double rad = FMath::Atan2(vectorLocation.Y - playerLocation.Y, vectorLocation.X - playerLocation.X);
+	double deg = FMath::RadiansToDegrees(rad);
+
+	// ルートコンポーネントが回転している分を計算に考慮する
+	deg += m_RootRotationY;
+	rad = FMath::DegreesToRadians(deg);
+
+	// 横方向への移動量を算出
+	float side = GetVelocity().X / FMath::Tan(rad);
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Side = %f ( %f [Velocity] / %f [Tan( %f Degree)])"), side, GetVelocity().X, FMath::Tan(rad), deg);
+
+	// 斜辺の長さを算出
+	float hyp = GetVelocity().X / FMath::Sin(rad);
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] hyp = %f ( %f [Velocity] / %f [Sin( %f Degree)])"), hyp, GetVelocity().X, FMath::Sin(rad), deg);
+
+	if (side > 2000.0f)
 	{
-		forwardVec.Y *= (GetVelocity().X / 15.0f);
+		side = 2000.0f;
 	}
 
-	// Z軸のベクトルが反転しているので値も反転させて速度を乗算
-	forwardVec.Z *= -speed;
+	// 角度（cos）による速度補正
+	float adjust = FMath::Cos(rad);
+	static float adjustPrev;
+	adjust = FMath::Pow(adjust, 3);
+	adjust = FMath::Abs(adjust);
+	adjust = FMath::Clamp(adjust, 0.0f, 1.0f);
 
-	AddActorLocalOffset(forwardVec * 2.0f);
+	FVector newVel = GetVelocity();
+	newVel.Y = -side;
+
+	UE_LOG(LogTemp, Warning, TEXT("adjust = %f"), adjust);
+	
+	// ベロシティを設定
+	m_BoardCapsuleCollision->SetPhysicsLinearVelocity(newVel);
+
+	adjustPrev = adjust;
 
 	// スプリングアームの距離調整
 	float addLength = GetVelocity().X / m_ArmLengthAdjust;
 	m_SpringArm->TargetArmLength = m_SpringArmLength + addLength;
-
 }
 
 // 加速リセット
@@ -246,4 +280,32 @@ void ANewPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] (%s) Actor Name = %s"), *OverlappedComponent->GetName(), *OtherActor->GetName());
+
+	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
+	}
+
+
+	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+	}
+}
+
+void ANewPlayer::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] (%s) Actor Name = %s"), *HitComponent->GetName(), *OtherActor->GetName());
+
+	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
+	}
+
+
+	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+	}
 }
