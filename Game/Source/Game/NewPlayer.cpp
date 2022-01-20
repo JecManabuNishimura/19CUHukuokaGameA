@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "NewPlayer.h"
 #include "SensorManager.h"
 #include "Camera/CameraComponent.h"
@@ -11,62 +10,103 @@ ANewPlayer::ANewPlayer()
 	: m_IsSensor(false)
 	, m_IsSharpcurve(false)
 	, m_CurrentForwardAcceleration(0.0f)
+	, m_SideValue(0.0f)
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_UpdateValue(FVector::ZeroVector)
-	, m_ProjectileMovement(nullptr)
+	, m_FloatingPawnMovementComponent(nullptr)
 	, m_BoardCapsuleCollision(nullptr)
 	, m_BoardMesh(nullptr)
 	, m_PlayerMesh(nullptr)
+	, m_SpringArm(nullptr)
 	, m_PlayerCamera(nullptr)
 	, m_BoxCollision(nullptr)
 	, m_RootRotationY(90.0f)
+	, m_SpringArmLength(350.0f)
+	, m_ArmLengthAdjust(100.0f)
 	, m_CanMove(false)
-	, m_ForwardMaxSpeed(5.0f)
-	, m_ForwardAcceleration(0.0125f)
-	, m_SideMaxSpeed(5.0f)
-	, m_SideAcceleration(0.00625f)
-	, m_BrakePower(0.075f)
+	, m_SideMaxSpeed(1.0f)
+	, m_SideAcceleration(0.15f)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
-	m_ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-
 	m_BoardCapsuleCollision = CreateDefaultSubobject<UCapsuleComponent>(TEXT("BoardCapsuleCollision"));
-	RootComponent = m_BoardCapsuleCollision;
-	m_BoardCapsuleCollision->SetSimulatePhysics(true);
-	m_BoardCapsuleCollision->SetEnableGravity(true);
-	m_BoardCapsuleCollision->SetUseCCD(true);
-	m_BoardCapsuleCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
-	m_BoardCapsuleCollision->SetCapsuleHalfHeight(90.0f);
-	m_BoardCapsuleCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoardCapsuleCollision->SetRelativeRotation(FRotator(m_RootRotationY, 0.0f, 0.0f));
+	if (m_BoardCapsuleCollision)
+	{
+		RootComponent = m_BoardCapsuleCollision;
+		m_BoardCapsuleCollision->OnComponentHit.AddDynamic(this, &ANewPlayer::OnHit);
+		m_BoardCapsuleCollision->SetSimulatePhysics(true);
+		m_BoardCapsuleCollision->SetEnableGravity(true);
+		m_BoardCapsuleCollision->SetUseCCD(true);
+		m_BoardCapsuleCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
+		m_BoardCapsuleCollision->SetCapsuleHalfHeight(90.0f);
+		m_BoardCapsuleCollision->SetCenterOfMass(FVector(0.0f, 0.0f, -1.0f));
+		m_BoardCapsuleCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_BoardCapsuleCollision->SetRelativeRotation(FRotator(m_RootRotationY, 0.0f, 0.0f));
+	}
 
 	m_BoardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoardMesh"));
-	m_BoardMesh->SetupAttachment(m_BoardCapsuleCollision);
-	m_BoardMesh->SetCollisionProfileName("NoCollision");
-	m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoardMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	if (m_BoardMesh)
+	{
+		m_BoardMesh->SetupAttachment(RootComponent);
+		m_BoardMesh->SetCollisionProfileName("NoCollision");
+		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_BoardMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	}
 
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
-	m_PlayerMesh->SetupAttachment(m_BoardCapsuleCollision);
-	m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_PlayerMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	if (m_PlayerMesh)
+	{
+		m_PlayerMesh->SetupAttachment(RootComponent);
+		m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_PlayerMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	}
+
+	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+	if (m_SpringArm)
+	{
+		m_SpringArm->SetupAttachment(RootComponent);
+		m_SpringArm->TargetArmLength = m_SpringArmLength;
+		m_SpringArm->bDoCollisionTest = true;
+		m_SpringArm->bEnableCameraLag = true;
+		m_SpringArm->CameraLagSpeed = 10.0f;
+		m_SpringArm->bEnableCameraRotationLag = true;
+		m_SpringArm->CameraRotationLagSpeed = 10.0f;
+		m_SpringArm->bInheritPitch = false;
+		m_SpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_SpringArm->SetRelativeRotation(FRotator(-m_RootRotationY + 315.0f, 0.0f, 0.0f));
+	}
 
 	m_PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
-	m_PlayerCamera->SetupAttachment(m_BoardCapsuleCollision);
-	m_PlayerCamera->SetRelativeLocation(FVector(300.0f, 0.0f, 250.0f));
-	m_PlayerCamera->SetRelativeRotation(FRotator(-m_RootRotationY - 30.0f, 0.0f, 0.0f));
+	if (m_PlayerCamera)
+	{
+		m_PlayerCamera->SetupAttachment(m_SpringArm, USpringArmComponent::SocketName);
+		m_PlayerCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_PlayerCamera->SetRelativeRotation(FRotator(15.0f, 0.0f, 0.0f));
+	}
 
 	m_BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
-	m_BoxCollision->SetupAttachment(m_BoardCapsuleCollision);
-	m_BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ANewPlayer::OnOverlapBegin);
-	m_BoxCollision->SetBoxExtent(FVector(100.0f, 100.0f, 100.0f));
-	m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	m_BoxCollision->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	if (m_BoxCollision)
+	{
+		m_BoxCollision->SetupAttachment(RootComponent);
+		m_BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ANewPlayer::OnOverlapBegin);
+		m_BoxCollision->bMultiBodyOverlap = true;
+		m_BoxCollision->SetBoxExtent(FVector(100.0f, 100.0f, 100.0f));
+		m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_BoxCollision->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+	}
+
+	m_FloatingPawnMovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovementComponent"));
+	if (m_FloatingPawnMovementComponent)
+	{
+		m_FloatingPawnMovementComponent->MaxSpeed = 2500.0f;
+		m_FloatingPawnMovementComponent->Acceleration = 1000.0f;
+		m_FloatingPawnMovementComponent->Deceleration = 8000.0f;
+		m_FloatingPawnMovementComponent->TurningBoost = 75.0f;
+	}
 }
 // 移動値入力処理（コントローラー）
 void ANewPlayer::InputSensor()
@@ -80,21 +120,8 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 	// コントローラー未使用時のみ
 	if (!m_IsSensor)
 	{
-		// 入力中 or ブレーキ中
-		static bool isStartInput = false;
-
-		// 実際の移動値
-		static float value = 0.0f;
-
-		// 入力あり
 		if (_axisValue != 0.0f)
 		{
-			// 入力あり状態に
-			isStartInput = true;
-
-			// 加速する方向の取得
-			float accelDir = (_axisValue > 0.0f) ? 1.0f : -1.0f;
-
 			// ドリフトかどうか
 			if (m_IsSharpcurve)
 			{
@@ -103,57 +130,45 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 			else
 			{
 				// 加速する
-				m_CurrentSideAcceleration += m_SideAcceleration * accelDir;
-				m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, -1.0f, 1.0f);
+				m_CurrentSideAcceleration += m_SideAcceleration;
 
-				value = _axisValue * m_CurrentSideAcceleration * accelDir;
+				// 最大速度にクランプする
+				m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, 0.0f, m_SideMaxSpeed);
 			}
 		}
-		// 入力なし
-		else if (isStartInput)
+		else
 		{
-			float mag = 1.0f - m_BrakePower;
-			value *= mag;
-			m_CurrentSideAcceleration *= mag;
-
-			// 停止
-			if (FMath::IsNearlyEqual(value, 0.0f, (m_BrakePower / 5.0f)))
-			{
-				isStartInput = false;
-				m_CurrentSideAcceleration = 0.0f;
-				value = 0.0f;
-			}
+			m_CurrentSideAcceleration = 0.0f;
 		}
 
-		AddActorWorldRotation(FRotator(0.0f, FMath::Clamp(value, -1.0f, 1.0f) * m_SideMaxSpeed, 0.0f));
+		m_SideValue = -FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
 	}
 }
 
 // 移動処理
 void ANewPlayer::UpdateMove()
-{	
-	// 前進を加速させる
-	m_CurrentForwardAcceleration += m_ForwardAcceleration;
-	m_CurrentForwardAcceleration = FMath::Clamp(m_CurrentForwardAcceleration, 0.0f, 1.0f);
-	
-	// 実際に移動量を反映させる
-	float speed = m_ForwardMaxSpeed * m_CurrentForwardAcceleration;
+{
+	// 左右移動の量に応じて回転
+	AddActorLocalRotation(FRotator(0.0f, 0.0f, m_SideValue));
 
 	// 前方向ベクトルの取得
-	FVector forwardVec = GetActorForwardVector();
+	FVector meshForwardVec = m_BoardMesh->GetForwardVector();
+		
+	// ベロシティを設定
+	FVector speedVector = meshForwardVec;
+	m_FloatingPawnMovementComponent->AddInputVector(meshForwardVec);
 
-	FVector meshVec = m_BoardMesh->GetForwardVector();
-	
-	UE_LOG(LogTemp, Warning, TEXT("Forward Vec = %s"), *forwardVec.ToString());
-	UE_LOG(LogTemp, Warning, TEXT("Board Vec = %s"), *meshVec.ToString());
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity = %s"), *m_FloatingPawnMovementComponent->Velocity.ToString());
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity Size = %f"), m_FloatingPawnMovementComponent->Velocity.Size());
 
-	// 前進加速量に応じて左右移動のベクトルを制御
-	forwardVec.X *= m_CurrentForwardAcceleration;
-
-	// Z軸のベクトルが反転しているので値も反転させて速度を乗算
-	forwardVec.Z *= -speed;
-
-	AddActorLocalOffset(forwardVec);
+	// スプリングアームの距離調整
+	float addLength = m_FloatingPawnMovementComponent->Velocity.X / m_ArmLengthAdjust;
+	m_SpringArm->TargetArmLength = m_SpringArmLength + addLength;
+	// カメラの角度調整
+	FRotator cameraRot = m_PlayerCamera->GetRelativeRotation();
+	float addPitch = FMath::Lerp(0.0f, 20.0f, m_FloatingPawnMovementComponent->Velocity.Size() / m_FloatingPawnMovementComponent->MaxSpeed);
+	cameraRot.Pitch = 15.0f + addPitch;
+	m_PlayerCamera->SetRelativeRotation(cameraRot);
 }
 
 // 加速リセット
@@ -226,4 +241,48 @@ void ANewPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Overlap Actor Name = %s"), *OverlappedComponent->GetName(), *OtherActor->GetName());
+
+	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
+	}
+
+
+	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+	}
+}
+
+void ANewPlayer::OnComponentOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Overlap End Actor Name = %s"), *OverlappedComponent->GetName(), *OtherActor->GetName());
+
+	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap End Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
+	}
+
+
+	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap End Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+	}
+}
+
+void ANewPlayer::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Hit Actor Name = %s"), *HitComponent->GetName(), *OtherActor->GetName());
+
+	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Hit Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
+	}
+
+
+	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Hit Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+	}
 }
