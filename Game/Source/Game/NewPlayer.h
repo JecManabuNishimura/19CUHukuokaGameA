@@ -4,9 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "GameFramework/ProjectileMovementComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/FloatingPawnMovement.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "NewPlayer.generated.h"
@@ -76,11 +75,9 @@ private:
 	FVector m_UpdateValue;
 
 public:
-	/*
 	// プレイヤーのMovementComponent
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		UProjectileMovementComponent* m_ProjectileMovementComponent;
-	*/
+		UFloatingPawnMovement* m_FloatingPawnMovementComponent;
 
 	// ボードの当たり判定に使用する
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
@@ -122,14 +119,6 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		bool m_CanMove;
 
-	// 前進の最大速度
-	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move|Forward")
-		float m_ForwardMaxSpeed;
-
-	// 前進の加速量
-	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move|Forward")
-		float m_ForwardAcceleration;
-
 	// 左右の移動量
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move|Side")
 		float m_SideMaxSpeed;
@@ -141,6 +130,9 @@ public:
 public:
 	UFUNCTION()
 		void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+		void OnComponentOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UFUNCTION()
 		void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);

@@ -14,7 +14,7 @@ ANewPlayer::ANewPlayer()
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_UpdateValue(FVector::ZeroVector)
-	//, m_ProjectileMovementComponent(nullptr)
+	, m_FloatingPawnMovementComponent(nullptr)
 	, m_BoardCapsuleCollision(nullptr)
 	, m_BoardMesh(nullptr)
 	, m_PlayerMesh(nullptr)
@@ -25,8 +25,6 @@ ANewPlayer::ANewPlayer()
 	, m_SpringArmLength(350.0f)
 	, m_ArmLengthAdjust(100.0f)
 	, m_CanMove(false)
-	, m_ForwardMaxSpeed(5.0f)
-	, m_ForwardAcceleration(0.0125f)
 	, m_SideMaxSpeed(1.0f)
 	, m_SideAcceleration(0.15f)
 {
@@ -95,19 +93,20 @@ ANewPlayer::ANewPlayer()
 	{
 		m_BoxCollision->SetupAttachment(RootComponent);
 		m_BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ANewPlayer::OnOverlapBegin);
+		m_BoxCollision->bMultiBodyOverlap = true;
 		m_BoxCollision->SetBoxExtent(FVector(100.0f, 100.0f, 100.0f));
 		m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoxCollision->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
 	}
 
-	/*
-	m_ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
-	if (m_ProjectileMovementComponent)
+	m_FloatingPawnMovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovementComponent"));
+	if (m_FloatingPawnMovementComponent)
 	{
-		m_ProjectileMovementComponent->SetUpdatedComponent(m_BoardCapsuleCollision);
-		m_ProjectileMovementComponent->bRotationFollowsVelocity = true;
-		m_ProjectileMovementComponent->bShouldBounce = true;
-	}*/
+		m_FloatingPawnMovementComponent->MaxSpeed = 2500.0f;
+		m_FloatingPawnMovementComponent->Acceleration = 1000.0f;
+		m_FloatingPawnMovementComponent->Deceleration = 8000.0f;
+		m_FloatingPawnMovementComponent->TurningBoost = 75.0f;
+	}
 }
 // 移動値入力処理（コントローラー）
 void ANewPlayer::InputSensor()
@@ -152,62 +151,24 @@ void ANewPlayer::UpdateMove()
 	// 左右移動の量に応じて回転
 	AddActorLocalRotation(FRotator(0.0f, 0.0f, m_SideValue));
 
-	// 前進を加速させる
-	m_CurrentForwardAcceleration += m_ForwardAcceleration;
-	m_CurrentForwardAcceleration = FMath::Clamp(m_CurrentForwardAcceleration, 0.0f, 1.0f);
-
-	// 実際に移動量を反映させる
-	float speed = m_ForwardMaxSpeed * m_CurrentForwardAcceleration;
-
 	// 前方向ベクトルの取得
 	FVector meshForwardVec = m_BoardMesh->GetForwardVector();
-	FVector meshRightVec = m_BoardMesh->GetRightVector();
-
-	// プレイヤーのX方向のベロシティと角度からY方向への移動量を算出
-	// プレイヤーのボードの角度を算出
-	FVector playerLocation = GetActorLocation();
-	FVector vectorLocation = GetActorLocation() + (meshForwardVec * 10.0f);
-
-	double rad = FMath::Atan2(vectorLocation.Y - playerLocation.Y, vectorLocation.X - playerLocation.X);
-	double deg = FMath::RadiansToDegrees(rad);
-
-	// ルートコンポーネントが回転している分を計算に考慮する
-	deg += m_RootRotationY;
-	rad = FMath::DegreesToRadians(deg);
-
-	// 横方向への移動量を算出
-	float side = GetVelocity().X / FMath::Tan(rad);
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Side = %f ( %f [Velocity] / %f [Tan( %f Degree)])"), side, GetVelocity().X, FMath::Tan(rad), deg);
-
-	// 斜辺の長さを算出
-	float hyp = GetVelocity().X / FMath::Sin(rad);
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] hyp = %f ( %f [Velocity] / %f [Sin( %f Degree)])"), hyp, GetVelocity().X, FMath::Sin(rad), deg);
-
-	if (side > 2000.0f)
-	{
-		side = 2000.0f;
-	}
-
-	// 角度（cos）による速度補正
-	float adjust = FMath::Cos(rad);
-	static float adjustPrev;
-	adjust = FMath::Pow(adjust, 3);
-	adjust = FMath::Abs(adjust);
-	adjust = FMath::Clamp(adjust, 0.0f, 1.0f);
-
-	FVector newVel = GetVelocity();
-	newVel.Y = -side;
-
-	UE_LOG(LogTemp, Warning, TEXT("adjust = %f"), adjust);
-	
+		
 	// ベロシティを設定
-	m_BoardCapsuleCollision->SetPhysicsLinearVelocity(newVel);
+	FVector speedVector = meshForwardVec;
+	m_FloatingPawnMovementComponent->AddInputVector(meshForwardVec);
 
-	adjustPrev = adjust;
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity = %s"), *m_FloatingPawnMovementComponent->Velocity.ToString());
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity Size = %f"), m_FloatingPawnMovementComponent->Velocity.Size());
 
 	// スプリングアームの距離調整
-	float addLength = GetVelocity().X / m_ArmLengthAdjust;
+	float addLength = m_FloatingPawnMovementComponent->Velocity.X / m_ArmLengthAdjust;
 	m_SpringArm->TargetArmLength = m_SpringArmLength + addLength;
+	// カメラの角度調整
+	FRotator cameraRot = m_PlayerCamera->GetRelativeRotation();
+	float addPitch = FMath::Lerp(0.0f, 20.0f, m_FloatingPawnMovementComponent->Velocity.Size() / m_FloatingPawnMovementComponent->MaxSpeed);
+	cameraRot.Pitch = 15.0f + addPitch;
+	m_PlayerCamera->SetRelativeRotation(cameraRot);
 }
 
 // 加速リセット
@@ -280,32 +241,48 @@ void ANewPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] (%s) Actor Name = %s"), *OverlappedComponent->GetName(), *OtherActor->GetName());
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Overlap Actor Name = %s"), *OverlappedComponent->GetName(), *OtherActor->GetName());
 
 	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
 	}
 
 
 	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+	}
+}
+
+void ANewPlayer::OnComponentOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Overlap End Actor Name = %s"), *OverlappedComponent->GetName(), *OtherActor->GetName());
+
+	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap End Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
+	}
+
+
+	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap End Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
 	}
 }
 
 void ANewPlayer::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] (%s) Actor Name = %s"), *HitComponent->GetName(), *OtherActor->GetName());
+	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Hit Actor Name = %s"), *HitComponent->GetName(), *OtherActor->GetName());
 
 	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Hit Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
 	}
 
 
 	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Hit Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
 	}
 }
