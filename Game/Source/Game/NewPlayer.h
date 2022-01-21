@@ -73,15 +73,24 @@ private:
 
 	// 移動量の入力を保存する
 	FVector m_UpdateValue;
+	
+	// 進行方向を制御
+	FVector m_BaseForwardVector;
 
 public:
 	// プレイヤーのMovementComponent
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UFloatingPawnMovement* m_FloatingPawnMovementComponent;
 
-	// ボードの当たり判定に使用する
+	/*
+	// ボードの当たり判定に使用する（カプセル）
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UCapsuleComponent* m_BoardCapsuleCollision;
+
+	// ボードの当たり判定に使用する（ボックス）
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		UBoxComponent* m_BoardBoxCollision;
+	*/
 
 	// ボードのメッシュ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
@@ -102,10 +111,6 @@ public:
 	// コリジョン
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UBoxComponent* m_BoxCollision;
-
-	// ルートコンポーネントのY回転
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings")
-		float m_RootRotationY;
 
 	// スプリングアームのもともとの長さ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Camera")

@@ -3,6 +3,7 @@
 #include "NewPlayer.h"
 #include "SensorManager.h"
 #include "Camera/CameraComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "..\..\UE4Duino\Source\UE4Duino\Public\Serial.h"
 
 // Sets default values
@@ -14,18 +15,21 @@ ANewPlayer::ANewPlayer()
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_UpdateValue(FVector::ZeroVector)
+	, m_BaseForwardVector(FVector::ZeroVector)
 	, m_FloatingPawnMovementComponent(nullptr)
+	/*
 	, m_BoardCapsuleCollision(nullptr)
+	, m_BoardBoxCollision(nullptr)
+	*/
 	, m_BoardMesh(nullptr)
 	, m_PlayerMesh(nullptr)
 	, m_SpringArm(nullptr)
 	, m_PlayerCamera(nullptr)
 	, m_BoxCollision(nullptr)
-	, m_RootRotationY(90.0f)
 	, m_SpringArmLength(350.0f)
 	, m_ArmLengthAdjust(100.0f)
 	, m_CanMove(false)
-	, m_SideMaxSpeed(1.0f)
+	, m_SideMaxSpeed(1.5f)
 	, m_SideAcceleration(0.15f)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -33,6 +37,7 @@ ANewPlayer::ANewPlayer()
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
+	/*
 	m_BoardCapsuleCollision = CreateDefaultSubobject<UCapsuleComponent>(TEXT("BoardCapsuleCollision"));
 	if (m_BoardCapsuleCollision)
 	{
@@ -42,42 +47,58 @@ ANewPlayer::ANewPlayer()
 		m_BoardCapsuleCollision->SetEnableGravity(true);
 		m_BoardCapsuleCollision->SetUseCCD(true);
 		m_BoardCapsuleCollision->SetCollisionProfileName(TEXT("PhysicsActor"));
-		m_BoardCapsuleCollision->SetCapsuleHalfHeight(90.0f);
-		m_BoardCapsuleCollision->SetCenterOfMass(FVector(0.0f, 0.0f, -1.0f));
+		m_BoardCapsuleCollision->SetCapsuleHalfHeight(40.0f);
+		m_BoardCapsuleCollision->SetCenterOfMass(FVector(0.0f, 0.0f, -5.0f));
 		m_BoardCapsuleCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoardCapsuleCollision->SetRelativeRotation(FRotator(m_RootRotationY, 0.0f, 0.0f));
 	}
 
+	m_BoardBoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoardBoxCollision"));
+	if (m_BoardBoxCollision)
+	{
+		m_BoardBoxCollision->SetupAttachment(RootComponent);
+		m_BoardBoxCollision->SetUseCCD(true);
+		m_BoardBoxCollision->SetBoxExtent(FVector(m_BoardCapsuleCollision->GetScaledCapsuleRadius(), m_BoardCapsuleCollision->GetScaledCapsuleRadius(), m_BoardCapsuleCollision->GetScaledCapsuleHalfHeight() / 2.0f));
+		m_BoardBoxCollision->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+	}
+	*/
+
 	m_BoardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoardMesh"));
 	if (m_BoardMesh)
 	{
-		m_BoardMesh->SetupAttachment(RootComponent);
-		m_BoardMesh->SetCollisionProfileName("NoCollision");
+		RootComponent = m_BoardMesh;
+		m_BoardMesh->SetSimulatePhysics(true);
+		m_BoardMesh->SetEnableGravity(true);
+		m_BoardMesh->SetUseCCD(true);
+		m_BoardMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
+		m_BoardMesh->SetCenterOfMass(FVector(0.0f, 0.0f, -5.0f));
 		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_BoardMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+		m_BoardMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	if (m_PlayerMesh)
 	{
 		m_PlayerMesh->SetupAttachment(RootComponent);
+		m_PlayerMesh->SetEnableGravity(false);
+		m_PlayerMesh->SetCollisionProfileName("NoCollision");
 		m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_PlayerMesh->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+		m_PlayerMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
 	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	if (m_SpringArm)
 	{
-		m_SpringArm->SetupAttachment(RootComponent);
+		m_SpringArm->SetupAttachment(m_PlayerMesh);
 		m_SpringArm->TargetArmLength = m_SpringArmLength;
-		m_SpringArm->bDoCollisionTest = true;
+		m_SpringArm->bDoCollisionTest = false;
 		m_SpringArm->bEnableCameraLag = true;
 		m_SpringArm->CameraLagSpeed = 10.0f;
 		m_SpringArm->bEnableCameraRotationLag = true;
 		m_SpringArm->CameraRotationLagSpeed = 10.0f;
 		m_SpringArm->bInheritPitch = false;
 		m_SpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_SpringArm->SetRelativeRotation(FRotator(-m_RootRotationY + 315.0f, 0.0f, 0.0f));
+		m_SpringArm->SetRelativeRotation(FRotator(315.0f, 0.0f, 0.0f));
 	}
 
 	m_PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
@@ -96,7 +117,7 @@ ANewPlayer::ANewPlayer()
 		m_BoxCollision->bMultiBodyOverlap = true;
 		m_BoxCollision->SetBoxExtent(FVector(100.0f, 100.0f, 100.0f));
 		m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_BoxCollision->SetRelativeRotation(FRotator(-m_RootRotationY, 0.0f, 0.0f));
+		m_BoxCollision->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
 	m_FloatingPawnMovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovementComponent"));
@@ -141,7 +162,7 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 			m_CurrentSideAcceleration = 0.0f;
 		}
 
-		m_SideValue = -FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
+		m_SideValue = FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
 	}
 }
 
@@ -149,13 +170,12 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 void ANewPlayer::UpdateMove()
 {
 	// 左右移動の量に応じて回転
-	AddActorLocalRotation(FRotator(0.0f, 0.0f, m_SideValue));
+	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f), true);
 
-	// 前方向ベクトルの取得
+	// ボードの前方向ベクトルの取得
 	FVector meshForwardVec = m_BoardMesh->GetForwardVector();
-		
-	// ベロシティを設定
-	FVector speedVector = meshForwardVec;
+
+	// ボードの前方向ベクトルに加速度を追加
 	m_FloatingPawnMovementComponent->AddInputVector(meshForwardVec);
 
 	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity = %s"), *m_FloatingPawnMovementComponent->Velocity.ToString());
@@ -164,6 +184,7 @@ void ANewPlayer::UpdateMove()
 	// スプリングアームの距離調整
 	float addLength = m_FloatingPawnMovementComponent->Velocity.X / m_ArmLengthAdjust;
 	m_SpringArm->TargetArmLength = m_SpringArmLength + addLength;
+
 	// カメラの角度調整
 	FRotator cameraRot = m_PlayerCamera->GetRelativeRotation();
 	float addPitch = FMath::Lerp(0.0f, 20.0f, m_FloatingPawnMovementComponent->Velocity.Size() / m_FloatingPawnMovementComponent->MaxSpeed);
@@ -189,6 +210,9 @@ void ANewPlayer::BeginPlay()
 	Super::BeginPlay();
 
 	m_IsSensor = USensorManager::ConnectToSensor();
+	m_BaseForwardVector = m_BoardMesh->GetForwardVector();
+	FRotator rot = UKismetMathLibrary::MakeRotFromX(m_BoardMesh->GetForwardVector());
+	UE_LOG(LogTemp, Warning, TEXT("Rotation = %s"), *rot.ToString());
 }
 
 // Called every frame
