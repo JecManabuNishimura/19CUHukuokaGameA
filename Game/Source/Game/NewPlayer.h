@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
+#include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "NewPlayer.generated.h"
@@ -71,6 +72,9 @@ private:
 	// 急カーブの強さ
 	float m_CurrentSharpcurvePower;
 
+	// ボードが接地していない時の速度減衰量
+	float m_AirSpeedAttenuation;
+
 	// 移動量の入力を保存する
 	FVector m_UpdateValue;
 	
@@ -120,9 +124,21 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Camera")
 		float m_ArmLengthAdjust;
 
+	// ボードから出ている接地判定を取るレイの開始位置のオフセット
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Ground")
+		FVector m_GroundRayOffset;
+
+	// ボードから出ている接地判定を取るレイの長さ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Ground")
+		float m_GroundRayLength;
+
 	// 移動可能かどうか
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		bool m_CanMove;
+
+	// ボードが接地していない時の速度減衰量
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move")
+		float m_AirSpeedAttenuationValue;
 
 	// 左右の移動量
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move|Side")
@@ -132,6 +148,13 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move|Side")
 		float m_SideAcceleration;
 
+	// レイの色
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+		FColor m_DrawRayColor;
+
+	// レイの表示時間
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+		float m_DrawRayTime;
 public:
 	UFUNCTION()
 		void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
