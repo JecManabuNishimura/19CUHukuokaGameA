@@ -12,11 +12,14 @@
 ANewPlayer::ANewPlayer()
 	: m_IsSensor(false)
 	, m_IsSharpcurve(false)
+	, m_IsJump(false)
 	, m_CurrentForwardAcceleration(0.0f)
 	, m_SideValue(0.0f)
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_AirSpeedAttenuation(1.0f)
+	, m_DefaultCenterOfMass(FVector(-50.0f, 0.0f, -10.0f))
+	, m_JumpCenterOfMass(FVector(0.0f, 0.0f, -10.0f))
 	, m_UpdateValue(FVector::ZeroVector)
 	, m_BaseForwardVector(FVector::ZeroVector)
 	, m_FloatingPawnMovementComponent(nullptr)
@@ -29,12 +32,13 @@ ANewPlayer::ANewPlayer()
 	, m_ArmLengthAdjust(100.0f)
 	, m_GroundRayOffset(FVector(150.0f, 0.0f, 5.0f))
 	, m_GroundRayLength(30.0f)
-	, m_CanMove(false)
+	, m_JumpPower(FVector(10000.0f, 1.0f, 50000.0f))
+	, m_TailLandingRayOffset(FVector::ZeroVector)
+	, m_TailLandingRayLength(500.0f)
+	, m_CanMove(true)
 	, m_AirSpeedAttenuationValue(1.0f / 600.0f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
-	, m_DrawRayColor(FColor::Green)
-	, m_DrawRayTime(7.0f)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -50,7 +54,7 @@ ANewPlayer::ANewPlayer()
 		m_BoardMesh->SetEnableGravity(true);
 		m_BoardMesh->SetUseCCD(true);
 		m_BoardMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-		m_BoardMesh->SetCenterOfMass(FVector(0.0f, 0.0f, -10.0f));
+		m_BoardMesh->SetCenterOfMass(m_DefaultCenterOfMass);
 		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoardMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
@@ -107,6 +111,10 @@ ANewPlayer::ANewPlayer()
 		m_FloatingPawnMovementComponent->Deceleration = 8000.0f;
 		m_FloatingPawnMovementComponent->TurningBoost = 75.0f;
 	}
+	
+	m_GroundRayInfo.collisionQueueParam.AddIgnoredActor(this);
+
+	m_TailLandingDebug.DrawRayColor = FColor::Red;
 }
 
 // 移動値入力処理（コントローラー）
@@ -168,17 +176,14 @@ void ANewPlayer::UpdateMove()
 		meshForwardVec.Z = 0.0f;
 	}
 
-	FHitResult hitRes;
-	FVector start = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_GroundRayOffset.X) + (meshRightVec * m_GroundRayOffset.Y) + (meshUpVector * m_GroundRayOffset.Z);
-	FVector end = start - (meshUpVector * m_GroundRayLength);
-	FCollisionObjectQueryParams objectQueueParam = FCollisionObjectQueryParams::AllObjects;
-	FCollisionQueryParams collisionQueueParam = FCollisionQueryParams::DefaultQueryParam;
-	collisionQueueParam.AddIgnoredActor(this);
+	// 着地判定レイの表示
+	m_GroundRayInfo.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_GroundRayOffset.X) + (meshRightVec * m_GroundRayOffset.Y) + (meshUpVector * m_GroundRayOffset.Z);
+	m_GroundRayInfo.rayEnd = m_GroundRayInfo.rayStart - (meshUpVector * m_GroundRayLength);
 
-	DrawDebugLine(GetWorld(), start, end, m_DrawRayColor, false, m_DrawRayTime);
-
+	MyDrawDebugLine(m_GroundRayInfo, m_GroundDebug);
+	
 	// ボード下部から出ているレイがなにかのオブジェクトにあたっているか
-	if (GetWorld()->LineTraceSingleByObjectType(hitRes, start, end, objectQueueParam, collisionQueueParam))
+	if (MyLineTrace(m_GroundRayInfo) || m_IsJump)
 	{
 		// 速度減衰なし
 		m_AirSpeedAttenuation = 1.0f;
@@ -189,11 +194,50 @@ void ANewPlayer::UpdateMove()
 		m_AirSpeedAttenuation = FMath::Clamp(m_AirSpeedAttenuation - m_AirSpeedAttenuationValue, 0.0f, 1.0f);
 	}
 
+	// テール着地レイの表示
+	m_TailLandingRayInfo.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_TailLandingRayOffset.X) + (meshRightVec * m_TailLandingRayOffset.Y) + (meshUpVector * m_TailLandingRayOffset.Z);
+	m_TailLandingRayInfo.rayEnd = m_TailLandingRayInfo.rayStart;
+	m_TailLandingRayInfo.rayEnd.Z -= m_TailLandingRayLength;
+
+	MyDrawDebugLine(m_TailLandingRayInfo, m_TailLandingDebug);
+
+	static bool isOnce = true;
+	if (MyLineTrace(m_TailLandingRayInfo) && m_IsJump)
+	{
+		if (isOnce)
+		{
+			isOnce = false;
+			FRotator rot = m_BoardMesh->GetComponentRotation();
+			rot.Pitch -= 10.0f;
+			m_BoardMesh->SetWorldRotation(rot);
+		}
+	}
+	else
+	{
+		isOnce = true;
+	}
+
+	// 重心の変更
+	if (m_IsJump)
+	{
+		m_BoardMesh->SetCenterOfMass(m_JumpCenterOfMass);
+	}
+	else
+	{
+		m_BoardMesh->SetCenterOfMass(m_DefaultCenterOfMass);
+	}
+
 	// ボードの前方向ベクトルに加速度を追加
 	m_FloatingPawnMovementComponent->AddInputVector(meshForwardVec * m_AirSpeedAttenuation);
 
 	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity = %s"), *m_FloatingPawnMovementComponent->Velocity.ToString());
 	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity Size = %f"), m_FloatingPawnMovementComponent->Velocity.Size());
+
+	// ジャンプ状態を戻すか
+	if (m_FloatingPawnMovementComponent->Velocity.Z <= 0.0f)
+	{
+		m_IsJump = false;
+	}
 
 	// スプリングアームの距離調整
 	float addLength = m_FloatingPawnMovementComponent->Velocity.X / m_ArmLengthAdjust;
@@ -216,6 +260,21 @@ void ANewPlayer::ResetAcceleration()
 void ANewPlayer::SetDrift(bool _status)
 {
 	m_IsSharpcurve = _status;
+}
+
+// FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
+void ANewPlayer::MyDrawDebugLine(FLinetraceInfo linetrace, FDebugRayInfo ray)
+{
+	if (ray.IsDrawRay)
+	{
+		DrawDebugLine(GetWorld(), linetrace.rayStart, linetrace.rayEnd, ray.DrawRayColor, false, ray.DrawRayTime);
+	}
+}
+
+// FLinetraceInfoを元にレイを飛ばす
+bool ANewPlayer::MyLineTrace(FLinetraceInfo linetrace)
+{
+	return GetWorld()->LineTraceSingleByObjectType(linetrace.hitResult, linetrace.rayStart, linetrace.rayEnd, linetrace.objectQueueParam, linetrace.collisionQueueParam);
 }
 
 // Called when the game starts or when spawned
@@ -284,10 +343,15 @@ void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor
 		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
 	}
 
-
 	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
 	{
 		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+	}
+
+	if (OtherComp->ComponentHasTag("Jump") && m_IsJump == false)
+	{
+		m_IsJump = true;
+		m_BoardMesh->AddImpulse(m_BoardMesh->GetForwardVector() * m_JumpPower);
 	}
 }
 
