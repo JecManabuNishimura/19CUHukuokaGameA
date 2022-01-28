@@ -81,10 +81,10 @@ private:
 	void SetDrift(bool _status);
 
 	// FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
-	void MyDrawDebugLine(FLinetraceInfo linetrace, FDebugRayInfo ray);
+	void MyDrawDebugLine(const FLinetraceInfo& linetrace, const FDebugRayInfo& ray);
 
 	// FLinetraceInfoを元にレイを飛ばす
-	bool MyLineTrace(FLinetraceInfo linetrace);
+	bool MyLineTrace(FLinetraceInfo& linetrace);
 
 protected:
 	// Called when the game starts or when spawned

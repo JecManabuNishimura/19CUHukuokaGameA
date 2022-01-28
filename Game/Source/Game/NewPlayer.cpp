@@ -201,20 +201,11 @@ void ANewPlayer::UpdateMove()
 
 	MyDrawDebugLine(m_TailLandingRayInfo, m_TailLandingDebug);
 
-	static bool isOnce = true;
 	if (MyLineTrace(m_TailLandingRayInfo) && m_IsJump)
 	{
-		if (isOnce)
-		{
-			isOnce = false;
-			FRotator rot = m_BoardMesh->GetComponentRotation();
-			rot.Pitch -= 10.0f;
-			m_BoardMesh->SetWorldRotation(rot);
-		}
-	}
-	else
-	{
-		isOnce = true;
+		FRotator rot = m_BoardMesh->GetComponentRotation();
+		//rot.Pitch = 90.0f;
+		m_BoardMesh->SetWorldRotation(rot);
 	}
 
 	// 重心の変更
@@ -263,7 +254,7 @@ void ANewPlayer::SetDrift(bool _status)
 }
 
 // FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
-void ANewPlayer::MyDrawDebugLine(FLinetraceInfo linetrace, FDebugRayInfo ray)
+void ANewPlayer::MyDrawDebugLine(const FLinetraceInfo& linetrace, const FDebugRayInfo& ray)
 {
 	if (ray.IsDrawRay)
 	{
@@ -272,7 +263,7 @@ void ANewPlayer::MyDrawDebugLine(FLinetraceInfo linetrace, FDebugRayInfo ray)
 }
 
 // FLinetraceInfoを元にレイを飛ばす
-bool ANewPlayer::MyLineTrace(FLinetraceInfo linetrace)
+bool ANewPlayer::MyLineTrace(FLinetraceInfo& linetrace)
 {
 	return GetWorld()->LineTraceSingleByObjectType(linetrace.hitResult, linetrace.rayStart, linetrace.rayEnd, linetrace.objectQueueParam, linetrace.collisionQueueParam);
 }
@@ -351,6 +342,7 @@ void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor
 	if (OtherComp->ComponentHasTag("Jump") && m_IsJump == false)
 	{
 		m_IsJump = true;
+		m_TailLandingRayInfo.collisionQueueParam.AddIgnoredActor(OtherActor);
 		m_BoardMesh->AddImpulse(m_BoardMesh->GetForwardVector() * m_JumpPower);
 	}
 }
