@@ -72,7 +72,7 @@ private:
 	void InputKeyboard(float _axisValue);
 
 	// 移動処理
-	void UpdateMove();
+	void UpdateMove(const float deltaTime);
 
 	// 加速リセット
 	void ResetAcceleration();
@@ -85,6 +85,9 @@ private:
 
 	// FLinetraceInfoを元にレイを飛ばす
 	bool MyLineTrace(FLinetraceInfo& linetrace);
+
+	// FCollisionQueryParamsをのignoreActorを自分自身以外解除
+	void ClearIgnoreActor(FCollisionQueryParams& collisionQueryParams);
 
 protected:
 	// Called when the game starts or when spawned
@@ -133,9 +136,6 @@ private:
 
 	// 着地判定レイの情報
 	FLinetraceInfo m_GroundRayInfo;
-
-	// テール着地レイの情報
-	FLinetraceInfo m_TailLandingRayInfo;
 
 public:
 	// プレイヤーのMovementComponent
@@ -192,14 +192,6 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Jump")
 		FVector m_JumpPower;
 
-	// テール着地レイの開始位置のオフセット
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Jump")
-		FVector m_TailLandingRayOffset;
-
-	// テール着地レイの長さ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Jump")
-		float m_TailLandingRayLength;
-
 	// 移動可能かどうか
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		bool m_CanMove;
@@ -207,14 +199,6 @@ public:
 	// ボードが接地していない時の速度減衰量
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move")
 		float m_AirSpeedAttenuationValue;
-
-	// 通常時の重心
-	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move")
-		FVector m_DefaultCenterOfMass;
-
-	// ジャンプ時の重心
-	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move")
-		FVector m_JumpCenterOfMass;
 
 	// 左右の移動量
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move|Side")
@@ -228,10 +212,6 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
 		FDebugRayInfo m_GroundDebug;
 
-	// 着地判定レイを表示する
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
-		FDebugRayInfo m_TailLandingDebug;
-
 public:
 	UFUNCTION()
 		void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -240,5 +220,5 @@ public:
 		void OnComponentOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UFUNCTION()
-		void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+		void OnCompHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 };

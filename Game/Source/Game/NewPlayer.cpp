@@ -18,8 +18,6 @@ ANewPlayer::ANewPlayer()
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_AirSpeedAttenuation(1.0f)
-	, m_DefaultCenterOfMass(FVector(-50.0f, 0.0f, -10.0f))
-	, m_JumpCenterOfMass(FVector(0.0f, 0.0f, -10.0f))
 	, m_UpdateValue(FVector::ZeroVector)
 	, m_BaseForwardVector(FVector::ZeroVector)
 	, m_FloatingPawnMovementComponent(nullptr)
@@ -31,10 +29,8 @@ ANewPlayer::ANewPlayer()
 	, m_SpringArmLength(350.0f)
 	, m_ArmLengthAdjust(100.0f)
 	, m_GroundRayOffset(FVector(150.0f, 0.0f, 5.0f))
-	, m_GroundRayLength(30.0f)
-	, m_JumpPower(FVector(10000.0f, 1.0f, 50000.0f))
-	, m_TailLandingRayOffset(FVector::ZeroVector)
-	, m_TailLandingRayLength(500.0f)
+	, m_GroundRayLength(100.0f)
+	, m_JumpPower(FVector(5000.0f, 5000.0f, 5000.0f))
 	, m_CanMove(true)
 	, m_AirSpeedAttenuationValue(1.0f / 600.0f)
 	, m_SideMaxSpeed(2.5f)
@@ -45,20 +41,23 @@ ANewPlayer::ANewPlayer()
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
+	// ボードのメッシュの設定
 	m_BoardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoardMesh"));
 	if (m_BoardMesh)
 	{
 		RootComponent = m_BoardMesh;
-		m_BoardMesh->OnComponentHit.AddDynamic(this, &ANewPlayer::OnHit);
+		m_BoardMesh->bHasPerInstanceHitProxies = true;
+		m_BoardMesh->OnComponentHit.AddDynamic(this, &ANewPlayer::OnCompHit);
 		m_BoardMesh->SetSimulatePhysics(true);
 		m_BoardMesh->SetEnableGravity(true);
 		m_BoardMesh->SetUseCCD(true);
 		m_BoardMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-		m_BoardMesh->SetCenterOfMass(m_DefaultCenterOfMass);
+		m_BoardMesh->SetCenterOfMass(FVector(0.0f, 0.0f, -10.0f));
 		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoardMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
+	// プレイヤーメッシュの設定
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	if (m_PlayerMesh)
 	{
@@ -69,6 +68,7 @@ ANewPlayer::ANewPlayer()
 		m_PlayerMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
+	// カメラのスプリングアームの設定
 	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	if (m_SpringArm)
 	{
@@ -84,6 +84,7 @@ ANewPlayer::ANewPlayer()
 		m_SpringArm->SetRelativeRotation(FRotator(315.0f, 0.0f, 0.0f));
 	}
 
+	// カメラの設定
 	m_PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
 	if (m_PlayerCamera)
 	{
@@ -92,17 +93,19 @@ ANewPlayer::ANewPlayer()
 		m_PlayerCamera->SetRelativeRotation(FRotator(15.0f, 0.0f, 0.0f));
 	}
 
+	// トリガー用コリジョンの設定
 	m_BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
 	if (m_BoxCollision)
 	{
 		m_BoxCollision->SetupAttachment(RootComponent);
 		m_BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ANewPlayer::OnOverlapBegin);
 		m_BoxCollision->bMultiBodyOverlap = true;
-		m_BoxCollision->SetBoxExtent(FVector(100.0f, 100.0f, 100.0f));
-		m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_BoxCollision->SetBoxExtent(FVector(150.0f, 50.0f, 100.0f));
+		m_BoxCollision->SetRelativeLocation(FVector(0.0f, 0.0f, 90.0f));
 		m_BoxCollision->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
+	// 移動コンポーネントの設定
 	m_FloatingPawnMovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovementComponent"));
 	if (m_FloatingPawnMovementComponent)
 	{
@@ -111,10 +114,6 @@ ANewPlayer::ANewPlayer()
 		m_FloatingPawnMovementComponent->Deceleration = 8000.0f;
 		m_FloatingPawnMovementComponent->TurningBoost = 75.0f;
 	}
-	
-	m_GroundRayInfo.collisionQueueParam.AddIgnoredActor(this);
-
-	m_TailLandingDebug.DrawRayColor = FColor::Red;
 }
 
 // 移動値入力処理（コントローラー）
@@ -155,7 +154,7 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 }
 
 // 移動処理
-void ANewPlayer::UpdateMove()
+void ANewPlayer::UpdateMove(const float deltaTime)
 {
 	// 左右移動の量に応じて回転
 	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f), true);
@@ -165,10 +164,11 @@ void ANewPlayer::UpdateMove()
 	FVector meshRightVec = m_BoardMesh->GetRightVector();
 	FVector meshUpVector = m_BoardMesh->GetUpVector();
 
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] meshForwardVec = %s"), *meshForwardVec.ToString());
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] meshRightVec = %s"), *meshRightVec.ToString());
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] meshUpVector = %s"), *meshUpVector.ToString());
+	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshForwardVec = %s"), *meshForwardVec.ToString());
+	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshRightVec = %s"), *meshRightVec.ToString());
+	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshUpVector = %s"), *meshUpVector.ToString());
 
+	// 角度が一定値以上にならないように補正する
 	FRotator vectorRot = UKismetMathLibrary::MakeRotationFromAxes(meshForwardVec, meshRightVec, meshUpVector);
 
 	if (vectorRot.Pitch > 60.0 || vectorRot.Pitch < -60.0f)
@@ -182,7 +182,7 @@ void ANewPlayer::UpdateMove()
 
 	MyDrawDebugLine(m_GroundRayInfo, m_GroundDebug);
 	
-	// ボード下部から出ているレイがなにかのオブジェクトにあたっているか
+	// 着地判定レイがなにかのオブジェクトにあたっているか
 	if (MyLineTrace(m_GroundRayInfo) || m_IsJump)
 	{
 		// 速度減衰なし
@@ -194,40 +194,23 @@ void ANewPlayer::UpdateMove()
 		m_AirSpeedAttenuation = FMath::Clamp(m_AirSpeedAttenuation - m_AirSpeedAttenuationValue, 0.0f, 1.0f);
 	}
 
-	// テール着地レイの表示
-	m_TailLandingRayInfo.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_TailLandingRayOffset.X) + (meshRightVec * m_TailLandingRayOffset.Y) + (meshUpVector * m_TailLandingRayOffset.Z);
-	m_TailLandingRayInfo.rayEnd = m_TailLandingRayInfo.rayStart;
-	m_TailLandingRayInfo.rayEnd.Z -= m_TailLandingRayLength;
-
-	MyDrawDebugLine(m_TailLandingRayInfo, m_TailLandingDebug);
-
-	if (MyLineTrace(m_TailLandingRayInfo) && m_IsJump)
-	{
-		FRotator rot = m_BoardMesh->GetComponentRotation();
-		//rot.Pitch = 90.0f;
-		m_BoardMesh->SetWorldRotation(rot);
-	}
-
-	// 重心の変更
-	if (m_IsJump)
-	{
-		m_BoardMesh->SetCenterOfMass(m_JumpCenterOfMass);
-	}
-	else
-	{
-		m_BoardMesh->SetCenterOfMass(m_DefaultCenterOfMass);
-	}
-
 	// ボードの前方向ベクトルに加速度を追加
 	m_FloatingPawnMovementComponent->AddInputVector(meshForwardVec * m_AirSpeedAttenuation);
 
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity = %s"), *m_FloatingPawnMovementComponent->Velocity.ToString());
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Velocity Size = %f"), m_FloatingPawnMovementComponent->Velocity.Size());
+	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] Velocity = %s"), *m_FloatingPawnMovementComponent->Velocity.ToString());
+	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] Velocity Size = %f"), m_FloatingPawnMovementComponent->Velocity.Size());
 
 	// ジャンプ状態を戻すか
-	if (m_FloatingPawnMovementComponent->Velocity.Z <= 0.0f)
+	UPrimitiveComponent* hitComp = m_GroundRayInfo.hitResult.GetComponent();
+	if (hitComp && hitComp->ComponentHasTag("Ground"))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Landing!"))
 		m_IsJump = false;
+	}
+
+	if (m_IsJump)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Jumping!"))
 	}
 
 	// スプリングアームの距離調整
@@ -268,6 +251,13 @@ bool ANewPlayer::MyLineTrace(FLinetraceInfo& linetrace)
 	return GetWorld()->LineTraceSingleByObjectType(linetrace.hitResult, linetrace.rayStart, linetrace.rayEnd, linetrace.objectQueueParam, linetrace.collisionQueueParam);
 }
 
+// FCollisionQueryParamsをのignoreActorを自分自身以外解除
+void ANewPlayer::ClearIgnoreActor(FCollisionQueryParams& collisionQueryParams)
+{
+	collisionQueryParams.ClearIgnoredActors();
+	collisionQueryParams.AddIgnoredActor(this);
+}
+
 // Called when the game starts or when spawned
 void ANewPlayer::BeginPlay()
 {
@@ -275,6 +265,8 @@ void ANewPlayer::BeginPlay()
 
 	m_IsSensor = USensorManager::ConnectToSensor();
 	m_BaseForwardVector = m_BoardMesh->GetForwardVector();
+
+	m_GroundRayInfo.collisionQueueParam.AddIgnoredActor(this);
 }
 
 // Called every frame
@@ -291,7 +283,7 @@ void ANewPlayer::Tick(float DeltaTime)
 			InputSensor();
 		}
 
-		UpdateMove();
+		UpdateMove(DeltaTime);
 	}
 }
 
@@ -327,43 +319,18 @@ void ANewPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Overlap Actor Name = %s"), *OverlappedComponent->GetName(), *OtherActor->GetName());
-
-	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
-	{
-		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
-	}
-
-	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
-	{
-		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
-	}
-
 	if (OtherComp->ComponentHasTag("Jump") && m_IsJump == false)
 	{
 		m_IsJump = true;
-		m_TailLandingRayInfo.collisionQueueParam.AddIgnoredActor(OtherActor);
 		m_BoardMesh->AddImpulse(m_BoardMesh->GetForwardVector() * m_JumpPower);
 	}
 }
 
 void ANewPlayer::OnComponentOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Overlap End Actor Name = %s"), *OverlappedComponent->GetName(), *OtherActor->GetName());
-
-	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
-	{
-		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap End Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
-	}
-
-
-	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
-	{
-		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Overlap End Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
-	}
 }
 
-void ANewPlayer::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+void ANewPlayer::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Hit Actor Name = %s"), *HitComponent->GetName(), *OtherActor->GetName());
 
