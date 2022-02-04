@@ -12,7 +12,6 @@
 ANewPlayer::ANewPlayer()
 	: m_IsSensor(false)
 	, m_IsSharpcurve(false)
-	, m_IsJump(false)
 	, m_CurrentForwardAcceleration(0.0f)
 	, m_SideValue(0.0f)
 	, m_CurrentSideAcceleration(0.0f)
@@ -20,6 +19,7 @@ ANewPlayer::ANewPlayer()
 	, m_AirSpeedAttenuation(1.0f)
 	, m_UpdateValue(FVector::ZeroVector)
 	, m_BaseForwardVector(FVector::ZeroVector)
+	, m_IsJump(false)
 	, m_FloatingPawnMovementComponent(nullptr)
 	, m_BoardMesh(nullptr)
 	, m_PlayerMesh(nullptr)
@@ -28,11 +28,10 @@ ANewPlayer::ANewPlayer()
 	, m_BoxCollision(nullptr)
 	, m_SpringArmLength(350.0f)
 	, m_ArmLengthAdjust(100.0f)
-	, m_GroundRayOffset(FVector(150.0f, 0.0f, 5.0f))
-	, m_GroundRayLength(100.0f)
 	, m_JumpPower(FVector(5000.0f, 5000.0f, 5000.0f))
 	, m_CanMove(true)
 	, m_AirSpeedAttenuationValue(1.0f / 600.0f)
+	, m_FloatPower(50.0f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
 {
@@ -49,7 +48,7 @@ ANewPlayer::ANewPlayer()
 		m_BoardMesh->bHasPerInstanceHitProxies = true;
 		m_BoardMesh->OnComponentHit.AddDynamic(this, &ANewPlayer::OnCompHit);
 		m_BoardMesh->SetSimulatePhysics(true);
-		m_BoardMesh->SetEnableGravity(true);
+		m_BoardMesh->SetEnableGravity(false);
 		m_BoardMesh->SetUseCCD(true);
 		m_BoardMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
 		m_BoardMesh->SetCenterOfMass(FVector(0.0f, 0.0f, -10.0f));
@@ -114,6 +113,20 @@ ANewPlayer::ANewPlayer()
 		m_FloatingPawnMovementComponent->Deceleration = 8000.0f;
 		m_FloatingPawnMovementComponent->TurningBoost = 75.0f;
 	}
+
+	m_GroundRay.RayStartOffset = FVector(0.0f, 0.0f, 5.0f);
+	m_GroundRay.RayLength = 200.0f;
+
+	m_HoverRay.DrawRayColor = FColor::Red;
+	m_HoverRay.RayLength = 50.0f;
+
+	m_HoverAngleFrontRay.RayStartOffset = FVector(200.0f, 0.0f, 100.0f);
+	m_HoverAngleFrontRay.DrawRayColor = FColor::Blue;
+	m_HoverAngleFrontRay.RayLength = 300.0f;
+
+	m_HoverAngleRearRay.RayStartOffset = FVector(-200.0f, 0.0f, 100.0f);
+	m_HoverAngleRearRay.DrawRayColor = FColor::Blue;
+	m_HoverAngleRearRay.RayLength = 300.0f;
 }
 
 // 移動値入力処理（コントローラー）
@@ -177,13 +190,13 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	}
 
 	// 着地判定レイの表示
-	m_GroundRayInfo.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_GroundRayOffset.X) + (meshRightVec * m_GroundRayOffset.Y) + (meshUpVector * m_GroundRayOffset.Z);
-	m_GroundRayInfo.rayEnd = m_GroundRayInfo.rayStart - (meshUpVector * m_GroundRayLength);
+	m_GroundRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_GroundRay.RayStartOffset.X) + (meshRightVec * m_GroundRay.RayStartOffset.Y) + (meshUpVector * m_GroundRay.RayStartOffset.Z);
+	m_GroundRay.rayEnd = m_GroundRay.rayStart - (meshUpVector * m_GroundRay.RayLength);
 
-	MyDrawDebugLine(m_GroundRayInfo, m_GroundDebug);
+	MyDrawDebugLine(m_GroundRay);
 	
 	// 着地判定レイがなにかのオブジェクトにあたっているか
-	if (MyLineTrace(m_GroundRayInfo) || m_IsJump)
+	if (MyLineTrace(m_GroundRay) || m_IsJump)
 	{
 		// 速度減衰なし
 		m_AirSpeedAttenuation = 1.0f;
@@ -201,12 +214,86 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] Velocity Size = %f"), m_FloatingPawnMovementComponent->Velocity.Size());
 
 	// ジャンプ状態を戻すか
-	UPrimitiveComponent* hitComp = m_GroundRayInfo.hitResult.GetComponent();
+	UPrimitiveComponent* hitComp = m_GroundRay.hitResult.GetComponent();
 	if (hitComp && hitComp->ComponentHasTag("Ground"))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Landing!"))
 		m_IsJump = false;
 	}
+
+	// ホバーレイの表示
+	m_HoverRay.rayStart = m_BoardMesh->GetComponentLocation();
+	m_HoverRay.rayEnd = m_HoverRay.rayStart - (meshUpVector * m_HoverRay.RayLength);
+	
+	MyDrawDebugLine(m_HoverRay);
+
+	// 当たっていれば上方向に力を与える
+	FVector pos = GetActorLocation();
+	if (MyLineTrace(m_HoverRay))
+	{
+		pos = m_HoverRay.hitResult.ImpactPoint;
+		pos.Z += m_FloatPower;
+	}
+	else if (!m_IsJump)
+	{
+		pos.Z -= 2000.0f;
+	}
+
+	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, 0.2f));
+
+	// 角度算出
+	m_HoverAngleFrontRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_HoverAngleFrontRay.RayStartOffset.X) + (meshRightVec * m_HoverAngleFrontRay.RayStartOffset.Y) + (meshUpVector * m_HoverAngleFrontRay.RayStartOffset.Z);
+	m_HoverAngleFrontRay.rayEnd = m_HoverAngleFrontRay.rayStart - (meshUpVector * m_HoverAngleFrontRay.RayLength);
+
+	m_HoverAngleRearRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_HoverAngleRearRay.RayStartOffset.X) + (meshRightVec * m_HoverAngleRearRay.RayStartOffset.Y) + (meshUpVector * m_HoverAngleRearRay.RayStartOffset.Z);
+	m_HoverAngleRearRay.rayEnd = m_HoverAngleRearRay.rayStart - (meshUpVector * m_HoverAngleRearRay.RayLength);
+
+	MyDrawDebugLine(m_HoverAngleFrontRay);
+	MyDrawDebugLine(m_HoverAngleRearRay);
+
+	FVector frontVector = FVector::ZeroVector;
+	FVector rearVector = FVector::ZeroVector;
+
+	bool isFrontHit = MyLineTrace(m_HoverAngleFrontRay);
+	bool isRearHit = MyLineTrace(m_HoverAngleRearRay);
+
+	if (isFrontHit && isRearHit)
+	{
+		frontVector = m_HoverAngleFrontRay.hitResult.ImpactNormal;
+		rearVector = m_HoverAngleRearRay.hitResult.ImpactNormal;
+	}
+	
+	FRotator frontRot = UKismetMathLibrary::MakeRotFromX(frontVector);
+	FRotator rearRot = UKismetMathLibrary::MakeRotFromX(rearVector);
+
+	if (!isFrontHit)
+	{
+		frontRot.Pitch = -60.0f;
+	}
+	if (!isRearHit)
+	{
+		rearRot.Pitch = -60.0f;
+	}
+
+	// 平面の時にPitchが90°と0°が取得されてしまい平均を取ると45°になってしまうので0°に固定
+	LockAngle(frontRot.Pitch, 90.0f, 0.0f, 1.0f);
+	LockAngle(rearRot.Pitch, 90.0f, 0.0f, 1.0f);
+
+	FRotator averageRotator = FRotator((frontRot.Pitch + rearRot.Pitch) / 2.0f, (frontRot.Yaw + rearRot.Yaw) / 2.0f, (frontRot.Roll + rearRot.Roll) / 2.0f);
+	averageRotator.Yaw = GetActorRotation().Yaw;
+	averageRotator.Roll /= 5.0f;
+
+	FRotator newRot = FMath::RInterpTo(GetActorRotation(), averageRotator, deltaTime, 1.2f);
+
+	/*
+	newRot.Yaw = 0.0f;
+	newRot.Roll = -newRot.Roll / 1.5f;
+	AddActorLocalRotation(newRot);
+	*/
+
+	SetActorRotation(newRot);
+
+	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] newRot %s"), *newRot.ToString());
 
 	if (m_IsJump)
 	{
@@ -237,11 +324,11 @@ void ANewPlayer::SetDrift(bool _status)
 }
 
 // FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
-void ANewPlayer::MyDrawDebugLine(const FLinetraceInfo& linetrace, const FDebugRayInfo& ray)
+void ANewPlayer::MyDrawDebugLine(const FLinetraceInfo& linetrace)
 {
-	if (ray.IsDrawRay)
+	if (linetrace.IsDrawRay)
 	{
-		DrawDebugLine(GetWorld(), linetrace.rayStart, linetrace.rayEnd, ray.DrawRayColor, false, ray.DrawRayTime);
+		DrawDebugLine(GetWorld(), linetrace.rayStart, linetrace.rayEnd, linetrace.DrawRayColor, false, linetrace.DrawRayTime);
 	}
 }
 
@@ -258,6 +345,15 @@ void ANewPlayer::ClearIgnoreActor(FCollisionQueryParams& collisionQueryParams)
 	collisionQueryParams.AddIgnoredActor(this);
 }
 
+// 軸の角度を固定する
+void ANewPlayer::LockAngle(float& originRot, const float lockAxis, const float targetAxis, const float tolerance)
+{
+	if (FMath::IsNearlyEqual(originRot, lockAxis, tolerance))
+	{
+		originRot = targetAxis;
+	}
+}
+
 // Called when the game starts or when spawned
 void ANewPlayer::BeginPlay()
 {
@@ -266,7 +362,10 @@ void ANewPlayer::BeginPlay()
 	m_IsSensor = USensorManager::ConnectToSensor();
 	m_BaseForwardVector = m_BoardMesh->GetForwardVector();
 
-	m_GroundRayInfo.collisionQueueParam.AddIgnoredActor(this);
+	m_GroundRay.collisionQueueParam.AddIgnoredActor(this);
+	m_HoverRay.collisionQueueParam.AddIgnoredActor(this);
+	m_HoverAngleFrontRay.collisionQueueParam.AddIgnoredActor(this);
+	m_HoverAngleRearRay.collisionQueueParam.AddIgnoredActor(this);
 }
 
 // Called every frame

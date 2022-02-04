@@ -14,27 +14,8 @@
 class USerial;
 class UCameraComponent;
 
-// デバッグ用レイの設定の構造体
-USTRUCT(BlueprintType)
-struct FDebugRayInfo
-{
-	GENERATED_USTRUCT_BODY();
-
-	// 着地判定レイを表示する
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		bool IsDrawRay = true;
-
-	// 着地判定レイの色
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		FColor DrawRayColor = FColor::Green;
-
-	// 着地判定レイの表示時間
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		float DrawRayTime = 7.0f;
-};
-
 // レイ（ライントレース）に必要なものの構造体
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FLinetraceInfo
 {
 	GENERATED_USTRUCT_BODY();
@@ -53,6 +34,26 @@ struct FLinetraceInfo
 
 	// 除外するものを設定
 	FCollisionQueryParams collisionQueueParam = FCollisionQueryParams::DefaultQueryParam;
+
+	// レイの開始位置のオフセット
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		FVector RayStartOffset;
+
+	// 着地判定レイを表示する
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		bool IsDrawRay = true;
+
+	// レイの長さ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		float RayLength = 100.0f;
+
+	// 着地判定レイの色
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		FColor DrawRayColor = FColor::Green;
+
+	// 着地判定レイの表示時間
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		float DrawRayTime = 7.0f;
 };
 
 UCLASS()
@@ -81,13 +82,16 @@ private:
 	void SetDrift(bool _status);
 
 	// FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
-	void MyDrawDebugLine(const FLinetraceInfo& linetrace, const FDebugRayInfo& ray);
+	void MyDrawDebugLine(const FLinetraceInfo& linetrace);
 
 	// FLinetraceInfoを元にレイを飛ばす
 	bool MyLineTrace(FLinetraceInfo& linetrace);
 
 	// FCollisionQueryParamsをのignoreActorを自分自身以外解除
 	void ClearIgnoreActor(FCollisionQueryParams& collisionQueryParams);
+
+	// 軸の角度を固定する
+	void LockAngle(float& originRot, const float lockAxis, const float targetAxis, const float tolerance);
 
 protected:
 	// Called when the game starts or when spawned
@@ -110,9 +114,6 @@ private:
 	// ドリフト状態かどうか
 	bool m_IsSharpcurve;
 
-	// ジャンプ状態
-	bool m_IsJump;
-
 	// 前進の現在の加速量
 	float m_CurrentForwardAcceleration;
 
@@ -134,8 +135,10 @@ private:
 	// 進行方向を制御
 	FVector m_BaseForwardVector;
 
-	// 着地判定レイの情報
-	FLinetraceInfo m_GroundRayInfo;
+protected:
+	UPROPERTY(BlueprintReadOnly)
+		// ジャンプ状態
+		bool m_IsJump;
 
 public:
 	// プレイヤーのMovementComponent
@@ -180,14 +183,6 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Camera")
 		float m_ArmLengthAdjust;
 
-	// 接地判定レイの開始位置のオフセット
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Ground")
-		FVector m_GroundRayOffset;
-
-	// 接地判定レイの長さ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Ground")
-		float m_GroundRayLength;
-
 	// ジャンプ台のジャンプ力
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Jump")
 		FVector m_JumpPower;
@@ -200,6 +195,10 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move")
 		float m_AirSpeedAttenuationValue;
 
+	// ボードの浮く力（上への力の強さ）
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_FloatPower;
+
 	// 左右の移動量
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move|Side")
 		float m_SideMaxSpeed;
@@ -208,9 +207,25 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move|Side")
 		float m_SideAcceleration;
 
-	// 着地判定レイの設定
+	// 着地判定レイ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
-		FDebugRayInfo m_GroundDebug;
+		FLinetraceInfo m_GroundRay;
+
+	// ホバー移動のレイ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+		FLinetraceInfo m_HoverRay;
+
+	// 角度取得レイ（前）
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+		FLinetraceInfo m_HoverAngleFrontRay;
+
+	// 角度取得レイ（後ろ）
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+		FLinetraceInfo m_HoverAngleRearRay;
+
+	// ボード衝突回避レイ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+		FLinetraceInfo m_AvoidRay;
 
 public:
 	UFUNCTION()
