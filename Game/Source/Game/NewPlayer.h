@@ -107,6 +107,14 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// 左右移動の取得用
+	UFUNCTION(BlueprintCallable)
+		float GetSideMoveValue();
+
+	// 接地しているか
+	UFUNCTION(BlueprintCallable)
+		bool GetIsLanding();
+
 private:
 	// コントローラーが接続されているか
 	bool m_IsSensor;
@@ -208,24 +216,25 @@ public:
 		float m_SideAcceleration;
 
 	// 着地判定レイ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
 		FLinetraceInfo m_GroundRay;
 
 	// ホバー移動のレイ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
 		FLinetraceInfo m_HoverRay;
 
 	// 角度取得レイ（前）
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
 		FLinetraceInfo m_HoverAngleFrontRay;
 
 	// 角度取得レイ（後ろ）
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
 		FLinetraceInfo m_HoverAngleRearRay;
 
 	// ボード衝突回避レイ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
 		FLinetraceInfo m_AvoidRay;
+
 
 public:
 	UFUNCTION()

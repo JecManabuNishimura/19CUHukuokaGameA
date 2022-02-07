@@ -51,7 +51,6 @@ ANewPlayer::ANewPlayer()
 		m_BoardMesh->SetEnableGravity(false);
 		m_BoardMesh->SetUseCCD(true);
 		m_BoardMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-		m_BoardMesh->SetCenterOfMass(FVector(0.0f, 0.0f, -10.0f));
 		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoardMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
@@ -181,13 +180,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshRightVec = %s"), *meshRightVec.ToString());
 	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshUpVector = %s"), *meshUpVector.ToString());
 
-	// 角度が一定値以上にならないように補正する
-	FRotator vectorRot = UKismetMathLibrary::MakeRotationFromAxes(meshForwardVec, meshRightVec, meshUpVector);
-
-	if (vectorRot.Pitch > 60.0 || vectorRot.Pitch < -60.0f)
-	{
-		meshForwardVec.Z = 0.0f;
-	}
+	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] AAAAA = %d"), GetIsLanding());
 
 	// 着地判定レイの表示
 	m_GroundRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_GroundRay.RayStartOffset.X) + (meshRightVec * m_GroundRay.RayStartOffset.Y) + (meshUpVector * m_GroundRay.RayStartOffset.Z);
@@ -234,7 +227,11 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		pos = m_HoverRay.hitResult.ImpactPoint;
 		pos.Z += m_FloatPower;
 	}
-	else if (!m_IsJump)
+	else if (m_IsJump)
+	{
+		pos.Z -= 1000.0f;
+	}
+	else
 	{
 		pos.Z -= 2000.0f;
 	}
@@ -266,13 +263,18 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	FRotator frontRot = UKismetMathLibrary::MakeRotFromX(frontVector);
 	FRotator rearRot = UKismetMathLibrary::MakeRotFromX(rearVector);
 
-	if (!isFrontHit)
+	if (!isFrontHit && isRearHit)
 	{
 		frontRot.Pitch = -60.0f;
 	}
-	if (!isRearHit)
+	else if (isFrontHit && !isRearHit)
 	{
 		rearRot.Pitch = -60.0f;
+	}
+	else if (!isFrontHit && !isRearHit && !m_IsJump)
+	{
+		frontRot.Pitch = 0.0f;
+		rearRot.Pitch = 0.0f;
 	}
 
 	// 平面の時にPitchが90°と0°が取得されてしまい平均を取ると45°になってしまうので0°に固定
@@ -281,9 +283,9 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 
 	FRotator averageRotator = FRotator((frontRot.Pitch + rearRot.Pitch) / 2.0f, (frontRot.Yaw + rearRot.Yaw) / 2.0f, (frontRot.Roll + rearRot.Roll) / 2.0f);
 	averageRotator.Yaw = GetActorRotation().Yaw;
-	averageRotator.Roll /= 5.0f;
+	averageRotator.Roll = 0.0f;
 
-	FRotator newRot = FMath::RInterpTo(GetActorRotation(), averageRotator, deltaTime, 1.2f);
+	FRotator newRot = FMath::RInterpTo(GetActorRotation(), averageRotator, deltaTime, 0.8f);
 
 	/*
 	newRot.Yaw = 0.0f;
@@ -414,6 +416,18 @@ void ANewPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 	// デバッグ用--加速度リセット
 	InputComponent->BindAction("Debug_Stop", IE_Pressed, this, &ANewPlayer::ResetAcceleration);
+}
+
+// 左右移動の取得用
+float ANewPlayer::GetSideMoveValue()
+{
+	return 0.0f;
+}
+
+// 接地しているか
+bool ANewPlayer::GetIsLanding()
+{
+	return m_GroundRay.hitResult.IsValidBlockingHit();
 }
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
