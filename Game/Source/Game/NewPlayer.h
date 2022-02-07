@@ -108,11 +108,11 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	// ¶‰EˆÚ“®‚Ìæ“¾—p
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure)
 		float GetSideMoveValue();
 
 	// Ú’n‚µ‚Ä‚¢‚é‚©
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure)
 		bool GetIsLanding();
 
 private:

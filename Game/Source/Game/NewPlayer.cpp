@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "NewPlayer.h"
-#include "SensorManager.h"
 #include "DrawDebugHelpers.h"
 #include "Camera/CameraComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -361,7 +360,6 @@ void ANewPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
-	m_IsSensor = USensorManager::ConnectToSensor();
 	m_BaseForwardVector = m_BoardMesh->GetForwardVector();
 
 	m_GroundRay.collisionQueueParam.AddIgnoredActor(this);
@@ -392,9 +390,6 @@ void ANewPlayer::Tick(float DeltaTime)
 void ANewPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-
-	// コントローラーから切断
-	USensorManager::DisconnectToSensor();
 }
 
 // Called to bind functionality to input
