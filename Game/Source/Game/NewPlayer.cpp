@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "..\..\UE4Duino\Source\UE4Duino\Public\Serial.h"
 
 // Sets default values
@@ -179,14 +180,15 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshRightVec = %s"), *meshRightVec.ToString());
 	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshUpVector = %s"), *meshUpVector.ToString());
 
-	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] AAAAA = %d"), GetIsLanding());
+	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Jump = %d"), m_IsJump);
+	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Land = %d"), GetIsLanding());
 
 	// 着地判定レイの表示
 	m_GroundRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_GroundRay.RayStartOffset.X) + (meshRightVec * m_GroundRay.RayStartOffset.Y) + (meshUpVector * m_GroundRay.RayStartOffset.Z);
 	m_GroundRay.rayEnd = m_GroundRay.rayStart - (meshUpVector * m_GroundRay.RayLength);
 
 	MyDrawDebugLine(m_GroundRay);
-	
+
 	// 着地判定レイがなにかのオブジェクトにあたっているか
 	if (MyLineTrace(m_GroundRay) || m_IsJump)
 	{
@@ -206,17 +208,15 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] Velocity Size = %f"), m_FloatingPawnMovementComponent->Velocity.Size());
 
 	// ジャンプ状態を戻すか
-	UPrimitiveComponent* hitComp = m_GroundRay.hitResult.GetComponent();
-	if (hitComp && hitComp->ComponentHasTag("Ground"))
+	if (m_GroundRay.hitResult.bBlockingHit && m_GroundRay.hitResult.Actor->ActorHasTag("Ground"))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Landing!"))
 		m_IsJump = false;
 	}
 
 	// ホバーレイの表示
 	m_HoverRay.rayStart = m_BoardMesh->GetComponentLocation();
 	m_HoverRay.rayEnd = m_HoverRay.rayStart - (meshUpVector * m_HoverRay.RayLength);
-	
+
 	MyDrawDebugLine(m_HoverRay);
 
 	// 当たっていれば上方向に力を与える
@@ -228,11 +228,11 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	}
 	else if (m_IsJump)
 	{
-		pos.Z -= 1000.0f;
+		pos.Z -= 1750.0f;
 	}
 	else
 	{
-		pos.Z -= 2000.0f;
+		pos.Z -= 2500.0f;
 	}
 
 	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, 0.2f));
@@ -258,7 +258,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		frontVector = m_HoverAngleFrontRay.hitResult.ImpactNormal;
 		rearVector = m_HoverAngleRearRay.hitResult.ImpactNormal;
 	}
-	
+
 	FRotator frontRot = UKismetMathLibrary::MakeRotFromX(frontVector);
 	FRotator rearRot = UKismetMathLibrary::MakeRotFromX(rearVector);
 
@@ -275,6 +275,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		frontRot.Pitch = 0.0f;
 		rearRot.Pitch = 0.0f;
 	}
+
 
 	// 平面の時にPitchが90°と0°が取得されてしまい平均を取ると45°になってしまうので0°に固定
 	LockAngle(frontRot.Pitch, 90.0f, 0.0f, 1.0f);
@@ -355,6 +356,43 @@ void ANewPlayer::LockAngle(float& originRot, const float lockAxis, const float t
 	}
 }
 
+// デバッグワープ
+void ANewPlayer::DebugWarp()
+{
+	int keyNum = -1;
+
+	const FKey debugKeys[] = { EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero,};
+
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+	if (!PlayerController)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Could not get the player controller. Debug warp is not available."));
+		return;
+	}
+
+	for (int i = 0; i < 10; ++i)
+	{
+		if (PlayerController->IsInputKeyDown(debugKeys[i]))
+		{
+			keyNum = i;
+			break;
+		}
+	}
+
+	if (keyNum != -1)
+	{
+		if (m_WarpPoints.Num() > keyNum && m_WarpPoints[keyNum])
+		{
+			SetActorLocation(m_WarpPoints[keyNum]->GetActorLocation());
+			SetActorRotation(FRotator::ZeroRotator);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] No warp points specified for the entered number %d"), keyNum);
+		}
+	}
+}
+
 // Called when the game starts or when spawned
 void ANewPlayer::BeginPlay()
 {
@@ -384,6 +422,8 @@ void ANewPlayer::Tick(float DeltaTime)
 
 		UpdateMove(DeltaTime);
 	}
+
+	DebugWarp();
 }
 
 //	終了時

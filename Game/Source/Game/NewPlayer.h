@@ -6,7 +6,6 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
-#include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "NewPlayer.generated.h"
@@ -92,6 +91,9 @@ private:
 
 	// 軸の角度を固定する
 	void LockAngle(float& originRot, const float lockAxis, const float targetAxis, const float tolerance);
+
+	// デバッグワープ
+	void DebugWarp();
 
 protected:
 	// Called when the game starts or when spawned
@@ -234,6 +236,10 @@ public:
 	// ボード衝突回避レイ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
 		FLinetraceInfo m_AvoidRay;
+
+	// デバッグワープポイント
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug")
+		TArray<AActor*> m_WarpPoints;
 
 
 public:
