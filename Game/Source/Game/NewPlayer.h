@@ -124,6 +124,9 @@ private:
 	// ドリフト状態かどうか
 	bool m_IsSharpcurve;
 
+	// 現在の重力
+	float m_CurrentGravity;
+
 	// 前進の現在の加速量
 	float m_CurrentForwardAcceleration;
 
@@ -205,9 +208,29 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Meta = (ClampMin = "0", ClampMax = "1"), Category = "Move")
 		float m_AirSpeedAttenuationValue;
 
+	// 最高速度
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_MaxSpeed;
+
+	// ジャンプ中の最高速度
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_MaxJumpSpeed;
+
 	// ボードの浮く力（上への力の強さ）
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		float m_FloatPower;
+
+	// ジャンプ中の重力の強さ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_JumpGravity;
+
+	// 落下中の重力の強さ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_FallGravity;
+
+	// ジャンプ中に加える重力の強さ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_AddJumpGravity;
 
 	// 左右の移動量
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move|Side")

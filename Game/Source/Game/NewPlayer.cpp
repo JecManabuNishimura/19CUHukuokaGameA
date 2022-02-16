@@ -12,11 +12,14 @@
 ANewPlayer::ANewPlayer()
 	: m_IsSensor(false)
 	, m_IsSharpcurve(false)
+	, m_CurrentGravity(0.0f)
 	, m_CurrentForwardAcceleration(0.0f)
 	, m_SideValue(0.0f)
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_AirSpeedAttenuation(1.0f)
+	, m_MaxSpeed(2500.0f)
+	, m_MaxJumpSpeed(4000.0f)
 	, m_UpdateValue(FVector::ZeroVector)
 	, m_BaseForwardVector(FVector::ZeroVector)
 	, m_IsJump(false)
@@ -26,12 +29,15 @@ ANewPlayer::ANewPlayer()
 	, m_SpringArm(nullptr)
 	, m_PlayerCamera(nullptr)
 	, m_BoxCollision(nullptr)
-	, m_SpringArmLength(350.0f)
+	, m_SpringArmLength(400.0f)
 	, m_ArmLengthAdjust(100.0f)
 	, m_JumpPower(FVector(5000.0f, 5000.0f, 5000.0f))
 	, m_CanMove(true)
 	, m_AirSpeedAttenuationValue(1.0f / 600.0f)
-	, m_FloatPower(50.0f)
+	, m_FloatPower(35.0f)
+	, m_JumpGravity(150.0f)
+	, m_FallGravity(2500.0f)
+	, m_AddJumpGravity(100.0f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
 {
@@ -79,7 +85,7 @@ ANewPlayer::ANewPlayer()
 		m_SpringArm->CameraRotationLagSpeed = 10.0f;
 		m_SpringArm->bInheritPitch = false;
 		m_SpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_SpringArm->SetRelativeRotation(FRotator(315.0f, 0.0f, 0.0f));
+		m_SpringArm->SetRelativeRotation(FRotator(320.0f, 0.0f, 0.0f));
 	}
 
 	// カメラの設定
@@ -88,7 +94,7 @@ ANewPlayer::ANewPlayer()
 	{
 		m_PlayerCamera->SetupAttachment(m_SpringArm, USpringArmComponent::SocketName);
 		m_PlayerCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_PlayerCamera->SetRelativeRotation(FRotator(15.0f, 0.0f, 0.0f));
+		m_PlayerCamera->SetRelativeRotation(FRotator(25.0f, 0.0f, 0.0f));
 	}
 
 	// トリガー用コリジョンの設定
@@ -107,7 +113,7 @@ ANewPlayer::ANewPlayer()
 	m_FloatingPawnMovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovementComponent"));
 	if (m_FloatingPawnMovementComponent)
 	{
-		m_FloatingPawnMovementComponent->MaxSpeed = 2500.0f;
+		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
 		m_FloatingPawnMovementComponent->Acceleration = 1000.0f;
 		m_FloatingPawnMovementComponent->Deceleration = 8000.0f;
 		m_FloatingPawnMovementComponent->TurningBoost = 75.0f;
@@ -117,7 +123,7 @@ ANewPlayer::ANewPlayer()
 	m_GroundRay.RayLength = 200.0f;
 
 	m_HoverRay.DrawRayColor = FColor::Red;
-	m_HoverRay.RayLength = 50.0f;
+	m_HoverRay.RayLength = 100.0f;
 
 	m_HoverAngleFrontRay.RayStartOffset = FVector(200.0f, 0.0f, 100.0f);
 	m_HoverAngleFrontRay.DrawRayColor = FColor::Blue;
@@ -169,7 +175,7 @@ void ANewPlayer::InputKeyboard(float _axisValue)
 void ANewPlayer::UpdateMove(const float deltaTime)
 {
 	// 左右移動の量に応じて回転
-	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f), true);
+	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
 
 	// ボードの各ベクトルの取得
 	FVector meshForwardVec = m_BoardMesh->GetForwardVector();
@@ -211,6 +217,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	if (m_GroundRay.hitResult.bBlockingHit && m_GroundRay.hitResult.Actor->ActorHasTag("Ground"))
 	{
 		m_IsJump = false;
+		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
 	}
 
 	// ホバーレイの表示
@@ -223,16 +230,20 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	FVector pos = GetActorLocation();
 	if (MyLineTrace(m_HoverRay))
 	{
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Hover"), true, true, FColor::Cyan, deltaTime);
 		pos = m_HoverRay.hitResult.ImpactPoint;
 		pos.Z += m_FloatPower;
 	}
 	else if (m_IsJump)
 	{
-		pos.Z -= 1750.0f;
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Jump"), true, true, FColor::Cyan, deltaTime);
+		pos.Z -= m_JumpGravity + m_CurrentGravity;
+		m_CurrentGravity += m_AddJumpGravity;
 	}
 	else
 	{
-		pos.Z -= 2500.0f;
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Fall"), true, true, FColor::Cyan, deltaTime);
+		pos.Z -= m_FallGravity;
 	}
 
 	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, 0.2f));
@@ -262,14 +273,17 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	FRotator frontRot = UKismetMathLibrary::MakeRotFromX(frontVector);
 	FRotator rearRot = UKismetMathLibrary::MakeRotFromX(rearVector);
 
+	// 後ろだけあたっているので前を下げる
 	if (!isFrontHit && isRearHit)
 	{
 		frontRot.Pitch = -60.0f;
 	}
+	// 前だけあたっているので後ろを下げる
 	else if (isFrontHit && !isRearHit)
 	{
 		rearRot.Pitch = -60.0f;
 	}
+	// どっちも当たっておらずジャンプでもないのでまっすぐにする
 	else if (!isFrontHit && !isRearHit && !m_IsJump)
 	{
 		frontRot.Pitch = 0.0f;
@@ -470,7 +484,9 @@ void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor
 	if (OtherComp->ComponentHasTag("Jump") && m_IsJump == false)
 	{
 		m_IsJump = true;
-		m_BoardMesh->AddImpulse(m_BoardMesh->GetForwardVector() * m_JumpPower);
+		m_CurrentGravity = 0.0f;
+
+		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxJumpSpeed;
 	}
 }
 
