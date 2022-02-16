@@ -232,6 +232,14 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		float m_AddJumpGravity;
 
+	// ホバーの速度
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_HoverLerpSpeed;
+
+	// 地面に対するプレイヤーの角度変更の速度
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_AngleLerpSpeed;
+
 	// 左右の移動量
 	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move|Side")
 		float m_SideMaxSpeed;
@@ -241,23 +249,23 @@ public:
 		float m_SideAcceleration;
 
 	// 着地判定レイ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray")
 		FLinetraceInfo m_GroundRay;
 
 	// ホバー移動のレイ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray")
 		FLinetraceInfo m_HoverRay;
 
 	// 角度取得レイ（前）
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray")
 		FLinetraceInfo m_HoverAngleFrontRay;
 
 	// 角度取得レイ（後ろ）
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray")
 		FLinetraceInfo m_HoverAngleRearRay;
 
 	// ボード衝突回避レイ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug|Ray")
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray")
 		FLinetraceInfo m_AvoidRay;
 
 	// デバッグワープポイント

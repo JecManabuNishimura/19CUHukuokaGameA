@@ -38,6 +38,8 @@ ANewPlayer::ANewPlayer()
 	, m_JumpGravity(150.0f)
 	, m_FallGravity(2500.0f)
 	, m_AddJumpGravity(100.0f)
+	, m_HoverLerpSpeed(0.2f)
+	, m_AngleLerpSpeed(0.6f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
 {
@@ -53,7 +55,7 @@ ANewPlayer::ANewPlayer()
 		RootComponent = m_BoardMesh;
 		m_BoardMesh->bHasPerInstanceHitProxies = true;
 		m_BoardMesh->OnComponentHit.AddDynamic(this, &ANewPlayer::OnCompHit);
-		m_BoardMesh->SetSimulatePhysics(true);
+		m_BoardMesh->SetSimulatePhysics(false);
 		m_BoardMesh->SetEnableGravity(false);
 		m_BoardMesh->SetUseCCD(true);
 		m_BoardMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
@@ -246,7 +248,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		pos.Z -= m_FallGravity;
 	}
 
-	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, 0.2f));
+	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, m_HoverLerpSpeed));
 
 	// Šp“xŽZo
 	m_HoverAngleFrontRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_HoverAngleFrontRay.RayStartOffset.X) + (meshRightVec * m_HoverAngleFrontRay.RayStartOffset.Y) + (meshUpVector * m_HoverAngleFrontRay.RayStartOffset.Z);
@@ -299,7 +301,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	averageRotator.Yaw = GetActorRotation().Yaw;
 	averageRotator.Roll = 0.0f;
 
-	FRotator newRot = FMath::RInterpTo(GetActorRotation(), averageRotator, deltaTime, 0.8f);
+	FRotator newRot = FMath::RInterpTo(GetActorRotation(), averageRotator, deltaTime, m_AngleLerpSpeed);
 
 	/*
 	newRot.Yaw = 0.0f;
