@@ -33,13 +33,13 @@ ANewPlayer::ANewPlayer()
 	, m_ArmLengthAdjust(100.0f)
 	, m_JumpPower(FVector(5000.0f, 5000.0f, 5000.0f))
 	, m_CanMove(true)
-	, m_AirSpeedAttenuationValue(1.0f / 600.0f)
+	, m_AirSpeedAttenuationValue(1.0f / 1200.0f)
 	, m_FloatPower(35.0f)
 	, m_JumpGravity(150.0f)
 	, m_FallGravity(2500.0f)
 	, m_AddJumpGravity(100.0f)
 	, m_HoverLerpSpeed(0.2f)
-	, m_AngleLerpSpeed(0.6f)
+	, m_AngleLerpSpeed(0.9f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
 {
@@ -220,6 +220,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	{
 		m_IsJump = false;
 		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
+		m_CurrentGravity = 0.0f;
 	}
 
 	// ホバーレイの表示
@@ -245,7 +246,8 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	else
 	{
 		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Fall"), true, true, FColor::Cyan, deltaTime);
-		pos.Z -= m_FallGravity;
+		pos.Z -= m_FallGravity + m_CurrentGravity;
+		m_CurrentGravity += m_AddJumpGravity;
 	}
 
 	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, m_HoverLerpSpeed));
@@ -291,7 +293,6 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		frontRot.Pitch = 0.0f;
 		rearRot.Pitch = 0.0f;
 	}
-
 
 	// 平面の時にPitchが90°と0°が取得されてしまい平均を取ると45°になってしまうので0°に固定
 	LockAngle(frontRot.Pitch, 90.0f, 0.0f, 1.0f);
