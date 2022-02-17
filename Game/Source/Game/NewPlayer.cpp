@@ -36,8 +36,9 @@ ANewPlayer::ANewPlayer()
 	, m_AirSpeedAttenuationValue(1.0f / 1200.0f)
 	, m_FloatPower(35.0f)
 	, m_JumpGravity(150.0f)
-	, m_FallGravity(2500.0f)
+	, m_FallGravity(250.0f)
 	, m_AddJumpGravity(100.0f)
+	, m_AddFallGravity(150.0f)
 	, m_HoverLerpSpeed(0.2f)
 	, m_AngleLerpSpeed(0.9f)
 	, m_SideMaxSpeed(2.5f)
@@ -124,6 +125,7 @@ ANewPlayer::ANewPlayer()
 	m_GroundRay.RayStartOffset = FVector(0.0f, 0.0f, 5.0f);
 	m_GroundRay.RayLength = 200.0f;
 
+	m_HoverRay.RayStartOffset = FVector(0.0f, 0.0f, 5.0f);
 	m_HoverRay.DrawRayColor = FColor::Red;
 	m_HoverRay.RayLength = 100.0f;
 
@@ -236,6 +238,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Hover"), true, true, FColor::Cyan, deltaTime);
 		pos = m_HoverRay.hitResult.ImpactPoint;
 		pos.Z += m_FloatPower;
+		m_CurrentGravity = 0.0f;
 	}
 	else if (m_IsJump)
 	{
@@ -247,7 +250,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	{
 		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Fall"), true, true, FColor::Cyan, deltaTime);
 		pos.Z -= m_FallGravity + m_CurrentGravity;
-		m_CurrentGravity += m_AddJumpGravity;
+		m_CurrentGravity += m_AddFallGravity;
 	}
 
 	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, m_HoverLerpSpeed));

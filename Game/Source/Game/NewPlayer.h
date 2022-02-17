@@ -232,6 +232,10 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		float m_AddJumpGravity;
 
+	// ジャンプ中に加える重力の強さ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
+		float m_AddFallGravity;
+
 	// ホバーの速度
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
 		float m_HoverLerpSpeed;
