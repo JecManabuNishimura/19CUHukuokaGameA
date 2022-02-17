@@ -65,9 +65,6 @@ public:
 	ANewPlayer();
 
 private:
-	// 移動値入力処理（コントローラー）
-	void InputSensor();
-
 	// 移動値入力処理（キーボード・パッド）
 	void InputKeyboard(float _axisValue);
 
@@ -118,6 +115,9 @@ public:
 		bool GetIsLanding();
 
 private:
+	// プレイヤーコントローラー
+	APlayerController* m_PlayerController;
+
 	// コントローラーが接続されているか
 	bool m_IsSensor;
 
@@ -147,6 +147,9 @@ private:
 	
 	// 進行方向を制御
 	FVector m_BaseForwardVector;
+
+	// ジャンプコマンド保存用
+	TArray<FKey> m_InputKeys;
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
@@ -282,6 +285,11 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray"
 		, Meta = (DisplayName = "Hover Angle Rear Ray"))
 		FLinetraceInfo m_HoverAngleRearRay;
+
+	// 衝突回避レイ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray"
+		, Meta = (DisplayName = "Avoid Ray"))
+		FLinetraceInfo m_AvoidRay;
 
 	// デバッグワープポイント
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug"

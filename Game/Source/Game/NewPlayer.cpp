@@ -10,7 +10,8 @@
 
 // Sets default values
 ANewPlayer::ANewPlayer()
-	: m_IsSensor(false)
+	: m_PlayerController(nullptr)
+	, m_IsSensor(false)
 	, m_IsSharpcurve(false)
 	, m_CurrentGravity(0.0f)
 	, m_CurrentForwardAcceleration(0.0f)
@@ -33,12 +34,12 @@ ANewPlayer::ANewPlayer()
 	, m_ArmLengthAdjust(100.0f)
 	, m_JumpPower(FVector(5000.0f, 5000.0f, 5000.0f))
 	, m_CanMove(true)
-	, m_AirSpeedAttenuationValue(1.0f / 1200.0f)
+	, m_AirSpeedAttenuationValue(1.0f / 2400.0f)
 	, m_FloatPower(15.0f)
-	, m_JumpGravity(20.0f)
-	, m_FallGravity(250.0f)
+	, m_JumpGravity(25.0f)
+	, m_FallGravity(30.0f)
 	, m_AddJumpGravity(10.0f)
-	, m_AddFallGravity(150.0f)
+	, m_AddFallGravity(20.0f)
 	, m_HoverLerpSpeed(1.0f)
 	, m_AngleLerpSpeed(1.2f)
 	, m_SideMaxSpeed(2.5f)
@@ -133,12 +134,6 @@ ANewPlayer::ANewPlayer()
 	m_HoverAngleRearRay.RayStartOffset = FVector(-200.0f, 0.0f, 100.0f);
 	m_HoverAngleRearRay.DrawRayColor = FColor::Blue;
 	m_HoverAngleRearRay.RayLength = 300.0f;
-}
-
-// 移動値入力処理（コントローラー）
-void ANewPlayer::InputSensor()
-{
-
 }
 
 // 移動値入力処理（キーボード・パッド）
@@ -307,6 +302,9 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 
 	SetActorRotation(newRot);
 
+	// 衝突回避
+	//m_AvoidRay.rayStart = 
+
 	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] newRot %s"), *newRot.ToString());
 
 	if (m_IsJump)
@@ -375,8 +373,7 @@ void ANewPlayer::DebugWarp()
 
 	const FKey debugKeys[] = { EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero,};
 
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-	if (!PlayerController)
+	if (!m_PlayerController)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Could not get the player controller. Debug warp is not available."));
 		return;
@@ -384,7 +381,7 @@ void ANewPlayer::DebugWarp()
 
 	for (int i = 0; i < 10; ++i)
 	{
-		if (PlayerController->IsInputKeyDown(debugKeys[i]))
+		if (m_PlayerController->IsInputKeyDown(debugKeys[i]))
 		{
 			keyNum = i;
 			break;
@@ -410,6 +407,9 @@ void ANewPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// プレイヤーのコントローラーの取得
+	m_PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+
 	m_BaseForwardVector = m_BoardMesh->GetForwardVector();
 
 	m_HoverRay.collisionQueueParam.AddIgnoredActor(this);
@@ -425,15 +425,9 @@ void ANewPlayer::Tick(float DeltaTime)
 	// 移動可能状態
 	if (m_CanMove)
 	{
-		// コントローラー使用の有無
-		if (m_IsSensor)
-		{
-			InputSensor();
-		}
-
 		UpdateMove(DeltaTime);
 	}
-
+	
 	DebugWarp();
 }
 
