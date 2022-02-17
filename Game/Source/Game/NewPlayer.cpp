@@ -34,13 +34,13 @@ ANewPlayer::ANewPlayer()
 	, m_JumpPower(FVector(5000.0f, 5000.0f, 5000.0f))
 	, m_CanMove(true)
 	, m_AirSpeedAttenuationValue(1.0f / 1200.0f)
-	, m_FloatPower(35.0f)
-	, m_JumpGravity(150.0f)
+	, m_FloatPower(15.0f)
+	, m_JumpGravity(20.0f)
 	, m_FallGravity(250.0f)
-	, m_AddJumpGravity(100.0f)
+	, m_AddJumpGravity(10.0f)
 	, m_AddFallGravity(150.0f)
-	, m_HoverLerpSpeed(0.2f)
-	, m_AngleLerpSpeed(0.9f)
+	, m_HoverLerpSpeed(1.0f)
+	, m_AngleLerpSpeed(1.2f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
 {
@@ -122,12 +122,9 @@ ANewPlayer::ANewPlayer()
 		m_FloatingPawnMovementComponent->TurningBoost = 75.0f;
 	}
 
-	m_GroundRay.RayStartOffset = FVector(0.0f, 0.0f, 5.0f);
-	m_GroundRay.RayLength = 200.0f;
-
 	m_HoverRay.RayStartOffset = FVector(0.0f, 0.0f, 5.0f);
 	m_HoverRay.DrawRayColor = FColor::Red;
-	m_HoverRay.RayLength = 100.0f;
+	m_HoverRay.RayLength = 200.0f;
 
 	m_HoverAngleFrontRay.RayStartOffset = FVector(200.0f, 0.0f, 100.0f);
 	m_HoverAngleFrontRay.DrawRayColor = FColor::Blue;
@@ -193,67 +190,62 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Jump = %d"), m_IsJump);
 	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Land = %d"), GetIsLanding());
 
-	// 着地判定レイの表示
-	m_GroundRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_GroundRay.RayStartOffset.X) + (meshRightVec * m_GroundRay.RayStartOffset.Y) + (meshUpVector * m_GroundRay.RayStartOffset.Z);
-	m_GroundRay.rayEnd = m_GroundRay.rayStart - (meshUpVector * m_GroundRay.RayLength);
-
-	MyDrawDebugLine(m_GroundRay);
-
-	// 着地判定レイがなにかのオブジェクトにあたっているか
-	if (MyLineTrace(m_GroundRay) || m_IsJump)
-	{
-		// 速度減衰なし
-		m_AirSpeedAttenuation = 1.0f;
-	}
-	else
-	{
-		// 速度減衰
-		m_AirSpeedAttenuation = FMath::Clamp(m_AirSpeedAttenuation - m_AirSpeedAttenuationValue, 0.0f, 1.0f);
-	}
-
-	// ボードの前方向ベクトルに加速度を追加
-	m_FloatingPawnMovementComponent->AddInputVector(meshForwardVec * m_AirSpeedAttenuation);
-
-	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] Velocity = %s"), *m_FloatingPawnMovementComponent->Velocity.ToString());
-	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] Velocity Size = %f"), m_FloatingPawnMovementComponent->Velocity.Size());
-
-	// ジャンプ状態を戻すか
-	if (m_GroundRay.hitResult.bBlockingHit && m_GroundRay.hitResult.Actor->ActorHasTag("Ground"))
-	{
-		m_IsJump = false;
-		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
-		m_CurrentGravity = 0.0f;
-	}
-
-	// ホバーレイの表示
+	// ホバーレイの表示・レイトレース
 	m_HoverRay.rayStart = m_BoardMesh->GetComponentLocation();
 	m_HoverRay.rayEnd = m_HoverRay.rayStart - (meshUpVector * m_HoverRay.RayLength);
 
 	MyDrawDebugLine(m_HoverRay);
 
-	// 当たっていれば上方向に力を与える
+	// ホバーレイが当たっていれば上昇
 	FVector pos = GetActorLocation();
-	if (MyLineTrace(m_HoverRay))
+	MyLineTrace(m_HoverRay);
+
+	if (m_IsJump)
 	{
+		// 速度減衰なし
+		m_AirSpeedAttenuation = 1.0f;
+
+		// ジャンプ時の重力を与える
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Jump"), true, true, FColor::Cyan, deltaTime);
+		pos.Z -= m_JumpGravity + m_CurrentGravity;
+		m_CurrentGravity += m_AddJumpGravity;
+	}
+	else if (m_HoverRay.hitResult.bBlockingHit)
+	{
+		// 速度減衰なし
+		m_AirSpeedAttenuation = 1.0f;
+
+		// 地面からm_FloatPower分浮かせる
 		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Hover"), true, true, FColor::Cyan, deltaTime);
 		pos = m_HoverRay.hitResult.ImpactPoint;
 		pos.Z += m_FloatPower;
 		m_CurrentGravity = 0.0f;
 	}
-	else if (m_IsJump)
-	{
-		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Jump"), true, true, FColor::Cyan, deltaTime);
-		pos.Z -= m_JumpGravity + m_CurrentGravity;
-		m_CurrentGravity += m_AddJumpGravity;
-	}
 	else
 	{
+		// 速度減衰
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] SpeedAttenuation"), true, true, FColor::Cyan, deltaTime);
+		m_AirSpeedAttenuation = FMath::Clamp(m_AirSpeedAttenuation - m_AirSpeedAttenuationValue, 0.0f, 1.0f);
+
+		// 通常落下時の重力を与える
 		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Fall"), true, true, FColor::Cyan, deltaTime);
 		pos.Z -= m_FallGravity + m_CurrentGravity;
 		m_CurrentGravity += m_AddFallGravity;
 	}
 
+	// ボードの前方向ベクトルに加速度を追加
+	m_FloatingPawnMovementComponent->AddInputVector(meshForwardVec * m_AirSpeedAttenuation);
+
+	// 浮かせた分をActorに適用
 	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, m_HoverLerpSpeed));
+
+	// 地面と接触していればジャンプ状態を戻す
+	if (m_HoverRay.hitResult.bBlockingHit && m_HoverRay.hitResult.Actor->ActorHasTag("Ground"))
+	{
+		m_IsJump = false;
+		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
+		m_CurrentGravity = 0.0f;
+	}
 
 	// 角度算出
 	m_HoverAngleFrontRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_HoverAngleFrontRay.RayStartOffset.X) + (meshRightVec * m_HoverAngleFrontRay.RayStartOffset.Y) + (meshUpVector * m_HoverAngleFrontRay.RayStartOffset.Z);
@@ -420,7 +412,6 @@ void ANewPlayer::BeginPlay()
 
 	m_BaseForwardVector = m_BoardMesh->GetForwardVector();
 
-	m_GroundRay.collisionQueueParam.AddIgnoredActor(this);
 	m_HoverRay.collisionQueueParam.AddIgnoredActor(this);
 	m_HoverAngleFrontRay.collisionQueueParam.AddIgnoredActor(this);
 	m_HoverAngleRearRay.collisionQueueParam.AddIgnoredActor(this);
@@ -482,7 +473,7 @@ float ANewPlayer::GetSideMoveValue()
 // 接地しているか
 bool ANewPlayer::GetIsLanding()
 {
-	return m_GroundRay.hitResult.IsValidBlockingHit();
+	return m_HoverRay.hitResult.IsValidBlockingHit();
 }
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
