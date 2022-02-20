@@ -480,6 +480,17 @@ ETrickType ANewPlayer::GetTrickType()
 			bool result = false;
 			switch (m_TrickBind[i].ValueComparisonType)
 			{
+				case EComp::Auto:
+					if (m_TrickBind[i].InputAxis > 0.0f)
+					{
+						result = compInputValue >= m_TrickBind[i].InputAxis;
+					}
+					else if (m_TrickBind[i].InputAxis < 0.0f)
+					{
+						result = compInputValue <= m_TrickBind[i].InputAxis;
+					}
+					break;
+
 				case EComp::OrMore:
 					result = compInputValue >= m_TrickBind[i].InputAxis;
 					break;

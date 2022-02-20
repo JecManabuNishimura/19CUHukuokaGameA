@@ -17,6 +17,7 @@ class UCameraComponent;
 UENUM(BlueprintType)
 enum class EComp : uint8
 {
+	Auto,
 	OrMore,
 	MoreThan,
 	LessThan,
