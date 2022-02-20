@@ -13,6 +13,35 @@
 class USerial;
 class UCameraComponent;
 
+// トリックの際に以上・以下を指定する用
+UENUM(BlueprintType)
+enum class EComp : uint8
+{
+	OrMore,
+	MoreThan,
+	LessThan,
+	OrLess,
+};
+
+// トリックの際の左スティックの軸の方向
+UENUM(BlueprintType)
+enum class EInputAxis : uint8
+{
+	X,
+	Y,
+};
+
+// トリックの種類
+UENUM(BlueprintType)
+enum class ETrickType : uint8
+{
+	Trick1,
+	Trick2,
+	Trick3,
+	Trick4,
+	None,
+};
+
 // レイ（ライントレース）に必要なものの構造体
 USTRUCT(BlueprintType)
 struct FLinetraceInfo
@@ -53,6 +82,35 @@ struct FLinetraceInfo
 	// 着地判定レイの表示時間
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		float DrawRayTime = 7.0f;
+
+	void SetStart(UPrimitiveComponent* CurrentComp)
+	{
+		this->rayStart = CurrentComp->GetComponentLocation() + (CurrentComp->GetForwardVector() * this->RayStartOffset.X) + (CurrentComp->GetRightVector() * this->RayStartOffset.Y) + (CurrentComp->GetUpVector() * this->RayStartOffset.Z);
+	}
+
+	void SetEnd(UPrimitiveComponent* CurrentComp)
+	{
+		this->rayEnd = this->rayStart - (CurrentComp->GetUpVector() * this->RayLength);
+	}
+};
+
+// トリックと入力の関連付け
+USTRUCT(BlueprintType)
+struct FTrickBind
+{
+	GENERATED_USTRUCT_BODY();
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		EInputAxis AxisDirection = EInputAxis::X;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Meta = (ClampMin = "-1", ClampMax = "1"))
+		float InputAxis = 0.0f;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		EComp ValueComparisonType = EComp::OrMore;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		ETrickType Trick = ETrickType::None;
 };
 
 UCLASS()
@@ -65,17 +123,23 @@ public:
 	ANewPlayer();
 
 private:
-	// 移動値入力処理（キーボード・パッド）
-	void InputKeyboard(float _axisValue);
+	// X軸の入力処理
+	void InputAxisX(const float _axisValue);
+
+	// Y軸の入力処理
+	void InputAxisY(const float _axisValue);
+
+	// ホバー処理
+	void Hover(const float _deltaTime);
+
+	// 2つのレイからプレイヤーの角度を変更
+	void SetRotationWithRay(const float _deltaTime);
 
 	// 移動処理
-	void UpdateMove(const float deltaTime);
+	void UpdateMove(const float _deltaTime);
 
-	// 加速リセット
-	void ResetAcceleration();
-
-	// 急カーブ（ドリフト）状態にする
-	void SetDrift(bool _status);
+	// トリックボタンの入力を受け付ける
+	void SetTrick(const bool _status);
 
 	// FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
 	void MyDrawDebugLine(const FLinetraceInfo& linetrace);
@@ -114,15 +178,16 @@ public:
 	UFUNCTION(BlueprintPure)
 		bool GetIsLanding();
 
+	// どのトリックを決めているか
+	UFUNCTION(BlueprintPure)
+		ETrickType GetTrickType();
+
 private:
 	// プレイヤーコントローラー
 	APlayerController* m_PlayerController;
 
-	// コントローラーが接続されているか
-	bool m_IsSensor;
-
-	// ドリフト状態かどうか
-	bool m_IsSharpcurve;
+	// トリックボタンが押されているか
+	bool m_IsTrick;
 
 	// 現在の重力
 	float m_CurrentGravity;
@@ -141,15 +206,9 @@ private:
 
 	// ボードが接地していない時の速度減衰量
 	float m_AirSpeedAttenuation;
-
-	// 移動量の入力を保存する
-	FVector m_UpdateValue;
-	
-	// 進行方向を制御
-	FVector m_BaseForwardVector;
-
-	// ジャンプコマンド保存用
-	TArray<FKey> m_InputKeys;
+		
+	// 入力の保存
+	FVector2D m_InputAxisValue;
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
@@ -160,16 +219,6 @@ public:
 	// プレイヤーのMovementComponent
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UFloatingPawnMovement* m_FloatingPawnMovementComponent;
-
-	/*
-	// ボードの当たり判定に使用する（カプセル）
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		UCapsuleComponent* m_BoardCapsuleCollision;
-
-	// ボードの当たり判定に使用する（ボックス）
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		UBoxComponent* m_BoardBoxCollision;
-	*/
 
 	// ボードのメッシュ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
@@ -192,19 +241,14 @@ public:
 		UBoxComponent* m_BoxCollision;
 
 	// スプリングアームのもともとの長さ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Camera"
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Camera"
 		, Meta = (DisplayName = "Spring Arm Length", ToolTip = "Original length of spring arm"))
 		float m_SpringArmLength;
 
 	// スプリングアームの長さの調整
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Camera"
-		, Meta = (DisplayName = "Spring Arm Length Adjust", ToolTip = "Adjusting the length of the spring arm"))
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Camera"
+		, Meta = (DisplayName = "Adjust Speed Spring Arm Length", ToolTip = "Amount to adjust the length of the spring arm when the speed is high"))
 		float m_ArmLengthAdjust;
-
-	// ジャンプ台のジャンプ力
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Settings|Jump"
-		, Meta = (DisplayName = "Jump Power", ToolTip = "Jumping power of the jumping platform"))
-		FVector m_JumpPower;
 
 	// 移動可能かどうか
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move"
@@ -232,26 +276,26 @@ public:
 		float m_FloatPower;
 
 	// ジャンプ中の重力の強さ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move"
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move|Gravity"
 		, Meta = (DisplayName = "Gravity During Jump", ToolTip = "Gravity during jump"))
 		float m_JumpGravity;
 
 	// 落下中の重力の強さ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move"
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move|Gravity"
 		, Meta = (DisplayName = "Gravity During Falling", ToolTip = "Gravity during falling"))
 		float m_FallGravity;
 
 	// ジャンプ中に加える重力の強さ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move"
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move|Gravity"
 		, Meta = (DisplayName = "Gravitational Acceleration During Jump", ToolTip = "Gravitational acceleration during jump"))
 		float m_AddJumpGravity;
 
 	// ジャンプ中に加える重力の強さ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move"
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move|Gravity"
 		, Meta = (DisplayName = "Gravitational Acceleration During Falling", ToolTip = "Gravitational acceleration during falling"))
 		float m_AddFallGravity;
 
-	// ホバーの速度
+	// ホバー量の変更する速度
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move"
 		, Meta = (DisplayName = "Hover Lerp Speed", ToolTip = "Amount of change in hover speed"))
 		float m_HoverLerpSpeed;
@@ -286,10 +330,10 @@ public:
 		, Meta = (DisplayName = "Hover Angle Rear Ray"))
 		FLinetraceInfo m_HoverAngleRearRay;
 
-	// 衝突回避レイ
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray"
-		, Meta = (DisplayName = "Avoid Ray"))
-		FLinetraceInfo m_AvoidRay;
+	// トリックのバインド
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Trick"
+		, Meta = (DisplayName = "Trick Binding"))
+		TArray<FTrickBind> m_TrickBind;
 
 	// デバッグワープポイント
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug"

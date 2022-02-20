@@ -11,18 +11,16 @@
 // Sets default values
 ANewPlayer::ANewPlayer()
 	: m_PlayerController(nullptr)
-	, m_IsSensor(false)
-	, m_IsSharpcurve(false)
+	, m_IsTrick(false)
 	, m_CurrentGravity(0.0f)
 	, m_CurrentForwardAcceleration(0.0f)
 	, m_SideValue(0.0f)
 	, m_CurrentSideAcceleration(0.0f)
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_AirSpeedAttenuation(1.0f)
+	, m_InputAxisValue(FVector2D::ZeroVector)
 	, m_MaxSpeed(2500.0f)
 	, m_MaxJumpSpeed(4000.0f)
-	, m_UpdateValue(FVector::ZeroVector)
-	, m_BaseForwardVector(FVector::ZeroVector)
 	, m_IsJump(false)
 	, m_FloatingPawnMovementComponent(nullptr)
 	, m_BoardMesh(nullptr)
@@ -32,7 +30,6 @@ ANewPlayer::ANewPlayer()
 	, m_BoxCollision(nullptr)
 	, m_SpringArmLength(400.0f)
 	, m_ArmLengthAdjust(100.0f)
-	, m_JumpPower(FVector(5000.0f, 5000.0f, 5000.0f))
 	, m_CanMove(true)
 	, m_AirSpeedAttenuationValue(1.0f / 2400.0f)
 	, m_FloatPower(15.0f)
@@ -136,59 +133,43 @@ ANewPlayer::ANewPlayer()
 	m_HoverAngleRearRay.RayLength = 300.0f;
 }
 
-// 移動値入力処理（キーボード・パッド）
-void ANewPlayer::InputKeyboard(float _axisValue)
+// X軸の入力処理
+void ANewPlayer::InputAxisX(const float _axisValue)
 {
-	// コントローラー未使用時のみ
-	if (!m_IsSensor)
+	m_InputAxisValue.X = _axisValue;
+
+	if (_axisValue != 0.0f && !m_IsJump)
 	{
-		if (_axisValue != 0.0f)
-		{
-			// ドリフトかどうか
-			if (m_IsSharpcurve)
-			{
-				// 加速する
-			}
-			else
-			{
-				// 加速する
-				m_CurrentSideAcceleration += m_SideAcceleration;
+		// 加速する
+		m_CurrentSideAcceleration += m_SideAcceleration;
 
-				// 最大速度にクランプする
-				m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, 0.0f, m_SideMaxSpeed);
-			}
-		}
-		else
-		{
-			m_CurrentSideAcceleration = 0.0f;
-		}
-
-		m_SideValue = FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
+		// 最大速度にクランプする
+		m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, 0.0f, m_SideMaxSpeed);
 	}
+	else
+	{
+		m_CurrentSideAcceleration = 0.0f;
+	}
+
+	m_SideValue = FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
 }
 
-// 移動処理
-void ANewPlayer::UpdateMove(const float deltaTime)
+// Y軸の入力処理
+void ANewPlayer::InputAxisY(const float _axisValue)
 {
-	// 左右移動の量に応じて回転
-	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
+	m_InputAxisValue.Y = _axisValue;
+}
 
-	// ボードの各ベクトルの取得
-	FVector meshForwardVec = m_BoardMesh->GetForwardVector();
-	FVector meshRightVec = m_BoardMesh->GetRightVector();
-	FVector meshUpVector = m_BoardMesh->GetUpVector();
+// ホバー処理
+void ANewPlayer::Hover(const float _deltaTime)
+{
+	// ホバーレイの位置設定
+	// 開始地点をボードの位置に
+	m_HoverRay.SetStart(m_BoardMesh);
+	// 終了地点を垂直に降ろした地点に
+	m_HoverRay.SetEnd(m_BoardMesh);
 
-	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshForwardVec = %s"), *meshForwardVec.ToString());
-	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshRightVec = %s"), *meshRightVec.ToString());
-	UE_LOG(LogTemp, VeryVerbose, TEXT("[NewPlayer] meshUpVector = %s"), *meshUpVector.ToString());
-
-	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Jump = %d"), m_IsJump);
-	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Land = %d"), GetIsLanding());
-
-	// ホバーレイの表示・レイトレース
-	m_HoverRay.rayStart = m_BoardMesh->GetComponentLocation();
-	m_HoverRay.rayEnd = m_HoverRay.rayStart - (meshUpVector * m_HoverRay.RayLength);
-
+	// レイの表示
 	MyDrawDebugLine(m_HoverRay);
 
 	// ホバーレイが当たっていれば上昇
@@ -201,7 +182,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		m_AirSpeedAttenuation = 1.0f;
 
 		// ジャンプ時の重力を与える
-		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Jump"), true, true, FColor::Cyan, deltaTime);
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Jump"), true, true, FColor::Cyan, _deltaTime);
 		pos.Z -= m_JumpGravity + m_CurrentGravity;
 		m_CurrentGravity += m_AddJumpGravity;
 	}
@@ -211,7 +192,7 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		m_AirSpeedAttenuation = 1.0f;
 
 		// 地面からm_FloatPower分浮かせる
-		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Hover"), true, true, FColor::Cyan, deltaTime);
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Hover"), true, true, FColor::Cyan, _deltaTime);
 		pos = m_HoverRay.hitResult.ImpactPoint;
 		pos.Z += m_FloatPower;
 		m_CurrentGravity = 0.0f;
@@ -219,20 +200,20 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	else
 	{
 		// 速度減衰
-		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] SpeedAttenuation"), true, true, FColor::Cyan, deltaTime);
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] SpeedAttenuation"), true, true, FColor::Cyan, _deltaTime);
 		m_AirSpeedAttenuation = FMath::Clamp(m_AirSpeedAttenuation - m_AirSpeedAttenuationValue, 0.0f, 1.0f);
 
 		// 通常落下時の重力を与える
-		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Fall"), true, true, FColor::Cyan, deltaTime);
+		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Fall"), true, true, FColor::Cyan, _deltaTime);
 		pos.Z -= m_FallGravity + m_CurrentGravity;
 		m_CurrentGravity += m_AddFallGravity;
 	}
 
 	// ボードの前方向ベクトルに加速度を追加
-	m_FloatingPawnMovementComponent->AddInputVector(meshForwardVec * m_AirSpeedAttenuation);
+	m_FloatingPawnMovementComponent->AddInputVector(m_BoardMesh->GetForwardVector() * m_AirSpeedAttenuation);
 
 	// 浮かせた分をActorに適用
-	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, deltaTime, m_HoverLerpSpeed));
+	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, _deltaTime, m_HoverLerpSpeed));
 
 	// 地面と接触していればジャンプ状態を戻す
 	if (m_HoverRay.hitResult.bBlockingHit && m_HoverRay.hitResult.Actor->ActorHasTag("Ground"))
@@ -241,29 +222,37 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
 		m_CurrentGravity = 0.0f;
 	}
+}
 
-	// 角度算出
-	m_HoverAngleFrontRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_HoverAngleFrontRay.RayStartOffset.X) + (meshRightVec * m_HoverAngleFrontRay.RayStartOffset.Y) + (meshUpVector * m_HoverAngleFrontRay.RayStartOffset.Z);
-	m_HoverAngleFrontRay.rayEnd = m_HoverAngleFrontRay.rayStart - (meshUpVector * m_HoverAngleFrontRay.RayLength);
-
-	m_HoverAngleRearRay.rayStart = m_BoardMesh->GetComponentLocation() + (meshForwardVec * m_HoverAngleRearRay.RayStartOffset.X) + (meshRightVec * m_HoverAngleRearRay.RayStartOffset.Y) + (meshUpVector * m_HoverAngleRearRay.RayStartOffset.Z);
-	m_HoverAngleRearRay.rayEnd = m_HoverAngleRearRay.rayStart - (meshUpVector * m_HoverAngleRearRay.RayLength);
-
+// 2つのレイからプレイヤーの角度を変更
+void ANewPlayer::SetRotationWithRay(const float _deltaTime)
+{
+	// 前のレイの設定・描画
+	m_HoverAngleFrontRay.SetStart(m_BoardMesh);
+	m_HoverAngleFrontRay.SetEnd(m_BoardMesh);
 	MyDrawDebugLine(m_HoverAngleFrontRay);
+
+	// 後ろのレイの設定・描画
+	m_HoverAngleRearRay.SetStart(m_BoardMesh);
+	m_HoverAngleRearRay.SetEnd(m_BoardMesh);
 	MyDrawDebugLine(m_HoverAngleRearRay);
 
+	// レイのあたった法線から角度を算出
 	FVector frontVector = FVector::ZeroVector;
 	FVector rearVector = FVector::ZeroVector;
 
+	// レイがあたったかどうか
 	bool isFrontHit = MyLineTrace(m_HoverAngleFrontRay);
 	bool isRearHit = MyLineTrace(m_HoverAngleRearRay);
 
+	// どっちもあたっている場合のみ法線情報を記憶する
 	if (isFrontHit && isRearHit)
 	{
 		frontVector = m_HoverAngleFrontRay.hitResult.ImpactNormal;
 		rearVector = m_HoverAngleRearRay.hitResult.ImpactNormal;
 	}
 
+	// VectorからRotatorを算出する
 	FRotator frontRot = UKismetMathLibrary::MakeRotFromX(frontVector);
 	FRotator rearRot = UKismetMathLibrary::MakeRotFromX(rearVector);
 
@@ -288,29 +277,31 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	LockAngle(frontRot.Pitch, 90.0f, 0.0f, 1.0f);
 	LockAngle(rearRot.Pitch, 90.0f, 0.0f, 1.0f);
 
+	// 角度の平均を算出
 	FRotator averageRotator = FRotator((frontRot.Pitch + rearRot.Pitch) / 2.0f, (frontRot.Yaw + rearRot.Yaw) / 2.0f, (frontRot.Roll + rearRot.Roll) / 2.0f);
+
+	// Yaw（Z軸）はプレイヤーが操作して変更するので変更しない
 	averageRotator.Yaw = GetActorRotation().Yaw;
+
+	// Roll（X軸）は傾きすぎると倒れそうになるので0で固定
 	averageRotator.Roll = 0.0f;
 
-	FRotator newRot = FMath::RInterpTo(GetActorRotation(), averageRotator, deltaTime, m_AngleLerpSpeed);
-
-	/*
-	newRot.Yaw = 0.0f;
-	newRot.Roll = -newRot.Roll / 1.5f;
-	AddActorLocalRotation(newRot);
-	*/
-
+	// 角度をLerpでなめらかに変更
+	FRotator newRot = FMath::RInterpTo(GetActorRotation(), averageRotator, _deltaTime, m_AngleLerpSpeed);
 	SetActorRotation(newRot);
+}
 
-	// 衝突回避
-	//m_AvoidRay.rayStart = 
+// 移動処理
+void ANewPlayer::UpdateMove(const float _deltaTime)
+{
+	// ホバー
+	Hover(_deltaTime);
 
-	UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] newRot %s"), *newRot.ToString());
+	// 左右移動の量に応じて回転
+	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
 
-	if (m_IsJump)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[NewPlayer] Jumping!"))
-	}
+	// 2つのレイからプレイヤーの角度を変更
+	SetRotationWithRay(_deltaTime);
 
 	// スプリングアームの距離調整
 	float addLength = m_FloatingPawnMovementComponent->Velocity.X / m_ArmLengthAdjust;
@@ -323,16 +314,10 @@ void ANewPlayer::UpdateMove(const float deltaTime)
 	m_PlayerCamera->SetRelativeRotation(cameraRot);
 }
 
-// 加速リセット
-void ANewPlayer::ResetAcceleration()
+// トリックボタンの入力を受け付ける
+void ANewPlayer::SetTrick(const bool _status)
 {
-	m_CurrentForwardAcceleration = 0.0f;
-}
-
-// 急カーブ（ドリフト）状態にする
-void ANewPlayer::SetDrift(bool _status)
-{
-	m_IsSharpcurve = _status;
+	m_IsTrick = _status;
 }
 
 // FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
@@ -371,7 +356,7 @@ void ANewPlayer::DebugWarp()
 {
 	int keyNum = -1;
 
-	const FKey debugKeys[] = { EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero,};
+	const FKey debugKeys[] = { EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero, };
 
 	if (!m_PlayerController)
 	{
@@ -410,8 +395,6 @@ void ANewPlayer::BeginPlay()
 	// プレイヤーのコントローラーの取得
 	m_PlayerController = UGameplayStatics::GetPlayerController(this, 0);
 
-	m_BaseForwardVector = m_BoardMesh->GetForwardVector();
-
 	m_HoverRay.collisionQueueParam.AddIgnoredActor(this);
 	m_HoverAngleFrontRay.collisionQueueParam.AddIgnoredActor(this);
 	m_HoverAngleRearRay.collisionQueueParam.AddIgnoredActor(this);
@@ -427,7 +410,7 @@ void ANewPlayer::Tick(float DeltaTime)
 	{
 		UpdateMove(DeltaTime);
 	}
-	
+
 	DebugWarp();
 }
 
@@ -443,19 +426,17 @@ void ANewPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	// 移動
-	InputComponent->BindAxis("MoveRight", this, &ANewPlayer::InputKeyboard);
+	InputComponent->BindAxis("Right", this, &ANewPlayer::InputAxisX);
+	InputComponent->BindAxis("Forward", this, &ANewPlayer::InputAxisY);
 
 	// 急カーブ（ドリフト）状態を設定
 	DECLARE_DELEGATE_OneParam(FCustomInputDelegate, const bool);
 
-	// ドリフトON
-	InputComponent->BindAction<FCustomInputDelegate>("Drift", IE_Pressed, this, &ANewPlayer::SetDrift, true);
+	// トリックON
+	InputComponent->BindAction<FCustomInputDelegate>("Trick", IE_Pressed, this, &ANewPlayer::SetTrick, true);
 
-	// ドリフトOFF
-	InputComponent->BindAction<FCustomInputDelegate>("Drift", IE_Released, this, &ANewPlayer::SetDrift, false);
-
-	// デバッグ用--加速度リセット
-	InputComponent->BindAction("Debug_Stop", IE_Pressed, this, &ANewPlayer::ResetAcceleration);
+	// トリックOFF
+	InputComponent->BindAction<FCustomInputDelegate>("Trick", IE_Released, this, &ANewPlayer::SetTrick, false);
 }
 
 // 左右移動の取得用
@@ -468,6 +449,66 @@ float ANewPlayer::GetSideMoveValue()
 bool ANewPlayer::GetIsLanding()
 {
 	return m_HoverRay.hitResult.IsValidBlockingHit();
+}
+
+// どのトリックを決めているか
+ETrickType ANewPlayer::GetTrickType()
+{
+	ETrickType currentTrick = ETrickType::None;
+
+	if (m_IsJump && m_IsTrick)
+	{
+		for (int i = 0; i < m_TrickBind.Num(); ++i)
+		{
+			// トリック一覧の軸をチェック
+			float compInputValue = 0.0f;
+			switch (m_TrickBind[i].AxisDirection)
+			{
+				case EInputAxis::X:
+					compInputValue = m_InputAxisValue.X;
+					break;
+
+				case EInputAxis::Y:
+					compInputValue = m_InputAxisValue.Y;
+					break;
+
+				default:
+					break;
+			}
+
+			// 比較
+			bool result = false;
+			switch (m_TrickBind[i].ValueComparisonType)
+			{
+				case EComp::OrMore:
+					result = compInputValue >= m_TrickBind[i].InputAxis;
+					break;
+
+				case EComp::MoreThan:
+					result = compInputValue > m_TrickBind[i].InputAxis;
+					break;
+
+				case EComp::LessThan:
+					result = compInputValue < m_TrickBind[i].InputAxis;
+					break;
+
+				case EComp::OrLess:
+					result = compInputValue <= m_TrickBind[i].InputAxis;
+					break;
+
+				default:
+					break;
+			}
+
+			if (result)
+			{
+				currentTrick = m_TrickBind[i].Trick;
+				break;
+			}
+		}
+	}
+
+	return currentTrick;
 }
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
