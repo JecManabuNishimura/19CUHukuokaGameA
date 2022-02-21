@@ -19,6 +19,7 @@ ANewPlayer::ANewPlayer()
 	, m_CurrentSharpcurvePower(0.0f)
 	, m_AirSpeedAttenuation(1.0f)
 	, m_InputAxisValue(FVector2D::ZeroVector)
+	, m_CurrentTrick(ETrickType::None)
 	, m_MaxSpeed(2500.0f)
 	, m_MaxJumpSpeed(4000.0f)
 	, m_IsJump(false)
@@ -57,7 +58,7 @@ ANewPlayer::ANewPlayer()
 		m_BoardMesh->SetSimulatePhysics(false);
 		m_BoardMesh->SetEnableGravity(false);
 		m_BoardMesh->SetUseCCD(true);
-		m_BoardMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
+		m_BoardMesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoardMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
@@ -66,7 +67,7 @@ ANewPlayer::ANewPlayer()
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	if (m_PlayerMesh)
 	{
-		m_PlayerMesh->SetupAttachment(RootComponent);
+		m_PlayerMesh->SetupAttachment(m_BoardMesh);
 		m_PlayerMesh->SetEnableGravity(false);
 		m_PlayerMesh->SetCollisionProfileName("NoCollision");
 		m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
@@ -77,7 +78,7 @@ ANewPlayer::ANewPlayer()
 	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	if (m_SpringArm)
 	{
-		m_SpringArm->SetupAttachment(m_PlayerMesh);
+		m_SpringArm->SetupAttachment(RootComponent);
 		m_SpringArm->TargetArmLength = m_SpringArmLength;
 		m_SpringArm->bDoCollisionTest = false;
 		m_SpringArm->bEnableCameraLag = true;
@@ -86,7 +87,7 @@ ANewPlayer::ANewPlayer()
 		m_SpringArm->CameraRotationLagSpeed = 10.0f;
 		m_SpringArm->bInheritPitch = false;
 		m_SpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_SpringArm->SetRelativeRotation(FRotator(320.0f, 0.0f, 0.0f));
+		m_SpringArm->SetRelativeRotation(FRotator(-40.0f, 0.0f, 0.0f));
 	}
 
 	// カメラの設定
@@ -102,7 +103,7 @@ ANewPlayer::ANewPlayer()
 	m_BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
 	if (m_BoxCollision)
 	{
-		m_BoxCollision->SetupAttachment(RootComponent);
+		m_BoxCollision->SetupAttachment(m_BoardMesh);
 		m_BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ANewPlayer::OnOverlapBegin);
 		m_BoxCollision->bMultiBodyOverlap = true;
 		m_BoxCollision->SetBoxExtent(FVector(150.0f, 50.0f, 100.0f));
@@ -213,12 +214,13 @@ void ANewPlayer::Hover(const float _deltaTime)
 	m_FloatingPawnMovementComponent->AddInputVector(m_BoardMesh->GetForwardVector() * m_AirSpeedAttenuation);
 
 	// 浮かせた分をActorに適用
-	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, _deltaTime, m_HoverLerpSpeed));
+	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, _deltaTime, m_HoverLerpSpeed), true);
 
 	// 地面と接触していればジャンプ状態を戻す
 	if (m_HoverRay.hitResult.bBlockingHit && m_HoverRay.hitResult.Actor->ActorHasTag("Ground"))
 	{
 		m_IsJump = false;
+		m_CurrentTrick = ETrickType::None;
 		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
 		m_CurrentGravity = 0.0f;
 	}
@@ -281,14 +283,14 @@ void ANewPlayer::SetRotationWithRay(const float _deltaTime)
 	FRotator averageRotator = FRotator((frontRot.Pitch + rearRot.Pitch) / 2.0f, (frontRot.Yaw + rearRot.Yaw) / 2.0f, (frontRot.Roll + rearRot.Roll) / 2.0f);
 
 	// Yaw（Z軸）はプレイヤーが操作して変更するので変更しない
-	averageRotator.Yaw = GetActorRotation().Yaw;
+	averageRotator.Yaw = m_BoardMesh->GetComponentRotation().Yaw;
 
 	// Roll（X軸）は傾きすぎると倒れそうになるので0で固定
 	averageRotator.Roll = 0.0f;
 
 	// 角度をLerpでなめらかに変更
-	FRotator newRot = FMath::RInterpTo(GetActorRotation(), averageRotator, _deltaTime, m_AngleLerpSpeed);
-	SetActorRotation(newRot);
+	FRotator newRot = FMath::RInterpTo(m_BoardMesh->GetComponentRotation(), averageRotator, _deltaTime, m_AngleLerpSpeed);
+	m_BoardMesh->SetWorldRotation(newRot);
 }
 
 // 移動処理
@@ -298,7 +300,10 @@ void ANewPlayer::UpdateMove(const float _deltaTime)
 	Hover(_deltaTime);
 
 	// 左右移動の量に応じて回転
-	AddActorLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
+	m_BoardMesh->AddLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
+
+	// 移動によってカメラは回転させない（逆回転を掛ける）
+	m_SpringArm->AddRelativeRotation(FRotator(0.0f, -m_SideValue, 0.0f));
 
 	// 2つのレイからプレイヤーの角度を変更
 	SetRotationWithRay(_deltaTime);
@@ -318,6 +323,7 @@ void ANewPlayer::UpdateMove(const float _deltaTime)
 void ANewPlayer::SetTrick(const bool _status)
 {
 	m_IsTrick = _status;
+
 }
 
 // FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
@@ -454,9 +460,7 @@ bool ANewPlayer::GetIsLanding()
 // どのトリックを決めているか
 ETrickType ANewPlayer::GetTrickType()
 {
-	ETrickType currentTrick = ETrickType::None;
-
-	if (m_IsJump && m_IsTrick)
+	if (m_IsJump && m_IsTrick && m_CurrentTrick == ETrickType::None)
 	{
 		for (int i = 0; i < m_TrickBind.Num(); ++i)
 		{
@@ -513,13 +517,13 @@ ETrickType ANewPlayer::GetTrickType()
 
 			if (result)
 			{
-				currentTrick = m_TrickBind[i].Trick;
+				m_CurrentTrick = m_TrickBind[i].Trick;
 				break;
 			}
 		}
 	}
 
-	return currentTrick;
+	return m_CurrentTrick;
 }
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

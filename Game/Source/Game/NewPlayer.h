@@ -211,12 +211,16 @@ private:
 	// 入力の保存
 	FVector2D m_InputAxisValue;
 
+	// 現在のトリック
+	ETrickType m_CurrentTrick;
+
 protected:
 	UPROPERTY(BlueprintReadOnly)
 		// ジャンプ状態
 		bool m_IsJump;
 
 public:
+
 	// プレイヤーのMovementComponent
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UFloatingPawnMovement* m_FloatingPawnMovementComponent;
