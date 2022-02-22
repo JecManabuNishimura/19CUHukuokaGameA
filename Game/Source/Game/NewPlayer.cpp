@@ -42,6 +42,8 @@ ANewPlayer::ANewPlayer()
 	, m_AngleLerpSpeed(1.2f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
+	, m_score(0)
+	, m_ScoreFlag(false)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -555,4 +557,14 @@ void ANewPlayer::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor
 	{
 		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Hit Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
 	}
+}
+
+int ANewPlayer::GetScore()
+{
+	int tmp = m_ScoreFlag ? m_score : 0;
+
+	// スコアフラグリセット
+	if (tmp != 0)m_ScoreFlag = false;
+
+	return  tmp;
 }

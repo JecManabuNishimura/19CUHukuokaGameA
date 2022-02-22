@@ -214,6 +214,11 @@ private:
 	// 現在のトリック
 	ETrickType m_CurrentTrick;
 
+	// スコア
+	int m_score;
+
+	bool m_ScoreFlag;
+
 protected:
 	UPROPERTY(BlueprintReadOnly)
 		// ジャンプ状態
@@ -355,4 +360,7 @@ public:
 
 	UFUNCTION()
 		void OnCompHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+	UFUNCTION(BlueprintPure, Category = "Score")
+		int GetScore();
 };
