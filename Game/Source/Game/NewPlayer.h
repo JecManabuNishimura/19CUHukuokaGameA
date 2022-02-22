@@ -36,9 +36,9 @@ enum class EInputAxis : uint8
 UENUM(BlueprintType)
 enum class ETrickType : uint8
 {
-	Trick1,
-	Trick2,
-	Trick3,
+	FrontSideSpin,
+	BackSideSpin,
+	Cork,
 	Trick4,
 	None,
 };
@@ -108,10 +108,16 @@ struct FTrickBind
 		float InputAxis = 0.0f;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		EComp ValueComparisonType = EComp::OrMore;
+		EComp ValueComparisonType = EComp::Auto;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		ETrickType Trick = ETrickType::None;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		float TrickSpinMaxValue = 5.0f;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		float TrickSpinAcceleration = 0.15f;
 };
 
 UCLASS()
@@ -139,6 +145,9 @@ private:
 	// 移動処理
 	void UpdateMove(const float _deltaTime);
 
+	// トリック
+	void Trick();
+
 	// トリックボタンの入力を受け付ける
 	void SetTrick(const bool _status);
 
@@ -151,7 +160,7 @@ private:
 	// FCollisionQueryParamsをのignoreActorを自分自身以外解除
 	void ClearIgnoreActor(FCollisionQueryParams& collisionQueryParams);
 
-	// 軸の角度を固定する
+	// 渡した角度の値（originRot）が指定の角度（lockAxis）にほぼ等しい場合、指定した値（targetAxis）にする
 	void LockAngle(float& originRot, const float lockAxis, const float targetAxis, const float tolerance);
 
 	// デバッグワープ
@@ -179,9 +188,26 @@ public:
 	UFUNCTION(BlueprintPure)
 		bool GetIsLanding();
 
+	// 接地しているか
+	UFUNCTION(BlueprintPure)
+		bool GetIsJump()
+	{
+		return m_IsJump;
+	}
+
+	// トリックボタンを押しているか
+	UFUNCTION(BlueprintPure)
+		bool GetIsTrick()
+	{
+		return m_IsTrick;
+	}
+
 	// どのトリックを決めているか
 	UFUNCTION(BlueprintPure)
-		ETrickType GetTrickType();
+		ETrickType GetTrickType()
+	{
+		return m_CurrentTrick;
+	}
 
 private:
 	// プレイヤーコントローラー
@@ -189,6 +215,9 @@ private:
 
 	// トリックボタンが押されているか
 	bool m_IsTrick;
+
+	// トリック番号
+	int m_TrickNum;
 
 	// 現在の重力
 	float m_CurrentGravity;
@@ -202,12 +231,12 @@ private:
 	// 左右の現在の加速量
 	float m_CurrentSideAcceleration;
 
-	// 急カーブの強さ
-	float m_CurrentSharpcurvePower;
+	// 前進の現在の加速量
+	float m_CurrentTrickSpinValue;
 
 	// ボードが接地していない時の速度減衰量
 	float m_AirSpeedAttenuation;
-		
+
 	// 入力の保存
 	FVector2D m_InputAxisValue;
 
@@ -225,6 +254,9 @@ protected:
 		bool m_IsJump;
 
 public:
+	// ルート
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		UBoxComponent* m_RootCollisionBox;
 
 	// プレイヤーのMovementComponent
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
@@ -325,6 +357,11 @@ public:
 		, Meta = (DisplayName = "Side Acceleration", ToolTip = "Side acceleration", ClampMin = "0", ClampMax = "1"))
 		float m_SideAcceleration;
 
+	// 左右移動の角度の限界
+	UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = "Move|Side"
+		, Meta = (DisplayName = "Side Max Angle", ToolTip = "Side Max Angle", ClampMin = "0", ClampMax = "180"))
+		float m_MaxAngle;
+
 	// ホバー移動のレイ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray"
 		, Meta = (DisplayName = "Hover Ray"))
@@ -349,7 +386,7 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug"
 		, Meta = (DisplayName = "Warp Points", ToolTip = "[Debug] Actor that warps when you press a number key"))
 		TArray<AActor*> m_WarpPoints;
- 
+
 
 public:
 	UFUNCTION()
