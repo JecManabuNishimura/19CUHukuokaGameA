@@ -24,6 +24,7 @@ ANewPlayer::ANewPlayer()
 	, m_MaxJumpSpeed(4000.0f)
 	, m_IsJump(false)
 	, m_FloatingPawnMovementComponent(nullptr)
+	, m_RootCollisionBox(nullptr)
 	, m_BoardMesh(nullptr)
 	, m_PlayerMesh(nullptr)
 	, m_SpringArm(nullptr)
@@ -50,12 +51,25 @@ ANewPlayer::ANewPlayer()
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
+	// ルートになるコリジョンの設定
+	m_RootCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("RootCollision"));
+	if (m_RootCollisionBox)
+	{
+		RootComponent = m_RootCollisionBox;
+		m_RootCollisionBox->SetSimulatePhysics(false);
+		m_RootCollisionBox->SetEnableGravity(false);
+		m_RootCollisionBox->SetUseCCD(true);
+		m_RootCollisionBox->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+		m_RootCollisionBox->SetBoxExtent(FVector(130.0f, 20.0f, 5.0f));
+		m_RootCollisionBox->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_RootCollisionBox->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
+	}
+
 	// ボードのメッシュの設定
 	m_BoardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoardMesh"));
 	if (m_BoardMesh)
 	{
-		RootComponent = m_BoardMesh;
-		m_BoardMesh->bHasPerInstanceHitProxies = true;
+		m_BoardMesh->SetupAttachment(RootComponent);
 		m_BoardMesh->OnComponentHit.AddDynamic(this, &ANewPlayer::OnCompHit);
 		m_BoardMesh->SetSimulatePhysics(false);
 		m_BoardMesh->SetEnableGravity(false);
@@ -80,7 +94,7 @@ ANewPlayer::ANewPlayer()
 	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	if (m_SpringArm)
 	{
-		m_SpringArm->SetupAttachment(RootComponent);
+		m_SpringArm->SetupAttachment(m_BoardMesh);
 		m_SpringArm->TargetArmLength = m_SpringArmLength;
 		m_SpringArm->bDoCollisionTest = false;
 		m_SpringArm->bEnableCameraLag = true;
@@ -350,7 +364,7 @@ void ANewPlayer::ClearIgnoreActor(FCollisionQueryParams& collisionQueryParams)
 	collisionQueryParams.AddIgnoredActor(this);
 }
 
-// 軸の角度を固定する
+// 渡した角度の値（originRot）が指定の角度（lockAxis）にほぼ等しい場合、指定した値（targetAxis）にする
 void ANewPlayer::LockAngle(float& originRot, const float lockAxis, const float targetAxis, const float tolerance)
 {
 	if (FMath::IsNearlyEqual(originRot, lockAxis, tolerance))

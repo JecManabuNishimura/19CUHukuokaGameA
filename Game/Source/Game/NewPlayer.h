@@ -36,9 +36,9 @@ enum class EInputAxis : uint8
 UENUM(BlueprintType)
 enum class ETrickType : uint8
 {
-	Trick1,
-	Trick2,
-	Trick3,
+	FrontSideSpin,
+	BackSideSpin,
+	Cork,
 	Trick4,
 	None,
 };
@@ -151,7 +151,7 @@ private:
 	// FCollisionQueryParamsをのignoreActorを自分自身以外解除
 	void ClearIgnoreActor(FCollisionQueryParams& collisionQueryParams);
 
-	// 軸の角度を固定する
+	// 渡した角度の値（originRot）が指定の角度（lockAxis）にほぼ等しい場合、指定した値（targetAxis）にする
 	void LockAngle(float& originRot, const float lockAxis, const float targetAxis, const float tolerance);
 
 	// デバッグワープ
@@ -207,7 +207,7 @@ private:
 
 	// ボードが接地していない時の速度減衰量
 	float m_AirSpeedAttenuation;
-		
+
 	// 入力の保存
 	FVector2D m_InputAxisValue;
 
@@ -225,6 +225,9 @@ protected:
 		bool m_IsJump;
 
 public:
+	// ルート
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		UBoxComponent* m_RootCollisionBox;
 
 	// プレイヤーのMovementComponent
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
@@ -349,7 +352,7 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug"
 		, Meta = (DisplayName = "Warp Points", ToolTip = "[Debug] Actor that warps when you press a number key"))
 		TArray<AActor*> m_WarpPoints;
- 
+
 
 public:
 	UFUNCTION()
