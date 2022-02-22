@@ -12,11 +12,12 @@
 ANewPlayer::ANewPlayer()
 	: m_PlayerController(nullptr)
 	, m_IsTrick(false)
+	, m_TrickNum(0)
 	, m_CurrentGravity(0.0f)
 	, m_CurrentForwardAcceleration(0.0f)
 	, m_SideValue(0.0f)
 	, m_CurrentSideAcceleration(0.0f)
-	, m_CurrentSharpcurvePower(0.0f)
+	, m_CurrentTrickSpinValue(0.0f)
 	, m_AirSpeedAttenuation(1.0f)
 	, m_InputAxisValue(FVector2D::ZeroVector)
 	, m_CurrentTrick(ETrickType::None)
@@ -35,14 +36,15 @@ ANewPlayer::ANewPlayer()
 	, m_CanMove(true)
 	, m_AirSpeedAttenuationValue(1.0f / 2400.0f)
 	, m_FloatPower(15.0f)
-	, m_JumpGravity(25.0f)
+	, m_JumpGravity(35.0f)
 	, m_FallGravity(30.0f)
-	, m_AddJumpGravity(10.0f)
+	, m_AddJumpGravity(25.0f)
 	, m_AddFallGravity(20.0f)
 	, m_HoverLerpSpeed(1.0f)
 	, m_AngleLerpSpeed(1.2f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
+	, m_MaxAngle(75.0f)
 	, m_score(0)
 	, m_ScoreFlag(false)
 {
@@ -83,7 +85,7 @@ ANewPlayer::ANewPlayer()
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	if (m_PlayerMesh)
 	{
-		m_PlayerMesh->SetupAttachment(m_BoardMesh);
+		m_PlayerMesh->SetupAttachment(m_BoardMesh, TEXT("NormanSocket"));
 		m_PlayerMesh->SetEnableGravity(false);
 		m_PlayerMesh->SetCollisionProfileName("NoCollision");
 		m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
@@ -94,7 +96,7 @@ ANewPlayer::ANewPlayer()
 	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	if (m_SpringArm)
 	{
-		m_SpringArm->SetupAttachment(m_BoardMesh);
+		m_SpringArm->SetupAttachment(RootComponent);
 		m_SpringArm->TargetArmLength = m_SpringArmLength;
 		m_SpringArm->bDoCollisionTest = false;
 		m_SpringArm->bEnableCameraLag = true;
@@ -155,20 +157,37 @@ void ANewPlayer::InputAxisX(const float _axisValue)
 {
 	m_InputAxisValue.X = _axisValue;
 
-	if (_axisValue != 0.0f && !m_IsJump)
+	// 角度が左右移動の限界内であるか、トリック状態
+	if (((m_BoardMesh->GetRelativeRotation().Yaw <= m_MaxAngle) && (m_BoardMesh->GetRelativeRotation().Yaw >= -m_MaxAngle)) || (m_IsJump && m_IsTrick))
 	{
-		// 加速する
-		m_CurrentSideAcceleration += m_SideAcceleration;
+		// 入力あり & ジャンプ状態ではない
+		if (_axisValue != 0.0f && !m_IsJump)
+		{
+			// 加速する
+			m_CurrentSideAcceleration += m_SideAcceleration;
 
-		// 最大速度にクランプする
-		m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, 0.0f, m_SideMaxSpeed);
+			// 最大速度にクランプする
+			m_CurrentSideAcceleration = FMath::Clamp(m_CurrentSideAcceleration, 0.0f, m_SideMaxSpeed);
+
+			m_SideValue = FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
+		}
+		// 入力なし
+		else
+		{
+			m_CurrentSideAcceleration = 0.0f;
+			m_SideValue = 0.0f;
+		}
 	}
 	else
 	{
 		m_CurrentSideAcceleration = 0.0f;
-	}
+		m_SideValue = 0.0f;
 
-	m_SideValue = FMath::Clamp(_axisValue, -1.0f, 1.0f) * m_CurrentSideAcceleration;
+		FRotator newRot = m_BoardMesh->GetRelativeRotation();
+		newRot.Yaw = (m_BoardMesh->GetRelativeRotation().Yaw > m_MaxAngle) ? m_MaxAngle : -m_MaxAngle;
+
+		m_BoardMesh->SetRelativeRotation(newRot);
+	}
 }
 
 // Y軸の入力処理
@@ -192,6 +211,15 @@ void ANewPlayer::Hover(const float _deltaTime)
 	// ホバーレイが当たっていれば上昇
 	FVector pos = GetActorLocation();
 	MyLineTrace(m_HoverRay);
+
+	// 前に進む方向
+	static FVector forwardVector;
+
+	// ジャンプ中でなければボードの前方向を保存
+	if (!m_IsJump)
+	{
+		forwardVector = m_BoardMesh->GetForwardVector();
+	}
 
 	if (m_IsJump)
 	{
@@ -227,7 +255,7 @@ void ANewPlayer::Hover(const float _deltaTime)
 	}
 
 	// ボードの前方向ベクトルに加速度を追加
-	m_FloatingPawnMovementComponent->AddInputVector(m_BoardMesh->GetForwardVector() * m_AirSpeedAttenuation);
+	m_FloatingPawnMovementComponent->AddInputVector(forwardVector * m_AirSpeedAttenuation);
 
 	// 浮かせた分をActorに適用
 	SetActorLocation(FMath::VInterpTo(GetActorLocation(), pos, _deltaTime, m_HoverLerpSpeed), true);
@@ -318,9 +346,6 @@ void ANewPlayer::UpdateMove(const float _deltaTime)
 	// 左右移動の量に応じて回転
 	m_BoardMesh->AddLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
 
-	// 移動によってカメラは回転させない（逆回転を掛ける）
-	m_SpringArm->AddRelativeRotation(FRotator(0.0f, -m_SideValue, 0.0f));
-
 	// 2つのレイからプレイヤーの角度を変更
 	SetRotationWithRay(_deltaTime);
 
@@ -335,11 +360,126 @@ void ANewPlayer::UpdateMove(const float _deltaTime)
 	m_PlayerCamera->SetRelativeRotation(cameraRot);
 }
 
+// トリック
+void ANewPlayer::Trick()
+{
+	// トリック可能状態（ジャンプかつトリックボタンを押している）
+	if (m_IsJump && m_IsTrick)
+	{
+		// まだトリックを決めていない状態
+		if (m_CurrentTrick == ETrickType::None)
+		{
+			m_CurrentTrickSpinValue = 0.0f;
+
+			for (int i = 0; i < m_TrickBind.Num(); ++i)
+			{
+				// トリック一覧の軸をチェック
+				float compInputValue = 0.0f;
+				switch (m_TrickBind[i].AxisDirection)
+				{
+				case EInputAxis::X:
+					compInputValue = m_InputAxisValue.X;
+					break;
+
+				case EInputAxis::Y:
+					compInputValue = m_InputAxisValue.Y;
+					break;
+
+				default:
+					break;
+				}
+
+				// 比較
+				bool result = false;
+				switch (m_TrickBind[i].ValueComparisonType)
+				{
+				case EComp::Auto:
+					if (m_TrickBind[i].InputAxis > 0.0f)
+					{
+						result = compInputValue >= m_TrickBind[i].InputAxis;
+					}
+					else if (m_TrickBind[i].InputAxis < 0.0f)
+					{
+						result = compInputValue <= m_TrickBind[i].InputAxis;
+					}
+					break;
+
+				case EComp::OrMore:
+					result = compInputValue >= m_TrickBind[i].InputAxis;
+					break;
+
+				case EComp::MoreThan:
+					result = compInputValue > m_TrickBind[i].InputAxis;
+					break;
+
+				case EComp::LessThan:
+					result = compInputValue < m_TrickBind[i].InputAxis;
+					break;
+
+				case EComp::OrLess:
+					result = compInputValue <= m_TrickBind[i].InputAxis;
+					break;
+
+				default:
+					break;
+				}
+
+				if (result)
+				{
+					m_TrickNum = i;
+					m_CurrentTrick = m_TrickBind[m_TrickNum].Trick;
+					break;
+				}
+			}
+		}
+		else
+		{
+			// トリック一覧の軸をチェック
+			float inputValue = 0.0f;
+			switch (m_TrickBind[m_TrickNum].AxisDirection)
+			{
+			case EInputAxis::X:
+				inputValue = m_InputAxisValue.X;
+				break;
+
+			case EInputAxis::Y:
+				inputValue = m_InputAxisValue.Y;
+				break;
+
+			default:
+				break;
+			}
+
+			// トリックを決める
+			switch (m_CurrentTrick)
+			{
+				// フロントサイドスピン（横方向（Z軸）で時計回り）
+			case ETrickType::FrontSideSpin:
+				// スピンを加速し、0～最高速度にクランプ
+				m_CurrentTrickSpinValue = FMath::Clamp(m_CurrentTrickSpinValue + m_TrickBind[m_TrickNum].TrickSpinAcceleration, 0.0f, m_TrickBind[m_TrickNum].TrickSpinMaxValue);
+
+				// スピン
+				m_BoardMesh->AddRelativeRotation(FRotator(0.0f, -m_CurrentTrickSpinValue * inputValue, 0.0f));
+				break;
+
+				// バックサイドスピン（横方向（Z軸）で反時計回り）
+			case ETrickType::BackSideSpin:
+
+				// スピンを加速し、0～最高速度にクランプ
+				m_CurrentTrickSpinValue = FMath::Clamp(m_CurrentTrickSpinValue + m_TrickBind[m_TrickNum].TrickSpinAcceleration, 0.0f, m_TrickBind[m_TrickNum].TrickSpinMaxValue);
+
+				// スピン
+				m_BoardMesh->AddRelativeRotation(FRotator(0.0f, m_CurrentTrickSpinValue * inputValue, 0.0f));
+				break;
+			}
+		}
+	}
+}
+
 // トリックボタンの入力を受け付ける
 void ANewPlayer::SetTrick(const bool _status)
 {
 	m_IsTrick = _status;
-
 }
 
 // FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
@@ -431,6 +571,7 @@ void ANewPlayer::Tick(float DeltaTime)
 	if (m_CanMove)
 	{
 		UpdateMove(DeltaTime);
+		Trick();
 	}
 
 	DebugWarp();
@@ -471,75 +612,6 @@ float ANewPlayer::GetSideMoveValue()
 bool ANewPlayer::GetIsLanding()
 {
 	return m_HoverRay.hitResult.IsValidBlockingHit();
-}
-
-// どのトリックを決めているか
-ETrickType ANewPlayer::GetTrickType()
-{
-	if (m_IsJump && m_IsTrick && m_CurrentTrick == ETrickType::None)
-	{
-		for (int i = 0; i < m_TrickBind.Num(); ++i)
-		{
-			// トリック一覧の軸をチェック
-			float compInputValue = 0.0f;
-			switch (m_TrickBind[i].AxisDirection)
-			{
-				case EInputAxis::X:
-					compInputValue = m_InputAxisValue.X;
-					break;
-
-				case EInputAxis::Y:
-					compInputValue = m_InputAxisValue.Y;
-					break;
-
-				default:
-					break;
-			}
-
-			// 比較
-			bool result = false;
-			switch (m_TrickBind[i].ValueComparisonType)
-			{
-				case EComp::Auto:
-					if (m_TrickBind[i].InputAxis > 0.0f)
-					{
-						result = compInputValue >= m_TrickBind[i].InputAxis;
-					}
-					else if (m_TrickBind[i].InputAxis < 0.0f)
-					{
-						result = compInputValue <= m_TrickBind[i].InputAxis;
-					}
-					break;
-
-				case EComp::OrMore:
-					result = compInputValue >= m_TrickBind[i].InputAxis;
-					break;
-
-				case EComp::MoreThan:
-					result = compInputValue > m_TrickBind[i].InputAxis;
-					break;
-
-				case EComp::LessThan:
-					result = compInputValue < m_TrickBind[i].InputAxis;
-					break;
-
-				case EComp::OrLess:
-					result = compInputValue <= m_TrickBind[i].InputAxis;
-					break;
-
-				default:
-					break;
-			}
-
-			if (result)
-			{
-				m_CurrentTrick = m_TrickBind[i].Trick;
-				break;
-			}
-		}
-	}
-
-	return m_CurrentTrick;
 }
 
 void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
