@@ -36,8 +36,7 @@ enum class EInputAxis : uint8
 UENUM(BlueprintType)
 enum class ETrickType : uint8
 {
-	FrontSideSpin,
-	BackSideSpin,
+	SideSpin,
 	Cork,
 	Trick4,
 	None,

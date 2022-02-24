@@ -453,23 +453,16 @@ void ANewPlayer::Trick()
 			// トリックを決める
 			switch (m_CurrentTrick)
 			{
-				// フロントサイドスピン（横方向（Z軸）で時計回り）
-			case ETrickType::FrontSideSpin:
-				// スピンを加速し、0～最高速度にクランプ
-				m_CurrentTrickSpinValue = FMath::Clamp(m_CurrentTrickSpinValue + m_TrickBind[m_TrickNum].TrickSpinAcceleration, 0.0f, m_TrickBind[m_TrickNum].TrickSpinMaxValue);
-
-				// スピン
-				m_BoardMesh->AddRelativeRotation(FRotator(0.0f, -m_CurrentTrickSpinValue * inputValue, 0.0f));
-				break;
-
-				// バックサイドスピン（横方向（Z軸）で反時計回り）
-			case ETrickType::BackSideSpin:
-
+				// サイドスピン
+			case ETrickType::SideSpin:
 				// スピンを加速し、0～最高速度にクランプ
 				m_CurrentTrickSpinValue = FMath::Clamp(m_CurrentTrickSpinValue + m_TrickBind[m_TrickNum].TrickSpinAcceleration, 0.0f, m_TrickBind[m_TrickNum].TrickSpinMaxValue);
 
 				// スピン
 				m_BoardMesh->AddRelativeRotation(FRotator(0.0f, m_CurrentTrickSpinValue * inputValue, 0.0f));
+				break;
+
+			default:
 				break;
 			}
 		}
