@@ -225,6 +225,13 @@ public:
 		return m_CurrentTrick;
 	}
 
+	// 移動可能状態を更新
+	UFUNCTION(BlueprintCallable)
+		void SetMove(bool _status)
+	{
+		m_CanMove = _status;
+	}
+
 private:
 	// プレイヤーコントローラー
 	APlayerController* m_PlayerController;
