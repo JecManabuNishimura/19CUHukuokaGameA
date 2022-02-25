@@ -1,10 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "NewPlayer.h"
-#include "DrawDebugHelpers.h"
+#include <float.h>
 #include "Camera/CameraComponent.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "..\..\UE4Duino\Source\UE4Duino\Public\Serial.h"
 
@@ -12,6 +11,7 @@
 ANewPlayer::ANewPlayer()
 	: m_PlayerController(nullptr)
 	, m_IsTrick(false)
+	, m_IsOnceTrick(true)
 	, m_TrickNum(0)
 	, m_CurrentGravity(0.0f)
 	, m_CurrentForwardAcceleration(0.0f)
@@ -45,8 +45,8 @@ ANewPlayer::ANewPlayer()
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
 	, m_MaxAngle(75.0f)
-	, m_score(0)
-	, m_ScoreFlag(false)
+	, m_ForwardScore(300)
+	, m_Score(0)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -85,7 +85,7 @@ ANewPlayer::ANewPlayer()
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	if (m_PlayerMesh)
 	{
-		m_PlayerMesh->SetupAttachment(m_BoardMesh, TEXT("NormanSocket"));
+		m_PlayerMesh->SetupAttachment(m_BoardMesh);
 		m_PlayerMesh->SetEnableGravity(false);
 		m_PlayerMesh->SetCollisionProfileName("NoCollision");
 		m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
@@ -150,6 +150,8 @@ ANewPlayer::ANewPlayer()
 	m_HoverAngleRearRay.RayStartOffset = FVector(-200.0f, 0.0f, 100.0f);
 	m_HoverAngleRearRay.DrawRayColor = FColor::Blue;
 	m_HoverAngleRearRay.RayLength = 300.0f;
+
+	m_TrickDistanceRay.RayLength = 1000.0f;
 }
 
 // X軸の入力処理
@@ -206,11 +208,11 @@ void ANewPlayer::Hover(const float _deltaTime)
 	m_HoverRay.SetEnd(m_BoardMesh);
 
 	// レイの表示
-	MyDrawDebugLine(m_HoverRay);
+	m_HoverRay.DrawLine(GetWorld());
 
 	// ホバーレイが当たっていれば上昇
 	FVector pos = GetActorLocation();
-	MyLineTrace(m_HoverRay);
+	m_HoverRay.LineTrace(GetWorld());
 
 	// 前に進む方向
 	static FVector forwardVector;
@@ -263,8 +265,8 @@ void ANewPlayer::Hover(const float _deltaTime)
 	// 地面と接触していればジャンプ状態を戻す
 	if (m_HoverRay.hitResult.bBlockingHit && m_HoverRay.hitResult.Actor->ActorHasTag("Ground"))
 	{
+		TrickEnd();
 		m_IsJump = false;
-		m_CurrentTrick = ETrickType::None;
 		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
 		m_CurrentGravity = 0.0f;
 	}
@@ -276,20 +278,20 @@ void ANewPlayer::SetRotationWithRay(const float _deltaTime)
 	// 前のレイの設定・描画
 	m_HoverAngleFrontRay.SetStart(m_BoardMesh);
 	m_HoverAngleFrontRay.SetEnd(m_BoardMesh);
-	MyDrawDebugLine(m_HoverAngleFrontRay);
+	m_HoverAngleFrontRay.DrawLine(GetWorld());
 
 	// 後ろのレイの設定・描画
 	m_HoverAngleRearRay.SetStart(m_BoardMesh);
 	m_HoverAngleRearRay.SetEnd(m_BoardMesh);
-	MyDrawDebugLine(m_HoverAngleRearRay);
+	m_HoverAngleRearRay.DrawLine(GetWorld());
 
 	// レイのあたった法線から角度を算出
 	FVector frontVector = FVector::ZeroVector;
 	FVector rearVector = FVector::ZeroVector;
 
 	// レイがあたったかどうか
-	bool isFrontHit = MyLineTrace(m_HoverAngleFrontRay);
-	bool isRearHit = MyLineTrace(m_HoverAngleRearRay);
+	bool isFrontHit = m_HoverAngleFrontRay.LineTrace(GetWorld());
+	bool isRearHit = m_HoverAngleRearRay.LineTrace(GetWorld());
 
 	// どっちもあたっている場合のみ法線情報を記憶する
 	if (isFrontHit && isRearHit)
@@ -363,7 +365,7 @@ void ANewPlayer::UpdateMove(const float _deltaTime)
 // トリック
 void ANewPlayer::Trick()
 {
-	// トリック可能状態（ジャンプかつトリックボタンを押している）
+	// トリック可能状態（ジャンプかつトリックボタンを押していて、トリックを押すのが最初）
 	if (m_IsJump && m_IsTrick)
 	{
 		// まだトリックを決めていない状態
@@ -426,6 +428,7 @@ void ANewPlayer::Trick()
 
 				if (result)
 				{
+					m_IsOnceTrick = false;
 					m_TrickNum = i;
 					m_CurrentTrick = m_TrickBind[m_TrickNum].Trick;
 					break;
@@ -469,25 +472,50 @@ void ANewPlayer::Trick()
 	}
 }
 
-// トリックボタンの入力を受け付ける
-void ANewPlayer::SetTrick(const bool _status)
+// トリック終了
+void ANewPlayer::TrickEnd()
 {
-	m_IsTrick = _status;
-}
-
-// FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
-void ANewPlayer::MyDrawDebugLine(const FLinetraceInfo& linetrace)
-{
-	if (linetrace.IsDrawRay)
+	if (!m_IsOnceTrick)
 	{
-		DrawDebugLine(GetWorld(), linetrace.rayStart, linetrace.rayEnd, linetrace.DrawRayColor, false, linetrace.DrawRayTime);
+		m_IsTrick = false;
+		m_IsOnceTrick = true;
+		m_CurrentTrick = ETrickType::None;
+
+		m_TrickDistanceRay.SetStart(m_BoardMesh);
+		m_TrickDistanceRay.SetEnd(m_BoardMesh);
+		m_TrickDistanceRay.DrawLine(GetWorld());
+		
+		// スコア加算
+		// どれだけ真っ直ぐか
+		float div = m_BoardMesh->GetRelativeRotation().Yaw;
+
+		// 0除算を防ぐ
+		if (div == 0.0f)
+		{
+			div = FLT_MIN;
+		}
+
+		int forwardScore = FMath::RoundToInt( m_ForwardScore* (1.0f - (FMath::Abs(div) / 180.0f)));
+
+		FString forwardStr = TEXT("[NewPlayer] Look Forward Score : ");
+		forwardStr.Append(FString::FromInt(forwardScore));
+
+		UKismetSystemLibrary::PrintString(GetWorld(), forwardStr, true, true, FColor::Cyan, 5.0f);
+
+		m_Score += forwardScore;
 	}
 }
 
-// FLinetraceInfoを元にレイを飛ばす
-bool ANewPlayer::MyLineTrace(FLinetraceInfo& linetrace)
+// トリックボタンの入力を受け付ける
+void ANewPlayer::SetTrick(const bool _status)
 {
-	return GetWorld()->LineTraceSingleByObjectType(linetrace.hitResult, linetrace.rayStart, linetrace.rayEnd, linetrace.objectQueueParam, linetrace.collisionQueueParam);
+	bool currentTrick = m_IsTrick;
+	m_IsTrick = (_status && m_IsOnceTrick);
+
+	if (currentTrick)
+	{
+		TrickEnd();
+	}
 }
 
 // FCollisionQueryParamsをのignoreActorを自分自身以外解除
@@ -553,6 +581,7 @@ void ANewPlayer::BeginPlay()
 	m_HoverRay.collisionQueueParam.AddIgnoredActor(this);
 	m_HoverAngleFrontRay.collisionQueueParam.AddIgnoredActor(this);
 	m_HoverAngleRearRay.collisionQueueParam.AddIgnoredActor(this);
+	m_TrickDistanceRay.collisionQueueParam.AddIgnoredActor(this);
 }
 
 // Called every frame
@@ -612,6 +641,7 @@ void ANewPlayer::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor
 	if (OtherComp->ComponentHasTag("Jump") && m_IsJump == false)
 	{
 		m_IsJump = true;
+
 		m_CurrentGravity = 0.0f;
 
 		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxJumpSpeed;
@@ -640,10 +670,5 @@ void ANewPlayer::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor
 
 int ANewPlayer::GetScore()
 {
-	int tmp = m_ScoreFlag ? m_score : 0;
-
-	// スコアフラグリセット
-	if (tmp != 0)m_ScoreFlag = false;
-
-	return  tmp;
+	return m_Score;
 }

@@ -8,6 +8,8 @@
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "DrawDebugHelpers.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "NewPlayer.generated.h"
 
 class USerial;
@@ -92,6 +94,21 @@ struct FLinetraceInfo
 	{
 		this->rayEnd = this->rayStart - (CurrentComp->GetUpVector() * this->RayLength);
 	}
+
+	// FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
+	void DrawLine(const UWorld* World)
+	{
+		if (this->IsDrawRay)
+		{
+			DrawDebugLine(World, this->rayStart, this->rayEnd, this->DrawRayColor, false, this->DrawRayTime);
+		}
+	}
+
+	// FLinetraceInfoを元にレイを飛ばす
+	bool LineTrace(const UWorld* World)
+	{
+		return World->LineTraceSingleByObjectType(this->hitResult, this->rayStart, this->rayEnd, this->objectQueueParam, this->collisionQueueParam);
+	}
 };
 
 // トリックと入力の関連付け
@@ -101,6 +118,18 @@ struct FTrickBind
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		ETrickType Trick = ETrickType::None;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		int TrickBaseScore = 200;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		float TrickSpinMaxValue = 5.0f;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		float TrickSpinAcceleration = 0.15f;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		EInputAxis AxisDirection = EInputAxis::X;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Meta = (ClampMin = "-1", ClampMax = "1"))
@@ -108,15 +137,6 @@ struct FTrickBind
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		EComp ValueComparisonType = EComp::Auto;
-
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		ETrickType Trick = ETrickType::None;
-
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		float TrickSpinMaxValue = 5.0f;
-
-	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		float TrickSpinAcceleration = 0.15f;
 };
 
 UCLASS()
@@ -147,14 +167,11 @@ private:
 	// トリック
 	void Trick();
 
+	// トリック終了
+	void TrickEnd();
+
 	// トリックボタンの入力を受け付ける
 	void SetTrick(const bool _status);
-
-	// FLinetraceInfoとFDebugRayInfoを元にデバッグ用のラインを表示
-	void MyDrawDebugLine(const FLinetraceInfo& linetrace);
-
-	// FLinetraceInfoを元にレイを飛ばす
-	bool MyLineTrace(FLinetraceInfo& linetrace);
 
 	// FCollisionQueryParamsをのignoreActorを自分自身以外解除
 	void ClearIgnoreActor(FCollisionQueryParams& collisionQueryParams);
@@ -215,6 +232,9 @@ private:
 	// トリックボタンが押されているか
 	bool m_IsTrick;
 
+	// ジャンプしてからトリックボタンを押すのが最初か
+	bool m_IsOnceTrick;
+
 	// トリック番号
 	int m_TrickNum;
 
@@ -243,9 +263,7 @@ private:
 	ETrickType m_CurrentTrick;
 
 	// スコア
-	int m_score;
-
-	bool m_ScoreFlag;
+	int m_Score;
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
@@ -361,6 +379,11 @@ public:
 		, Meta = (DisplayName = "Side Max Angle", ToolTip = "Side Max Angle", ClampMin = "0", ClampMax = "180"))
 		float m_MaxAngle;
 
+	// 着地時に前を向いていた方向によって得られる得点（最大）
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Score"
+		, Meta = (DisplayName = "Look Forward Score", ToolTip = "Score obtained by facing forward at the time of landing"))
+		int m_ForwardScore;
+
 	// ホバー移動のレイ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray"
 		, Meta = (DisplayName = "Hover Ray"))
@@ -375,6 +398,11 @@ public:
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray"
 		, Meta = (DisplayName = "Hover Angle Rear Ray"))
 		FLinetraceInfo m_HoverAngleRearRay;
+
+	// トリック時の地面との距離を測るレイ
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Ray"
+		, Meta = (DisplayName = "Trick Distance Ray"))
+		FLinetraceInfo m_TrickDistanceRay;
 
 	// トリックのバインド
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Trick"
