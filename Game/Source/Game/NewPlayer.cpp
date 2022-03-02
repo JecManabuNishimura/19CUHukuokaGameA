@@ -61,6 +61,7 @@ ANewPlayer::ANewPlayer()
 	if (m_RootCollisionBox)
 	{
 		RootComponent = m_RootCollisionBox;
+		m_RootCollisionBox->OnComponentHit.AddDynamic(this, &ANewPlayer::OnCompHit);
 		m_RootCollisionBox->SetSimulatePhysics(false);
 		m_RootCollisionBox->SetEnableGravity(false);
 		m_RootCollisionBox->SetUseCCD(true);
@@ -79,7 +80,6 @@ ANewPlayer::ANewPlayer()
 		m_BoardMesh->SetSimulatePhysics(false);
 		m_BoardMesh->SetEnableGravity(false);
 		m_BoardMesh->SetUseCCD(true);
-		m_BoardMesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_BoardMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
@@ -249,10 +249,6 @@ void ANewPlayer::Hover(const float _deltaTime)
 	}
 	else
 	{
-		// ‘¬“xŒ¸Š
-		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] SpeedAttenuation"), true, true, FColor::Cyan, _deltaTime);
-		m_AirSpeedAttenuation = FMath::Clamp(m_AirSpeedAttenuation - m_AirSpeedAttenuationValue, 0.0f, 1.0f);
-
 		// ’Êí—Ž‰ºŽž‚Ìd—Í‚ð—^‚¦‚é
 		UKismetSystemLibrary::PrintString(GetWorld(), TEXT("[NewPlayer] Gravity Stat : Fall"), true, true, FColor::Cyan, _deltaTime);
 		pos.Z -= m_FallGravity + m_CurrentGravity;
@@ -667,17 +663,12 @@ void ANewPlayer::OnComponentOverlapEnd(UPrimitiveComponent* OverlappedComponent,
 
 void ANewPlayer::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] (%s) Hit Actor Name = %s"), *HitComponent->GetName(), *OtherActor->GetName());
-
-	for (int i = 0; i < OtherActor->Tags.Num(); ++i)
+	if (OtherActor != this && OtherActor->Tags.Num() == 0)
 	{
-		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Hit Actor Tag[%d] = %s"), i, *OtherActor->Tags[i].ToString());
-	}
+		FString hitStr = TEXT("[NewPlayer] Hit! Actor = ");
+		hitStr.Append(OtherActor->GetName());
 
-
-	for (int i = 0; i < OtherComp->ComponentTags.Num(); ++i)
-	{
-		UE_LOG(LogTemp, Verbose, TEXT("[NewPlayer] Hit Component Tag[%d] = %s"), i, *OtherComp->ComponentTags[i].ToString());
+		UKismetSystemLibrary::PrintString(GetWorld(), hitStr, true, true, FColor::Cyan, 5.0f);
 	}
 }
 
