@@ -446,4 +446,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Score")
 		int GetScore();
+
+	UFUNCTION(BlueprintPure)
+		// ’…’n”»’è—p
+		bool GetLanding();
 };

@@ -32,7 +32,7 @@ ANewPlayer::ANewPlayer()
 	, m_SpringArm(nullptr)
 	, m_PlayerCamera(nullptr)
 	, m_BoxCollision(nullptr)
-	, m_SpringArmLength(400.0f)
+	, m_SpringArmLength(600.0f)
 	, m_ArmLengthAdjust(100.0f)
 	, m_CanMove(true)
 	, m_AirSpeedAttenuationValue(1.0f / 4800.0f)
@@ -117,7 +117,7 @@ ANewPlayer::ANewPlayer()
 	{
 		m_PlayerCamera->SetupAttachment(m_SpringArm, USpringArmComponent::SocketName);
 		m_PlayerCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_PlayerCamera->SetRelativeRotation(FRotator(25.0f, 0.0f, 0.0f));
+		m_PlayerCamera->SetRelativeRotation(FRotator(15.0f, 0.0f, 0.0f));
 	}
 
 	// トリガー用コリジョンの設定
@@ -675,4 +675,19 @@ void ANewPlayer::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor
 int ANewPlayer::GetScore()
 {
 	return m_Score;
+}
+
+bool ANewPlayer::GetLanding()
+{
+	static float prevGravity = 0.0f;
+
+	if (m_CurrentGravity - prevGravity < -100)
+	{
+		prevGravity = m_CurrentGravity;
+		return true;
+	}
+
+	prevGravity = m_CurrentGravity;
+
+	return false;
 }
