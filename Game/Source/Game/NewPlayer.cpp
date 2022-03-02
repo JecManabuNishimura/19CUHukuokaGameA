@@ -13,6 +13,7 @@ ANewPlayer::ANewPlayer()
 	, m_IsTrick(false)
 	, m_IsOnceTrick(true)
 	, m_TrickNum(0)
+	, m_CurrentMaxSpeed(0.0f)
 	, m_CurrentGravity(0.0f)
 	, m_CurrentForwardAcceleration(0.0f)
 	, m_SideValue(0.0f)
@@ -21,7 +22,7 @@ ANewPlayer::ANewPlayer()
 	, m_AirSpeedAttenuation(1.0f)
 	, m_InputAxisValue(FVector2D::ZeroVector)
 	, m_CurrentTrick(ETrickType::None)
-	, m_MaxSpeed(2500.0f)
+	, m_MaxSpeedBase(4500.0f)
 	, m_MaxJumpSpeed(4000.0f)
 	, m_IsJump(false)
 	, m_FloatingPawnMovementComponent(nullptr)
@@ -34,14 +35,14 @@ ANewPlayer::ANewPlayer()
 	, m_SpringArmLength(400.0f)
 	, m_ArmLengthAdjust(100.0f)
 	, m_CanMove(true)
-	, m_AirSpeedAttenuationValue(1.0f / 2400.0f)
+	, m_AirSpeedAttenuationValue(1.0f / 4800.0f)
 	, m_FloatPower(15.0f)
 	, m_JumpGravity(35.0f)
 	, m_FallGravity(30.0f)
 	, m_AddJumpGravity(25.0f)
 	, m_AddFallGravity(20.0f)
 	, m_HoverLerpSpeed(1.0f)
-	, m_AngleLerpSpeed(1.2f)
+	, m_AngleLerpSpeed(1.0f)
 	, m_SideMaxSpeed(2.5f)
 	, m_SideAcceleration(0.15f)
 	, m_MaxAngle(75.0f)
@@ -52,6 +53,8 @@ ANewPlayer::ANewPlayer()
 	PrimaryActorTick.bCanEverTick = true;
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
+
+	m_CurrentMaxSpeed = m_MaxSpeedBase;
 
 	// ルートになるコリジョンの設定
 	m_RootCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("RootCollision"));
@@ -133,7 +136,7 @@ ANewPlayer::ANewPlayer()
 	m_FloatingPawnMovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovementComponent"));
 	if (m_FloatingPawnMovementComponent)
 	{
-		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
+		m_FloatingPawnMovementComponent->MaxSpeed = m_CurrentMaxSpeed;
 		m_FloatingPawnMovementComponent->Acceleration = 1000.0f;
 		m_FloatingPawnMovementComponent->Deceleration = 8000.0f;
 		m_FloatingPawnMovementComponent->TurningBoost = 75.0f;
@@ -151,7 +154,7 @@ ANewPlayer::ANewPlayer()
 	m_HoverAngleRearRay.DrawRayColor = FColor::Blue;
 	m_HoverAngleRearRay.RayLength = 300.0f;
 
-	m_TrickDistanceRay.RayLength = 1000.0f;
+	m_TrickDistanceRay.RayLength = 1500.0f;
 }
 
 // X軸の入力処理
@@ -267,7 +270,7 @@ void ANewPlayer::Hover(const float _deltaTime)
 	{
 		TrickEnd();
 		m_IsJump = false;
-		m_FloatingPawnMovementComponent->MaxSpeed = m_MaxSpeed;
+		m_FloatingPawnMovementComponent->MaxSpeed = m_CurrentMaxSpeed;
 		m_CurrentGravity = 0.0f;
 	}
 }
@@ -325,14 +328,10 @@ void ANewPlayer::SetRotationWithRay(const float _deltaTime)
 	LockAngle(frontRot.Pitch, 90.0f, 0.0f, 1.0f);
 	LockAngle(rearRot.Pitch, 90.0f, 0.0f, 1.0f);
 
-	// 角度の平均を算出
-	FRotator averageRotator = FRotator((frontRot.Pitch + rearRot.Pitch) / 2.0f, (frontRot.Yaw + rearRot.Yaw) / 2.0f, (frontRot.Roll + rearRot.Roll) / 2.0f);
-
+	// Pitch（Y軸）の角度の平均を算出
 	// Yaw（Z軸）はプレイヤーが操作して変更するので変更しない
-	averageRotator.Yaw = m_BoardMesh->GetComponentRotation().Yaw;
-
 	// Roll（X軸）は傾きすぎると倒れそうになるので0で固定
-	averageRotator.Roll = 0.0f;
+	FRotator averageRotator = FRotator((frontRot.Pitch + rearRot.Pitch) / 2.0f, m_BoardMesh->GetComponentRotation().Yaw, 0.0f);
 
 	// 角度をLerpでなめらかに変更
 	FRotator newRot = FMath::RInterpTo(m_BoardMesh->GetComponentRotation(), averageRotator, _deltaTime, m_AngleLerpSpeed);
@@ -357,7 +356,7 @@ void ANewPlayer::UpdateMove(const float _deltaTime)
 
 	// カメラの角度調整
 	FRotator cameraRot = m_PlayerCamera->GetRelativeRotation();
-	float addPitch = FMath::Lerp(0.0f, 20.0f, m_FloatingPawnMovementComponent->Velocity.Size() / m_FloatingPawnMovementComponent->MaxSpeed);
+	float addPitch = FMath::Lerp(0.0f, 20.0f, m_FloatingPawnMovementComponent->Velocity.Size() / m_CurrentMaxSpeed);
 	cameraRot.Pitch = 15.0f + addPitch;
 	m_PlayerCamera->SetRelativeRotation(cameraRot);
 }
@@ -477,13 +476,13 @@ void ANewPlayer::TrickEnd()
 {
 	if (!m_IsOnceTrick)
 	{
-		m_IsTrick = false;
 		m_IsOnceTrick = true;
 		m_CurrentTrick = ETrickType::None;
 
 		m_TrickDistanceRay.SetStart(m_BoardMesh);
 		m_TrickDistanceRay.SetEnd(m_BoardMesh);
 		m_TrickDistanceRay.DrawLine(GetWorld());
+		m_TrickDistanceRay.LineTrace(GetWorld());
 		
 		// スコア加算
 		// どれだけ真っ直ぐか
@@ -495,7 +494,15 @@ void ANewPlayer::TrickEnd()
 			div = FLT_MIN;
 		}
 
-		int forwardScore = FMath::RoundToInt( m_ForwardScore* (1.0f - (FMath::Abs(div) / 180.0f)));
+		// レイにあたっている（成功判定）
+		if (m_TrickDistanceRay.hitResult.bBlockingHit)
+		{
+			// 最高速度を上昇
+			m_CurrentMaxSpeed += m_TrickBind[m_TrickNum].TrickAddSpeed;
+			UKismetSystemLibrary::PrintString(GetWorld(), TEXT("Add Speed"), true, true, FColor::Cyan, 5.0f);
+		}
+
+		int forwardScore = FMath::RoundToInt( m_ForwardScore * (1.0f - (FMath::Abs(div) / 180.0f)));
 
 		FString forwardStr = TEXT("[NewPlayer] Look Forward Score : ");
 		forwardStr.Append(FString::FromInt(forwardScore));
@@ -503,6 +510,8 @@ void ANewPlayer::TrickEnd()
 		UKismetSystemLibrary::PrintString(GetWorld(), forwardStr, true, true, FColor::Cyan, 5.0f);
 
 		m_Score += forwardScore;
+
+		// どれだけ直前でボタンを離したか
 	}
 }
 
@@ -595,6 +604,10 @@ void ANewPlayer::Tick(float DeltaTime)
 		UpdateMove(DeltaTime);
 		Trick();
 	}
+
+	FString spdStr = TEXT("Max Speed = ");
+	spdStr.Append(FString::SanitizeFloat(m_FloatingPawnMovementComponent->MaxSpeed));
+	UKismetSystemLibrary::PrintString(GetWorld(), spdStr, true, true, FColor::Cyan, DeltaTime);
 
 	DebugWarp();
 }

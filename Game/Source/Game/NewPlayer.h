@@ -124,10 +124,19 @@ struct FTrickBind
 		int TrickBaseScore = 200;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		int TrickReleaseScore = 100;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		float TrickReleaseDistance = 50.0f;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		float TrickSpinMaxValue = 5.0f;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		float TrickSpinAcceleration = 0.15f;
+
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		float TrickAddSpeed = 200.0f;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		EInputAxis AxisDirection = EInputAxis::X;
@@ -245,6 +254,9 @@ private:
 	// トリック番号
 	int m_TrickNum;
 
+	// 現在の最高速度
+	float m_CurrentMaxSpeed;
+
 	// 現在の重力
 	float m_CurrentGravity;
 
@@ -329,7 +341,7 @@ public:
 	// 最高速度
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move"
 		, Meta = (DisplayName = "Max Speed", ToolTip = "Max speed"))
-		float m_MaxSpeed;
+		float m_MaxSpeedBase;
 
 	// ジャンプ中の最高速度
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move"
