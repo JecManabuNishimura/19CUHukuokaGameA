@@ -130,10 +130,10 @@ struct FTrickBind
 		float TrickReleaseDistance = 50.0f;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		float TrickSpinMaxValue = 5.0f;
+		float TrickSpinMaxValue = 15.0f;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-		float TrickSpinAcceleration = 0.15f;
+		float TrickSpinAcceleration = 0.6f;
 
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		float TrickAddSpeed = 200.0f;
@@ -425,8 +425,8 @@ public:
 
 	// トリックのバインド
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Trick"
-		, Meta = (DisplayName = "Trick Binding"))
-		TArray<FTrickBind> m_TrickBind;
+		, Meta = (DisplayName = "Trick List"))
+		TArray<FTrickBind> m_TrickList;
 
 	// デバッグワープポイント
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Debug"

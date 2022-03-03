@@ -368,11 +368,11 @@ void ANewPlayer::Trick()
 		{
 			m_CurrentTrickSpinValue = 0.0f;
 
-			for (int i = 0; i < m_TrickBind.Num(); ++i)
+			for (int i = 0; i < m_TrickList.Num(); ++i)
 			{
 				// トリック一覧の軸をチェック
 				float compInputValue = 0.0f;
-				switch (m_TrickBind[i].AxisDirection)
+				switch (m_TrickList[i].AxisDirection)
 				{
 				case EInputAxis::X:
 					compInputValue = m_InputAxisValue.X;
@@ -388,33 +388,33 @@ void ANewPlayer::Trick()
 
 				// 比較
 				bool result = false;
-				switch (m_TrickBind[i].ValueComparisonType)
+				switch (m_TrickList[i].ValueComparisonType)
 				{
 				case EComp::Auto:
-					if (m_TrickBind[i].InputAxis > 0.0f)
+					if (m_TrickList[i].InputAxis > 0.0f)
 					{
-						result = compInputValue >= m_TrickBind[i].InputAxis;
+						result = compInputValue >= m_TrickList[i].InputAxis;
 					}
-					else if (m_TrickBind[i].InputAxis < 0.0f)
+					else if (m_TrickList[i].InputAxis < 0.0f)
 					{
-						result = compInputValue <= m_TrickBind[i].InputAxis;
+						result = compInputValue <= m_TrickList[i].InputAxis;
 					}
 					break;
 
 				case EComp::OrMore:
-					result = compInputValue >= m_TrickBind[i].InputAxis;
+					result = compInputValue >= m_TrickList[i].InputAxis;
 					break;
 
 				case EComp::MoreThan:
-					result = compInputValue > m_TrickBind[i].InputAxis;
+					result = compInputValue > m_TrickList[i].InputAxis;
 					break;
 
 				case EComp::LessThan:
-					result = compInputValue < m_TrickBind[i].InputAxis;
+					result = compInputValue < m_TrickList[i].InputAxis;
 					break;
 
 				case EComp::OrLess:
-					result = compInputValue <= m_TrickBind[i].InputAxis;
+					result = compInputValue <= m_TrickList[i].InputAxis;
 					break;
 
 				default:
@@ -425,7 +425,7 @@ void ANewPlayer::Trick()
 				{
 					m_IsOnceTrick = false;
 					m_TrickNum = i;
-					m_CurrentTrick = m_TrickBind[m_TrickNum].Trick;
+					m_CurrentTrick = m_TrickList[m_TrickNum].Trick;
 					break;
 				}
 			}
@@ -434,7 +434,7 @@ void ANewPlayer::Trick()
 		{
 			// トリック一覧の軸をチェック
 			float inputValue = 0.0f;
-			switch (m_TrickBind[m_TrickNum].AxisDirection)
+			switch (m_TrickList[m_TrickNum].AxisDirection)
 			{
 			case EInputAxis::X:
 				inputValue = m_InputAxisValue.X;
@@ -454,7 +454,7 @@ void ANewPlayer::Trick()
 				// サイドスピン
 			case ETrickType::SideSpin:
 				// スピンを加速し、0～最高速度にクランプ
-				m_CurrentTrickSpinValue = FMath::Clamp(m_CurrentTrickSpinValue + m_TrickBind[m_TrickNum].TrickSpinAcceleration, 0.0f, m_TrickBind[m_TrickNum].TrickSpinMaxValue);
+				m_CurrentTrickSpinValue = FMath::Clamp(m_CurrentTrickSpinValue + m_TrickList[m_TrickNum].TrickSpinAcceleration, 0.0f, m_TrickList[m_TrickNum].TrickSpinMaxValue);
 
 				// スピン
 				m_BoardMesh->AddRelativeRotation(FRotator(0.0f, m_CurrentTrickSpinValue * inputValue, 0.0f));
@@ -494,7 +494,7 @@ void ANewPlayer::TrickEnd()
 		if (m_TrickDistanceRay.hitResult.bBlockingHit)
 		{
 			// 最高速度を上昇
-			m_CurrentMaxSpeed += m_TrickBind[m_TrickNum].TrickAddSpeed;
+			m_CurrentMaxSpeed += m_TrickList[m_TrickNum].TrickAddSpeed;
 			UKismetSystemLibrary::PrintString(GetWorld(), TEXT("Add Speed"), true, true, FColor::Cyan, 5.0f);
 		}
 
