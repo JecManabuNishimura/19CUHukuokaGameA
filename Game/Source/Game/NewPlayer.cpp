@@ -216,9 +216,9 @@ void ANewPlayer::Hover(const float _deltaTime)
 {
 	// ホバーレイの位置設定
 	// 開始地点をボードの位置に
-	m_HoverRay.SetStart(m_BoardMesh);
+	m_HoverRay.SetStart(m_MoveArrow);
 	// 終了地点を垂直に降ろした地点に
-	m_HoverRay.SetEnd(m_BoardMesh);
+	m_HoverRay.SetEnd(m_MoveArrow);
 
 	// レイの表示
 	m_HoverRay.DrawLine(GetWorld());
@@ -285,13 +285,13 @@ void ANewPlayer::Hover(const float _deltaTime)
 void ANewPlayer::SetRotationWithRay(const float _deltaTime)
 {
 	// 前のレイの設定・描画
-	m_HoverAngleFrontRay.SetStart(m_BoardMesh);
-	m_HoverAngleFrontRay.SetEnd(m_BoardMesh);
+	m_HoverAngleFrontRay.SetStart(m_MoveArrow);
+	m_HoverAngleFrontRay.SetEnd(m_MoveArrow);
 	m_HoverAngleFrontRay.DrawLine(GetWorld());
 
 	// 後ろのレイの設定・描画
-	m_HoverAngleRearRay.SetStart(m_BoardMesh);
-	m_HoverAngleRearRay.SetEnd(m_BoardMesh);
+	m_HoverAngleRearRay.SetStart(m_MoveArrow);
+	m_HoverAngleRearRay.SetEnd(m_MoveArrow);
 	m_HoverAngleRearRay.DrawLine(GetWorld());
 
 	// レイのあたった法線から角度を算出
@@ -485,8 +485,8 @@ void ANewPlayer::TrickEnd()
 		m_IsOnceTrick = true;
 		m_CurrentTrick = ETrickType::None;
 
-		m_TrickDistanceRay.SetStart(m_BoardMesh);
-		m_TrickDistanceRay.SetEnd(m_BoardMesh);
+		m_TrickDistanceRay.SetStart(m_MoveArrow);
+		m_TrickDistanceRay.SetEnd(m_MoveArrow);
 		m_TrickDistanceRay.DrawLine(GetWorld());
 		m_TrickDistanceRay.LineTrace(GetWorld());
 		
