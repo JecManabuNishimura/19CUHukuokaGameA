@@ -27,6 +27,7 @@ ANewPlayer::ANewPlayer()
 	, m_IsJump(false)
 	, m_FloatingPawnMovementComponent(nullptr)
 	, m_RootCollisionBox(nullptr)
+	, m_MoveArrow(nullptr)
 	, m_BoardMesh(nullptr)
 	, m_PlayerMesh(nullptr)
 	, m_SpringArm(nullptr)
@@ -71,28 +72,37 @@ ANewPlayer::ANewPlayer()
 		m_RootCollisionBox->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
-	// ボードのメッシュの設定
-	m_BoardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoardMesh"));
-	if (m_BoardMesh)
+	// 移動方向を決めるコンポーネントの設定
+	m_MoveArrow = CreateDefaultSubobject<UArrowComponent>(TEXT("MoveArrow"));
+	if (m_MoveArrow)
 	{
-		m_BoardMesh->SetupAttachment(RootComponent);
-		m_BoardMesh->OnComponentHit.AddDynamic(this, &ANewPlayer::OnCompHit);
-		m_BoardMesh->SetSimulatePhysics(false);
-		m_BoardMesh->SetEnableGravity(false);
-		m_BoardMesh->SetUseCCD(true);
-		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		m_BoardMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
+		m_MoveArrow->SetupAttachment(RootComponent);
+		m_MoveArrow->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_MoveArrow->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
 	// プレイヤーメッシュの設定
 	m_PlayerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	if (m_PlayerMesh)
 	{
-		m_PlayerMesh->SetupAttachment(m_BoardMesh);
+		m_PlayerMesh->SetupAttachment(m_MoveArrow);
 		m_PlayerMesh->SetEnableGravity(false);
 		m_PlayerMesh->SetCollisionProfileName("NoCollision");
 		m_PlayerMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		m_PlayerMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
+	}
+
+	// ボードのメッシュの設定
+	m_BoardMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoardMesh"));
+	if (m_BoardMesh)
+	{
+		m_BoardMesh->SetupAttachment(m_PlayerMesh);
+		m_BoardMesh->OnComponentHit.AddDynamic(this, &ANewPlayer::OnCompHit);
+		m_BoardMesh->SetSimulatePhysics(false);
+		m_BoardMesh->SetEnableGravity(false);
+		m_BoardMesh->SetUseCCD(true);
+		m_BoardMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		m_BoardMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 	}
 
 	// カメラのスプリングアームの設定
@@ -163,7 +173,7 @@ void ANewPlayer::InputAxisX(const float _axisValue)
 	m_InputAxisValue.X = _axisValue;
 
 	// 角度が左右移動の限界内であるか、トリック状態
-	if (((m_BoardMesh->GetRelativeRotation().Yaw <= m_MaxAngle) && (m_BoardMesh->GetRelativeRotation().Yaw >= -m_MaxAngle)) || (m_IsJump && m_IsTrick))
+	if (((m_MoveArrow->GetRelativeRotation().Yaw <= m_MaxAngle) && (m_MoveArrow->GetRelativeRotation().Yaw >= -m_MaxAngle)) || (m_IsJump && m_IsTrick))
 	{
 		// 入力あり & ジャンプ状態ではない
 		if (_axisValue != 0.0f && !m_IsJump)
@@ -188,10 +198,10 @@ void ANewPlayer::InputAxisX(const float _axisValue)
 		m_CurrentSideAcceleration = 0.0f;
 		m_SideValue = 0.0f;
 
-		FRotator newRot = m_BoardMesh->GetRelativeRotation();
-		newRot.Yaw = (m_BoardMesh->GetRelativeRotation().Yaw > m_MaxAngle) ? m_MaxAngle : -m_MaxAngle;
+		FRotator newRot = m_MoveArrow->GetRelativeRotation();
+		newRot.Yaw = (m_MoveArrow->GetRelativeRotation().Yaw > m_MaxAngle) ? m_MaxAngle : -m_MaxAngle;
 
-		m_BoardMesh->SetRelativeRotation(newRot);
+		m_MoveArrow->SetRelativeRotation(newRot);
 	}
 }
 
@@ -223,7 +233,7 @@ void ANewPlayer::Hover(const float _deltaTime)
 	// ジャンプ中でなければボードの前方向を保存
 	if (!m_IsJump)
 	{
-		forwardVector = m_BoardMesh->GetForwardVector();
+		forwardVector = m_MoveArrow->GetForwardVector();
 	}
 
 	if (m_IsJump)
@@ -327,11 +337,11 @@ void ANewPlayer::SetRotationWithRay(const float _deltaTime)
 	// Pitch（Y軸）の角度の平均を算出
 	// Yaw（Z軸）はプレイヤーが操作して変更するので変更しない
 	// Roll（X軸）は傾きすぎると倒れそうになるので0で固定
-	FRotator averageRotator = FRotator((frontRot.Pitch + rearRot.Pitch) / 2.0f, m_BoardMesh->GetComponentRotation().Yaw, 0.0f);
+	FRotator averageRotator = FRotator((frontRot.Pitch + rearRot.Pitch) / 2.0f, m_MoveArrow->GetComponentRotation().Yaw, 0.0f);
 
 	// 角度をLerpでなめらかに変更
-	FRotator newRot = FMath::RInterpTo(m_BoardMesh->GetComponentRotation(), averageRotator, _deltaTime, m_AngleLerpSpeed);
-	m_BoardMesh->SetWorldRotation(newRot);
+	FRotator newRot = FMath::RInterpTo(m_MoveArrow->GetComponentRotation(), averageRotator, _deltaTime, m_AngleLerpSpeed);
+	m_MoveArrow->SetWorldRotation(newRot);
 }
 
 // 移動処理
@@ -341,7 +351,7 @@ void ANewPlayer::UpdateMove(const float _deltaTime)
 	Hover(_deltaTime);
 
 	// 左右移動の量に応じて回転
-	m_BoardMesh->AddLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
+	m_MoveArrow->AddLocalRotation(FRotator(0.0f, m_SideValue, 0.0f));
 
 	// 2つのレイからプレイヤーの角度を変更
 	SetRotationWithRay(_deltaTime);
@@ -457,7 +467,7 @@ void ANewPlayer::Trick()
 				m_CurrentTrickSpinValue = FMath::Clamp(m_CurrentTrickSpinValue + m_TrickList[m_TrickNum].TrickSpinAcceleration, 0.0f, m_TrickList[m_TrickNum].TrickSpinMaxValue);
 
 				// スピン
-				m_BoardMesh->AddRelativeRotation(FRotator(0.0f, m_CurrentTrickSpinValue * inputValue, 0.0f));
+				m_MoveArrow->AddRelativeRotation(FRotator(0.0f, m_CurrentTrickSpinValue * inputValue, 0.0f));
 				break;
 
 			default:
@@ -482,7 +492,7 @@ void ANewPlayer::TrickEnd()
 		
 		// スコア加算
 		// どれだけ真っ直ぐか
-		float div = m_BoardMesh->GetRelativeRotation().Yaw;
+		float div = m_MoveArrow->GetRelativeRotation().Yaw;
 
 		// 0除算を防ぐ
 		if (div == 0.0f)

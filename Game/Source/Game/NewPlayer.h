@@ -8,6 +8,7 @@
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/ArrowComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "NewPlayer.generated.h"
@@ -297,6 +298,10 @@ public:
 	// プレイヤーのMovementComponent
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
 		UFloatingPawnMovement* m_FloatingPawnMovementComponent;
+
+	// 移動方向
+	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+		UArrowComponent* m_MoveArrow;
 
 	// ボードのメッシュ
 	UPROPERTY(EditAnyWhere, BlueprintReadWrite)
